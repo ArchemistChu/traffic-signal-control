@@ -1,0 +1,677 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-01-09 22:53:42 by Eclipse SUMO netconvert Version 1.24.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <type-files value="${SUMO_HOME}\data\typemap\osmNetconvert.typ.xml,${SUMO_HOME}\data\typemap\osmNetconvertUrbanDe.typ.xml,${SUMO_HOME}\data\typemap\osmNetconvertPedestrians.typ.xml,${SUMO_HOME}\data\typemap\osmNetconvertAerialway.typ.xml"/>
+        <osm-files value="osm_bbox.osm.xml.gz"/>
+    </input>
+
+    <output>
+        <output-file value="osm.net.xml.gz"/>
+        <output.street-names value="true"/>
+        <output.original-names value="true"/>
+        <ptstop-output value="osm_stops.add.xml"/>
+        <ptline-output value="osm_ptlines.xml"/>
+        <ptline-clean-up value="true"/>
+    </output>
+
+    <projection>
+        <proj value="+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs"/>
+    </projection>
+
+    <processing>
+        <geometry.remove value="true"/>
+        <roundabouts.guess value="true"/>
+    </processing>
+
+    <tls_building>
+        <tls.discard-simple value="true"/>
+        <tls.join value="true"/>
+        <tls.guess-signals value="true"/>
+        <tls.default-type value="actuated"/>
+    </tls_building>
+
+    <ramp_guessing>
+        <ramps.guess value="true"/>
+    </ramp_guessing>
+
+    <junctions>
+        <junctions.join value="true"/>
+        <junctions.corner-detail value="5"/>
+    </junctions>
+
+    <pedestrian>
+        <crossings.guess value="true"/>
+    </pedestrian>
+
+    <railway>
+        <railway.topology.repair value="true"/>
+    </railway>
+
+    <formats>
+        <osm.sidewalks value="true"/>
+    </formats>
+
+</netconvertConfiguration>
+-->
+
+<additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
+    <busStop id="-1001095593" name="West Georgia St (EB) at Bute St" lane="-476569286#2_0" startPos="56.16" endPos="71.16" friendlyPos="true" lines="240 250 246">
+        <access lane="1194857126#1_0" pos="63.49" length="60.25" friendlyPos="1"/>
+        <access lane="1196919284#2_0" pos="63.41" length="94.85" friendlyPos="1"/>
+        <access lane="1372186981#1_0" pos="58.14" length="100.16" friendlyPos="1"/>
+        <access lane="1372186981#2_0" pos="0.00" length="100.10" friendlyPos="1"/>
+        <access lane="892131510#1_0" pos="64.23" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-1006238910" name="West Georgia St (EB) at Granville St" lane="-470482469#2_0" startPos="104.52" endPos="119.52" friendlyPos="true" lines="240 250 257 246">
+        <access lane="138641315_0" pos="45.35" length="17.24" friendlyPos="1"/>
+        <access lane="138641326_0" pos="8.30" length="5.51" friendlyPos="1"/>
+        <access lane="567741888#1_0" pos="107.04" length="7.66" friendlyPos="1"/>
+        <access lane="567741888#2_0" pos="0.11" length="0.00" friendlyPos="1"/>
+        <access lane="567741890#1_0" pos="0.20" length="26.01" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-12138473172" name="West Georgia Street (EB) at Burrard Street" lane="-475245604#2_0" startPos="7.80" endPos="22.80" friendlyPos="true" lines="N24 N22 257 241 246">
+        <access lane="1363644781#1_0" pos="39.73" length="56.63" friendlyPos="1"/>
+        <access lane="1363644784#1_0" pos="4.91" length="53.22" friendlyPos="1"/>
+        <access lane="260070612#1_0" pos="0.20" length="63.08" friendlyPos="1"/>
+        <access lane="272690327#1_0" pos="79.58" length="0.00" friendlyPos="1"/>
+        <access lane="272694355#2_0" pos="0.00" length="63.14" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-2985506428" name="Cambie St (SB) at Robson St" lane="-1285856432#1_0" startPos="31.11" endPos="46.11" friendlyPos="true" lines="6 17">
+        <access lane="-118784735#3_0" pos="0.00" length="42.12" friendlyPos="1"/>
+        <access lane="118784735#2_0" pos="123.75" length="49.82" friendlyPos="1"/>
+        <access lane="118784735#3_0" pos="4.01" length="38.76" friendlyPos="1"/>
+        <access lane="733715188#2_0" pos="13.38" length="39.49" friendlyPos="1"/>
+        <access lane="738973375#1_0" pos="38.22" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-3476035321" name="Waterfront Station Bay 2" lane="-29595922#4_0" startPos="19.74" endPos="34.74" friendlyPos="true" lines="2">
+        <access lane="1446762152#1_0" pos="0.00" length="31.11" friendlyPos="1"/>
+        <access lane="338228123_0" pos="54.68" length="0.00" friendlyPos="1"/>
+        <access lane="358464785_0" pos="120.33" length="24.54" friendlyPos="1"/>
+        <access lane="689599809_0" pos="0.00" length="31.59" friendlyPos="1"/>
+        <access lane="689599812_0" pos="0.00" length="35.18" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-3725343232" name="West Hastings St (WB) at Hamilton St" lane="-74366435#2_0" startPos="43.03" endPos="58.03" friendlyPos="true" lines="8 16 20 14 3">
+        <access lane="1197239548#0_0" pos="0.20" length="84.12" friendlyPos="1"/>
+        <access lane="1197239548#1_0" pos="42.90" length="45.16" friendlyPos="1"/>
+        <access lane="1363632845#1_0" pos="80.52" length="0.00" friendlyPos="1"/>
+        <access lane="1370775513#1_0" pos="57.48" length="83.84" friendlyPos="1"/>
+        <access lane="871798858#0_0" pos="0.00" length="87.46" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-3739451261" name="West Hastings St (WB) at Granville St" lane="-1257711667#1_0" startPos="36.14" endPos="51.14" friendlyPos="true" lines="R5">
+        <access lane="1194864770#1_0" pos="0.20" length="15.42" friendlyPos="1"/>
+        <access lane="1371268987#1_0" pos="7.90" length="0.00" friendlyPos="1"/>
+        <access lane="1371268989#2_0" pos="56.64" length="17.62" friendlyPos="1"/>
+        <access lane="1371268989#3_0" pos="0.00" length="15.68" friendlyPos="1"/>
+        <access lane="910652752#1_0" pos="7.58" length="20.57" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-3763056611" name="Granville St (SB) at West Pender St" lane="-476486822#3_0" startPos="58.30" endPos="73.30" friendlyPos="true" lines="4 7 10 16 14 50">
+        <access lane="-1245642149#1_0" pos="0.00" length="106.70" friendlyPos="1"/>
+        <access lane="-1245642149#2_0" pos="0.85" length="103.74" friendlyPos="1"/>
+        <access lane="-1245642149#3_0" pos="123.79" length="103.95" friendlyPos="1"/>
+        <access lane="910652750#2_0" pos="66.09" length="0.00" friendlyPos="1"/>
+        <access lane="910652756#0_0" pos="66.34" length="32.60" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-3763312405" name="Burrard Station Bay 1" lane="-475244364#1_0" startPos="31.44" endPos="46.44" friendlyPos="true" lines="2 5">
+        <access lane="1363644796#2_0" pos="27.50" length="0.00" friendlyPos="1"/>
+        <access lane="1363644796#3_0" pos="0.00" length="17.25" friendlyPos="1"/>
+        <access lane="302984011_0" pos="0.00" length="14.02" friendlyPos="1"/>
+        <access lane="567744402_0" pos="0.00" length="30.37" friendlyPos="1"/>
+        <access lane="567744411_0" pos="0.00" length="33.79" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-3786840508" name="Robson Street (WB) at Granville Street" lane="-296215315#2_0" startPos="30.36" endPos="45.36" friendlyPos="true" lines="20 17">
+        <access lane="1197762084#0_0" pos="0.00" length="36.62" friendlyPos="1"/>
+        <access lane="1396710983#0_0" pos="18.14" length="0.00" friendlyPos="1"/>
+        <access lane="678900119#1_0" pos="234.96" length="31.28" friendlyPos="1"/>
+        <access lane="678900119#2_0" pos="0.00" length="31.40" friendlyPos="1"/>
+        <access lane="748837993#1_0" pos="0.20" length="34.92" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-3789883501" name="Burrard St (SB) at Nelson St" lane="-74096518#4_0" startPos="38.48" endPos="53.48" friendlyPos="true" lines="2 44">
+        <access lane="-43709700#0_0" pos="0.00" length="31.93" friendlyPos="1"/>
+        <access lane="-43709700#1_0" pos="5.75" length="31.90" friendlyPos="1"/>
+        <access lane="43709700#0_0" pos="6.05" length="27.17" friendlyPos="1"/>
+        <access lane="43709700#1_0" pos="0.00" length="27.13" friendlyPos="1"/>
+        <access lane="887993991#1_0" pos="45.64" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-3789883874" name="Burrard St (SB) at Smithe St" lane="-475235034#1_0" startPos="31.73" endPos="46.73" friendlyPos="true" lines="2">
+        <access lane="1371920336#1_0" pos="49.28" length="0.00" friendlyPos="1"/>
+        <access lane="1371920336#2_0" pos="0.00" length="11.60" friendlyPos="1"/>
+        <access lane="887992611#0_0" pos="0.00" length="8.69" friendlyPos="1"/>
+        <access lane="887994217#0_0" pos="0.00" length="46.59" friendlyPos="1"/>
+        <access lane="915126670#1_0" pos="0.00" length="32.68" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-3789883969" name="West Pender St (EB) at Burrard St" lane="-475766251#0_0" startPos="75.01" endPos="90.01" friendlyPos="true" lines="19 22 5 210 211">
+        <access lane="1363696082#1_0" pos="0.00" length="64.54" friendlyPos="1"/>
+        <access lane="907394160#1_0" pos="80.88" length="0.00" friendlyPos="1"/>
+        <access lane="907394160#2_0" pos="0.00" length="65.69" friendlyPos="1"/>
+        <access lane="912248370#1_0" pos="0.00" length="64.32" friendlyPos="1"/>
+        <access lane="913278918#1_0" pos="40.13" length="40.72" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-3789883974" name="Burrard St (SB) at Robson St" lane="-74366380#3_0" startPos="45.38" endPos="60.38" friendlyPos="true" lines="2">
+        <access lane="-1445703636#6_0" pos="0.00" length="20.98" friendlyPos="1"/>
+        <access lane="-1445703636#7_0" pos="5.62" length="20.95" friendlyPos="1"/>
+        <access lane="1195629743#1_0" pos="53.40" length="0.00" friendlyPos="1"/>
+        <access lane="1445703636#6_0" pos="178.70" length="25.71" friendlyPos="1"/>
+        <access lane="1445703636#7_0" pos="0.00" length="25.69" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-3940288957" name="Cambie St (SB) at West Georgia St" lane="-74252155#2_0" startPos="38.65" endPos="53.65" friendlyPos="true" lines="6 17">
+        <access lane="1196919327#2_0" pos="103.79" length="40.68" friendlyPos="1"/>
+        <access lane="1384460626_0" pos="0.00" length="40.93" friendlyPos="1"/>
+        <access lane="1384460627_0" pos="0.00" length="50.05" friendlyPos="1"/>
+        <access lane="871798857#1_0" pos="48.43" length="0.00" friendlyPos="1"/>
+        <access lane="871798857#2_0" pos="0.00" length="44.54" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-4164839464" name="West Pender St (EB) at Granville St" lane="-341691692#2_0" startPos="86.59" endPos="101.59" friendlyPos="true" lines="19 22 5 44 210 211">
+        <access lane="1194857152#1_0" pos="27.88" length="44.33" friendlyPos="1"/>
+        <access lane="1372536222#1_0" pos="94.45" length="0.00" friendlyPos="1"/>
+        <access lane="1372536222#2_0" pos="0.00" length="48.57" friendlyPos="1"/>
+        <access lane="910652750#1_0" pos="0.00" length="45.07" friendlyPos="1"/>
+        <access lane="910652757#1_0" pos="0.20" length="44.74" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-4225958021" name="Cambie St (SB) at Dunsmuir St" lane="-74252160#4_0" startPos="2.55" endPos="17.55" friendlyPos="true" lines="5">
+        <access lane="-1362914592#0_0" pos="0.00" length="35.39" friendlyPos="1"/>
+        <access lane="-1362914592#1_0" pos="8.59" length="35.29" friendlyPos="1"/>
+        <access lane="1362914592#0_0" pos="4.59" length="40.16" friendlyPos="1"/>
+        <access lane="1362914592#1_0" pos="0.00" length="40.07" friendlyPos="1"/>
+        <access lane="754047955#1_0" pos="48.87" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-4225958021@1145439" name="Cambie St (SB) at Dunsmuir St" lane="-74252155#6_0" startPos="0.00" endPos="4.49" friendlyPos="true" lines="6">
+        <access lane="-1362914592#0_0" pos="0.00" length="35.39" friendlyPos="1"/>
+        <access lane="-1362914592#1_0" pos="8.59" length="35.29" friendlyPos="1"/>
+        <access lane="1362914592#0_0" pos="4.59" length="40.16" friendlyPos="1"/>
+        <access lane="1362914592#1_0" pos="0.00" length="40.07" friendlyPos="1"/>
+        <access lane="754047955#1_0" pos="48.87" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-4230853126" name="West Pender St (EB) at Bute St" lane="-74214596#1_0" startPos="44.90" endPos="59.90" friendlyPos="true" lines="19">
+        <access lane="-43709717#3_0" pos="60.77" length="83.64" friendlyPos="1"/>
+        <access lane="1194852088#0_0" pos="59.74" length="67.71" friendlyPos="1"/>
+        <access lane="1372536209#1_0" pos="48.63" length="47.86" friendlyPos="1"/>
+        <access lane="43709717#3_0" pos="148.10" length="78.84" friendlyPos="1"/>
+        <access lane="913278899#1_0" pos="63.41" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-4230855444" name="West Pender St (EB) at Thurlow St" lane="-51528351#1_0" startPos="35.89" endPos="50.89" friendlyPos="true" lines="19 210 211">
+        <access lane="1363696073#0_0" pos="39.47" length="40.76" friendlyPos="1"/>
+        <access lane="1372484671#2_0" pos="0.00" length="75.98" friendlyPos="1"/>
+        <access lane="756078590_0" pos="63.94" length="65.28" friendlyPos="1"/>
+        <access lane="913278902#0_0" pos="0.20" length="75.98" friendlyPos="1"/>
+        <access lane="913278923#4_0" pos="61.12" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-4634183190" name="Robson St (WB) at Burrard St" lane="-74366383#1_0" startPos="30.00" endPos="45.00" friendlyPos="true" lines="5">
+        <access lane="1194869534#1_0" pos="0.60" length="59.61" friendlyPos="1"/>
+        <access lane="1194869535#1_0" pos="65.99" length="61.34" friendlyPos="1"/>
+        <access lane="1195629734#1_0" pos="0.00" length="59.44" friendlyPos="1"/>
+        <access lane="1368803100#1_0" pos="239.24" length="29.57" friendlyPos="1"/>
+        <access lane="887987901#2_0" pos="208.40" length="10.57" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-5129095623" name="West Pender St (EB) at Seymour Street" lane="-753820893#3_0" startPos="19.02" endPos="34.02" friendlyPos="true" lines="19 22 5 17 210 211">
+        <access lane="1194864784#0_0" pos="91.90" length="38.73" friendlyPos="1"/>
+        <access lane="1194864787#0_0" pos="0.20" length="44.47" friendlyPos="1"/>
+        <access lane="1194869518#1_0" pos="92.07" length="0.00" friendlyPos="1"/>
+        <access lane="1372536230#0_0" pos="0.20" length="44.44" friendlyPos="1"/>
+        <access lane="1372536230#1_0" pos="0.00" length="44.82" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-5131257123" name="West Hastings St (WB) at Richards St" lane="-22871087#3_0" startPos="65.80" endPos="80.80" friendlyPos="true" lines="8 16 14 3">
+        <access lane="1302144364#1_0" pos="12.36" length="50.15" friendlyPos="1"/>
+        <access lane="1302144364#2_0" pos="28.47" length="0.00" friendlyPos="1"/>
+        <access lane="139571564_0" pos="0.00" length="46.71" friendlyPos="1"/>
+        <access lane="139571573_0" pos="21.02" length="34.76" friendlyPos="1"/>
+        <access lane="888496014#1_0" pos="45.35" length="43.57" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-5145443724" name="Granville St (SB) at Robson St" lane="-296215314#2_0" startPos="172.56" endPos="187.56" friendlyPos="true" lines="4 7 10 16 14 50">
+        <access lane="1053460836#0_0" pos="0.00" length="84.93" friendlyPos="1"/>
+        <access lane="139571572_0" pos="0.00" length="73.37" friendlyPos="1"/>
+        <access lane="362510619_0" pos="14.79" length="73.29" friendlyPos="1"/>
+        <access lane="567741889#1_0" pos="180.11" length="0.00" friendlyPos="1"/>
+        <access lane="678900119#1_0" pos="179.54" length="41.44" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-5179200122" name="Burrard Station Bay 4" lane="-1184091183#0_0" startPos="6.27" endPos="21.27" friendlyPos="true" lines="2">
+        <access lane="-43709717#0_0" pos="2.51" length="42.50" friendlyPos="1"/>
+        <access lane="1194852092#1_0" pos="61.65" length="0.00" friendlyPos="1"/>
+        <access lane="1377974616#3_0" pos="60.82" length="37.15" friendlyPos="1"/>
+        <access lane="1377974616#4_0" pos="0.00" length="42.76" friendlyPos="1"/>
+        <access lane="43709717#0_0" pos="0.00" length="39.17" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-5201120622" name="Robson St (WB) at Hamilton St" lane="-74269429#2_0" startPos="37.18" endPos="52.18" friendlyPos="true" lines="17">
+        <access lane="-502008135#4_0" pos="0.00" length="38.70" friendlyPos="1"/>
+        <access lane="1216324915#2_0" pos="6.45" length="46.80" friendlyPos="1"/>
+        <access lane="502008135#4_0" pos="5.43" length="35.40" friendlyPos="1"/>
+        <access lane="724110212#2_0" pos="12.07" length="38.94" friendlyPos="1"/>
+        <access lane="724110215#2_0" pos="38.96" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-5340007413" name="Burrard Station Bay 5" lane="-74272800#2_0" startPos="130.77" endPos="145.77" friendlyPos="true" lines="44 22">
+        <access lane="1194857131#1_0" pos="0.20" length="23.48" friendlyPos="1"/>
+        <access lane="1363696074#1_0" pos="44.65" length="23.24" friendlyPos="1"/>
+        <access lane="1363696074#2_0" pos="0.00" length="23.39" friendlyPos="1"/>
+        <access lane="1363696077#0_0" pos="0.20" length="25.96" friendlyPos="1"/>
+        <access lane="1363696077#1_0" pos="12.77" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-6844787262" name="West Georgia St (EB) at Homer St" lane="-507337657#2_0" startPos="46.98" endPos="61.98" friendlyPos="true" lines="240 247 241 246">
+        <access lane="1216324920#1_0" pos="49.16" length="46.27" friendlyPos="1"/>
+        <access lane="1216324920#2_0" pos="2.52" length="44.87" friendlyPos="1"/>
+        <access lane="1442494607_0" pos="25.12" length="5.80" friendlyPos="1"/>
+        <access lane="724110209#1_0" pos="47.35" length="8.05" friendlyPos="1"/>
+        <access lane="724110209#2_0" pos="0.37" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-9692495007" name="Burrard St (SB) At West Georgia St" lane="-475245605#1_0" startPos="44.41" endPos="59.41" friendlyPos="true" lines="44">
+        <access lane="1194869536#1_0" pos="0.20" length="24.13" friendlyPos="1"/>
+        <access lane="272691205#1_0" pos="51.17" length="0.00" friendlyPos="1"/>
+        <access lane="780087554#0_0" pos="0.00" length="21.62" friendlyPos="1"/>
+        <access lane="887987902#0_0" pos="0.00" length="21.41" friendlyPos="1"/>
+        <access lane="887987902#1_0" pos="0.00" length="22.06" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-992235528" name="Granville St (SB) at West Georgia St" lane="-470482470#2_0" startPos="195.45" endPos="210.45" friendlyPos="true" lines="4 7 10 16 14 50">
+        <access lane="1194869543#1_0" pos="0.20" length="47.09" friendlyPos="1"/>
+        <access lane="567741887#2_0" pos="64.63" length="46.78" friendlyPos="1"/>
+        <access lane="567741887#3_0" pos="0.00" length="46.92" friendlyPos="1"/>
+        <access lane="567741894#1_0" pos="29.11" length="37.13" friendlyPos="1"/>
+        <access lane="567741895#1_0" pos="203.14" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-994915200" name="Granville St (SB) at Nelson St" lane="-1285844486#1_0" startPos="73.28" endPos="88.28" friendlyPos="true" lines="4 7 10 16 14 50">
+        <access lane="1392847204_0" pos="0.00" length="0.00" friendlyPos="1"/>
+        <access lane="43710649#2_0" pos="124.00" length="101.97" friendlyPos="1"/>
+        <access lane="748836076#1_0" pos="80.73" length="38.22" friendlyPos="1"/>
+        <access lane="748836077#1_0" pos="137.29" length="6.83" friendlyPos="1"/>
+        <access lane="748836077#2_0" pos="0.00" length="6.77" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-994916966" name="Granville St (SB) at Davie St" lane="-975327011#0_0" startPos="0.00" endPos="2.25" friendlyPos="true" lines="4 7 10 16 14 50">
+        <access lane="1001910427_0" pos="0.00" length="53.50" friendlyPos="1"/>
+        <access lane="1001910428_0" pos="2.40" length="51.43" friendlyPos="1"/>
+        <access lane="1361010802_0" pos="0.00" length="0.00" friendlyPos="1"/>
+        <access lane="738977913#1_0" pos="83.62" length="40.65" friendlyPos="1"/>
+        <access lane="738977913#2_0" pos="0.00" length="50.34" friendlyPos="1"/>
+    </busStop>
+    <busStop id="1006238197" name="Granville St (NB) at West Georgia St" lane="296215314#1_0" startPos="213.10" endPos="228.10" friendlyPos="true" lines="7 10 16 20 14 4 17 50">
+        <access lane="1194869542#1_0" pos="0.20" length="27.95" friendlyPos="1"/>
+        <access lane="1369422680#1_0" pos="123.02" length="27.38" friendlyPos="1"/>
+        <access lane="1369422680#2_0" pos="0.00" length="27.56" friendlyPos="1"/>
+        <access lane="678900119#0_0" pos="0.20" length="29.57" friendlyPos="1"/>
+        <access lane="678900119#1_0" pos="15.58" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="1012595218" name="West Georgia St (WB) at Bute St" lane="476569295#1_0" startPos="47.72" endPos="62.72" friendlyPos="true" lines="250A 250">
+        <access lane="1196919277#0_0" pos="158.52" length="9.36" friendlyPos="1"/>
+        <access lane="1196919277#1_0" pos="0.00" length="9.29" friendlyPos="1"/>
+        <access lane="1196919277#2_0" pos="0.00" length="21.61" friendlyPos="1"/>
+        <access lane="1197568624_0" pos="30.81" length="20.26" friendlyPos="1"/>
+        <access lane="1369422111_0" pos="0.00" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="11511667038" name="Burrard St (NB) at Smithe St" lane="475235032#2_0" startPos="19.75" endPos="34.75" friendlyPos="true" lines="2">
+        <access lane="1196919301#1_0" pos="0.00" length="45.14" friendlyPos="1"/>
+        <access lane="1196919302#0_0" pos="0.00" length="58.70" friendlyPos="1"/>
+        <access lane="887992609#1_0" pos="0.20" length="45.01" friendlyPos="1"/>
+        <access lane="887994761#2_0" pos="37.10" length="0.00" friendlyPos="1"/>
+        <access lane="887994761#3_0" pos="0.00" length="48.98" friendlyPos="1"/>
+    </busStop>
+    <busStop id="12096148150" name="Robson St (EB) at Thurlow St" lane="74366383#1_0" startPos="18.39" endPos="33.39" friendlyPos="true" lines="5">
+        <access lane="1368803100#1_0" pos="25.75" length="0.00" friendlyPos="1"/>
+        <access lane="1375362798#2_0" pos="62.97" length="42.58" friendlyPos="1"/>
+        <access lane="1375362798#3_0" pos="0.00" length="42.43" friendlyPos="1"/>
+        <access lane="887987901#1_0" pos="26.30" length="41.41" friendlyPos="1"/>
+        <access lane="887987901#2_0" pos="0.00" length="42.09" friendlyPos="1"/>
+    </busStop>
+    <busStop id="12138473173" name="West Georgia Street (WB) at Burrard Street" lane="475245604#3_0" startPos="36.54" endPos="51.54" friendlyPos="true" lines="250A">
+        <access lane="1194864779#1_0" pos="0.00" length="24.96" friendlyPos="1"/>
+        <access lane="1363644781#2_0" pos="41.53" length="7.83" friendlyPos="1"/>
+        <access lane="1363644781#3_0" pos="0.00" length="8.16" friendlyPos="1"/>
+        <access lane="1363644781#4_0" pos="0.00" length="26.69" friendlyPos="1"/>
+        <access lane="1363644782_0" pos="0.00" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="13086158736" name="Robson St (EB) at Bute St" lane="1445703632#0_0" startPos="0.00" endPos="2.92" friendlyPos="true" lines="5">
+        <access lane="1197491733#0_0" pos="0.00" length="31.97" friendlyPos="1"/>
+        <access lane="1218837679#0_0" pos="0.20" length="32.00" friendlyPos="1"/>
+        <access lane="1227935388#0_0" pos="2.86" length="27.83" friendlyPos="1"/>
+        <access lane="1372186988#1_0" pos="14.14" length="25.29" friendlyPos="1"/>
+        <access lane="1375362803_0" pos="0.00" length="33.08" friendlyPos="1"/>
+    </busStop>
+    <busStop id="3476051315" name="Seymour St (NB) at West Hastings St" lane="340383381#1_0" startPos="40.27" endPos="55.27" friendlyPos="true" lines="44">
+        <access lane="-43710698#0_0" pos="1.15" length="34.04" friendlyPos="1"/>
+        <access lane="-43710698#1_0" pos="122.70" length="42.99" friendlyPos="1"/>
+        <access lane="1371268992#1_0" pos="50.08" length="37.23" friendlyPos="1"/>
+        <access lane="43710698#0_0" pos="0.00" length="36.01" friendlyPos="1"/>
+        <access lane="888496024#2_0" pos="27.64" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="3738439095" name="Granville St (NB) at Davie St" lane="975327012#1_0" startPos="83.14" endPos="98.14" friendlyPos="true" lines="7 10 16 14 4 50">
+        <access lane="-1392847205_0" pos="47.80" length="23.21" friendlyPos="1"/>
+        <access lane="1382645096_0" pos="0.00" length="0.00" friendlyPos="1"/>
+        <access lane="1392847205_0" pos="0.00" length="23.56" friendlyPos="1"/>
+        <access lane="723925418#1_0" pos="88.55" length="6.89" friendlyPos="1"/>
+        <access lane="723925418#2_0" pos="0.00" length="6.89" friendlyPos="1"/>
+    </busStop>
+    <busStop id="3738439885" name="West Georgia St (WB) at Granville St" lane="24446503#1_0" startPos="73.78" endPos="88.78" friendlyPos="true" lines="250A 250">
+        <access lane="1369422680#1_0" pos="82.33" length="53.83" friendlyPos="1"/>
+        <access lane="567741891#1_0" pos="0.20" length="66.38" friendlyPos="1"/>
+        <access lane="567741892#0_0" pos="4.46" length="70.16" friendlyPos="1"/>
+        <access lane="567741892#1_0" pos="41.72" length="0.00" friendlyPos="1"/>
+        <access lane="567741894#1_0" pos="0.00" length="66.48" friendlyPos="1"/>
+    </busStop>
+    <busStop id="3743637009" name="West Georgia St (WB) at Homer St" lane="507906233#1_0" startPos="36.75" endPos="51.75" friendlyPos="true" lines="240 246">
+        <access lane="-556750826#4_0" pos="0.00" length="21.29" friendlyPos="1"/>
+        <access lane="-556750826#5_0" pos="9.08" length="21.59" friendlyPos="1"/>
+        <access lane="556750826#4_0" pos="232.15" length="26.02" friendlyPos="1"/>
+        <access lane="556750826#5_0" pos="0.00" length="26.26" friendlyPos="1"/>
+        <access lane="892082956#2_0" pos="10.86" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="3743637096" name="Davie St (EB) at Howe St" lane="440764070#2_0" startPos="17.86" endPos="32.86" friendlyPos="true" lines="6">
+        <access lane="-43710661#0_0" pos="0.00" length="50.46" friendlyPos="1"/>
+        <access lane="749084743_0" pos="4.35" length="45.63" friendlyPos="1"/>
+        <access lane="749084745#1_0" pos="24.89" length="40.93" friendlyPos="1"/>
+        <access lane="780062810#1_0" pos="25.44" length="0.00" friendlyPos="1"/>
+        <access lane="887993985_0" pos="0.00" length="42.10" friendlyPos="1"/>
+    </busStop>
+    <busStop id="3745030474" name="Burrard St (NB) at Comox St" lane="74096518#1_0" startPos="47.27" endPos="62.27" friendlyPos="true" lines="2 44">
+        <access lane="1363418905_0" pos="0.00" length="0.00" friendlyPos="1"/>
+        <access lane="1363418907#0_0" pos="33.43" length="24.35" friendlyPos="1"/>
+        <access lane="1363418909_0" pos="0.20" length="28.14" friendlyPos="1"/>
+        <access lane="887993989#4_0" pos="12.51" length="8.02" friendlyPos="1"/>
+        <access lane="887993989#5_0" pos="0.00" length="8.08" friendlyPos="1"/>
+    </busStop>
+    <busStop id="3789851068" name="West Hastings St (EB) at Granville St" lane="74589713#0_0" startPos="16.27" endPos="31.27" friendlyPos="true" lines="R5">
+        <access lane="116527983#1_0" pos="0.10" length="33.85" friendlyPos="1"/>
+        <access lane="1372536220#1_0" pos="0.00" length="34.26" friendlyPos="1"/>
+        <access lane="358560013_0" pos="5.56" length="41.85" friendlyPos="1"/>
+        <access lane="379842665#1_0" pos="101.26" length="0.00" friendlyPos="1"/>
+        <access lane="379842665#2_0" pos="0.00" length="37.68" friendlyPos="1"/>
+    </busStop>
+    <busStop id="3789883481" name="West Pender Street (WB) at Seymour St" lane="753820893#1_0" startPos="83.01" endPos="98.01" friendlyPos="true" lines="5 22 19 210 211">
+        <access lane="1194864784#0_0" pos="90.77" length="0.00" friendlyPos="1"/>
+        <access lane="1194864784#1_0" pos="0.00" length="47.34" friendlyPos="1"/>
+        <access lane="1194864787#1_0" pos="0.20" length="45.95" friendlyPos="1"/>
+        <access lane="1194869518#1_0" pos="90.63" length="38.71" friendlyPos="1"/>
+        <access lane="1368790824#1_0" pos="0.00" length="46.18" friendlyPos="1"/>
+    </busStop>
+    <busStop id="3789883872" name="Burrard Station Bay 7" lane="74245835#1_0" startPos="51.66" endPos="66.66" friendlyPos="true" lines="2 5 44">
+        <access lane="-1304005695#0_0" pos="7.58" length="40.83" friendlyPos="1"/>
+        <access lane="1304005695#0_0" pos="0.00" length="42.59" friendlyPos="1"/>
+        <access lane="1363644780#1_0" pos="58.71" length="9.00" friendlyPos="1"/>
+        <access lane="1363644780#2_0" pos="0.00" length="9.19" friendlyPos="1"/>
+        <access lane="1363644783_0" pos="0.00" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="3947265000" name="Howe St (SB) at Nelson St" lane="74271369#1_0" startPos="46.40" endPos="61.40" friendlyPos="true" lines="N10 N9">
+        <access lane="-124591571#0_0" pos="0.00" length="31.92" friendlyPos="1"/>
+        <access lane="-124591571#1_0" pos="4.37" length="31.75" friendlyPos="1"/>
+        <access lane="124591571#0_0" pos="66.58" length="36.68" friendlyPos="1"/>
+        <access lane="124591571#1_0" pos="0.00" length="36.53" friendlyPos="1"/>
+        <access lane="723926052#2_0" pos="17.95" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4084222893" name="Seymour St (NB) at Nelson St" lane="74366398#12_0" startPos="30.77" endPos="45.77" friendlyPos="true" lines="N10">
+        <access lane="1375709653_0" pos="0.00" length="0.00" friendlyPos="1"/>
+        <access lane="723901785#2_0" pos="83.56" length="34.05" friendlyPos="1"/>
+        <access lane="723901786#1_0" pos="35.58" length="6.74" friendlyPos="1"/>
+        <access lane="723901786#2_0" pos="0.00" length="6.71" friendlyPos="1"/>
+        <access lane="738973377#0_0" pos="0.21" length="61.20" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4100887897" name="Howe Street (SB) NS Dunsmuir Street (Bay 3)" lane="74226324#2_0" startPos="96.94" endPos="111.94" friendlyPos="true" lines="N19">
+        <access lane="1194864772#1_0" pos="46.47" length="39.44" friendlyPos="1"/>
+        <access lane="1194864774#1_0" pos="104.45" length="0.00" friendlyPos="1"/>
+        <access lane="1194864789#0_0" pos="0.00" length="72.51" friendlyPos="1"/>
+        <access lane="1377899480#0_0" pos="0.20" length="72.59" friendlyPos="1"/>
+        <access lane="1377899480#1_0" pos="0.00" length="72.84" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4100887898" name="Howe St (SB) at West Georgia St" lane="39453117#1_0" startPos="36.66" endPos="51.66" friendlyPos="true" lines="N10 N9">
+        <access lane="-633038163#0_0" pos="56.21" length="13.99" friendlyPos="1"/>
+        <access lane="260071544#1_0" pos="48.64" length="0.00" friendlyPos="1"/>
+        <access lane="599115063#0_0" pos="48.64" length="0.00" friendlyPos="1"/>
+        <access lane="633038161#0_0" pos="3.20" length="9.74" friendlyPos="1"/>
+        <access lane="633038161#1_0" pos="0.00" length="9.49" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4100889699" name="Howe Street (SB) at West Pender Street (Unloading Only Stop)" lane="74226324#2_0" startPos="61.95" endPos="76.95" friendlyPos="true" lines="210 211">
+        <access lane="-43710637#0_0" pos="0.00" length="108.97" friendlyPos="1"/>
+        <access lane="-43710637#1_0" pos="57.87" length="108.91" friendlyPos="1"/>
+        <access lane="1194864772#1_0" pos="81.45" length="38.38" friendlyPos="1"/>
+        <access lane="1194864774#1_0" pos="69.46" length="0.00" friendlyPos="1"/>
+        <access lane="1245642150#0_0" pos="69.56" length="93.70" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4100889701" name="Howe St (SB) at Robson St" lane="1255161405#1_0" startPos="41.46" endPos="56.46" friendlyPos="true" lines="N10 N9">
+        <access lane="1373537711_0" pos="0.00" length="8.02" friendlyPos="1"/>
+        <access lane="297295135#0_0" pos="0.00" length="31.85" friendlyPos="1"/>
+        <access lane="567741885#1_0" pos="41.59" length="10.77" friendlyPos="1"/>
+        <access lane="567741885#2_0" pos="2.18" length="0.00" friendlyPos="1"/>
+        <access lane="991569419#0_0" pos="0.00" length="32.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4141243828" name="Burrard Station Bay 2" lane="37005661#1_0" startPos="101.24" endPos="116.24" friendlyPos="true" lines="210 211">
+        <access lane="1194852091#2_0" pos="49.75" length="0.00" friendlyPos="1"/>
+        <access lane="1372484641_0" pos="22.93" length="54.88" friendlyPos="1"/>
+        <access lane="1372484642_0" pos="0.00" length="54.94" friendlyPos="1"/>
+        <access lane="768380522#1_0" pos="49.78" length="2.24" friendlyPos="1"/>
+        <access lane="913278930#2_0" pos="66.12" length="39.19" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4164839463" name="West Pender St (WB) at Granville St" lane="340383392#1_0" startPos="96.48" endPos="111.48" friendlyPos="true" lines="10 7 22">
+        <access lane="1194864781#1_0" pos="0.20" length="34.86" friendlyPos="1"/>
+        <access lane="1372536227#0_0" pos="2.64" length="38.12" friendlyPos="1"/>
+        <access lane="1372536227#1_0" pos="20.33" length="0.00" friendlyPos="1"/>
+        <access lane="1377899476#2_0" pos="55.66" length="34.36" friendlyPos="1"/>
+        <access lane="1377899476#3_0" pos="0.00" length="34.68" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4175141371" name="West Georgia St (WB) at Granville St" lane="470482469#1_0" startPos="56.83" endPos="71.83" friendlyPos="true" lines="240 246">
+        <access lane="1117195963_0" pos="10.37" length="74.52" friendlyPos="1"/>
+        <access lane="138641340_0" pos="0.00" length="5.70" friendlyPos="1"/>
+        <access lane="567741887#1_0" pos="54.91" length="8.07" friendlyPos="1"/>
+        <access lane="567741887#2_0" pos="0.37" length="0.00" friendlyPos="1"/>
+        <access lane="567741888#1_0" pos="63.21" length="53.51" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4183935589" name="Richards St (SB) at West Hastings St" lane="74269432#1_0" startPos="39.30" endPos="54.30" friendlyPos="true" lines="20">
+        <access lane="-593886647#0_0" pos="0.00" length="23.62" friendlyPos="1"/>
+        <access lane="-593886647#1_0" pos="120.52" length="23.43" friendlyPos="1"/>
+        <access lane="1302144366#1_0" pos="46.67" length="0.00" friendlyPos="1"/>
+        <access lane="593886647#0_0" pos="1.74" length="18.95" friendlyPos="1"/>
+        <access lane="593886647#1_0" pos="0.00" length="18.71" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4230853987" name="Waterfront Station Bay 4" lane="1197239554_0" startPos="17.49" endPos="32.49" friendlyPos="true" lines="7 8 4 50 3">
+        <access lane="1348592179_0" pos="3.54" length="36.69" friendlyPos="1"/>
+        <access lane="1371268994#1_0" pos="51.87" length="40.30" friendlyPos="1"/>
+        <access lane="1371268994#2_0" pos="21.85" length="0.00" friendlyPos="1"/>
+        <access lane="921565042#0_0" pos="1.61" length="42.04" friendlyPos="1"/>
+        <access lane="921565042#1_0" pos="0.00" length="42.07" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4230886302" name="Granville St (NB) at Dunsmuir St" lane="470482470#1_0" startPos="216.76" endPos="231.76" friendlyPos="true" lines="7 10 16 20 14 4 17 50">
+        <access lane="1378751913#0_0" pos="5.79" length="13.83" friendlyPos="1"/>
+        <access lane="1378751913#1_0" pos="0.00" length="14.48" friendlyPos="1"/>
+        <access lane="567741894#2_0" pos="103.66" length="0.00" friendlyPos="1"/>
+        <access lane="567741894#3_0" pos="0.00" length="14.82" friendlyPos="1"/>
+        <access lane="567741898#0_0" pos="0.00" length="14.86" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4230886303" name="Granville St (NB) at West Hastings St" lane="476572449#1_0" startPos="34.96" endPos="49.96" friendlyPos="true" lines="10 4">
+        <access lane="-43710698#1_0" pos="0.00" length="24.59" friendlyPos="1"/>
+        <access lane="-43710698#2_0" pos="5.49" length="24.58" friendlyPos="1"/>
+        <access lane="1371268989#2_0" pos="13.11" length="0.00" friendlyPos="1"/>
+        <access lane="43710698#1_0" pos="122.70" length="29.35" friendlyPos="1"/>
+        <access lane="43710698#2_0" pos="0.00" length="29.34" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4230886498" name="Burrard Station Bay 3" lane="305773435#2_0" startPos="15.74" endPos="30.74" friendlyPos="true" lines="22">
+        <access lane="1194852091#0_0" pos="0.20" length="21.30" friendlyPos="1"/>
+        <access lane="1194852091#1_0" pos="11.31" length="0.00" friendlyPos="1"/>
+        <access lane="1194852092#1_0" pos="148.56" length="21.53" friendlyPos="1"/>
+        <access lane="1194857119#0_0" pos="0.00" length="24.19" friendlyPos="1"/>
+        <access lane="1194857120#1_0" pos="0.20" length="22.92" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4230886502" name="Granville St (NB) at Smithe St" lane="50098014#2_0" startPos="111.06" endPos="126.06" friendlyPos="true" lines="7 10 16 14 4 50">
+        <access lane="-606465869#0_0" pos="101.96" length="94.60" friendlyPos="1"/>
+        <access lane="43710673#5_0" pos="118.66" length="139.06" friendlyPos="1"/>
+        <access lane="606465874_0" pos="97.98" length="99.40" friendlyPos="1"/>
+        <access lane="748837994#0_0" pos="98.42" length="42.96" friendlyPos="1"/>
+        <access lane="748837996#1_0" pos="118.85" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4230888691" name="Granville St (NB) at West Pender St" lane="476486822#4_0" startPos="33.68" endPos="48.68" friendlyPos="true" lines="7 10 16 20 14 4 17 50">
+        <access lane="1194864781#0_0" pos="0.00" length="23.16" friendlyPos="1"/>
+        <access lane="1194864783#1_0" pos="0.20" length="20.03" friendlyPos="1"/>
+        <access lane="1194869521#1_0" pos="124.02" length="20.62" friendlyPos="1"/>
+        <access lane="1194869521#2_0" pos="0.00" length="19.99" friendlyPos="1"/>
+        <access lane="1377899478#1_0" pos="10.68" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4231136844" name="Burrard St (NB) at Robson St" lane="74366412#0_0" startPos="0.00" endPos="15.00" friendlyPos="true" lines="2 5 44">
+        <access lane="-43709707#1_0" pos="0.00" length="37.93" friendlyPos="1"/>
+        <access lane="-43709707#2_0" pos="4.99" length="37.91" friendlyPos="1"/>
+        <access lane="1194869532#1_0" pos="74.06" length="0.00" friendlyPos="1"/>
+        <access lane="43709707#1_0" pos="167.16" length="42.71" friendlyPos="1"/>
+        <access lane="43709707#2_0" pos="0.00" length="42.69" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4269894834" name="West Pender St (WB) at Hamilton St" lane="476572445#1_0" startPos="51.47" endPos="66.47" friendlyPos="true" lines="4 7 5 22 19 210 211">
+        <access lane="-43710704#0_0" pos="64.78" length="91.64" friendlyPos="1"/>
+        <access lane="1197239549#0_0" pos="0.00" length="92.10" friendlyPos="1"/>
+        <access lane="1207226732#1_0" pos="64.02" length="0.00" friendlyPos="1"/>
+        <access lane="1363150843#1_0" pos="63.40" length="38.18" friendlyPos="1"/>
+        <access lane="1370775512#0_0" pos="0.20" length="92.09" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4314691889" name="West Hastings St (EB) at Homer St" lane="74366435#1_0" startPos="44.70" endPos="59.70" friendlyPos="true" lines="16 20 14">
+        <access lane="1197239548#1_0" pos="69.62" length="0.00" friendlyPos="1"/>
+        <access lane="1197239548#2_0" pos="0.00" length="82.28" friendlyPos="1"/>
+        <access lane="1363632845#1_0" pos="53.95" length="45.35" friendlyPos="1"/>
+        <access lane="871798859#1_0" pos="0.00" length="86.41" friendlyPos="1"/>
+        <access lane="888496030#1_0" pos="0.00" length="86.21" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4368127197" name="West Hastings St (EB) at Seymour St" lane="22871087#1_0" startPos="21.30" endPos="36.30" friendlyPos="true" lines="16 20 14">
+        <access lane="1194864785#1_0" pos="56.56" length="47.95" friendlyPos="1"/>
+        <access lane="1302144364#2_0" pos="12.68" length="43.94" friendlyPos="1"/>
+        <access lane="1368790823#1_0" pos="0.16" length="47.16" friendlyPos="1"/>
+        <access lane="888496014#1_0" pos="29.10" length="0.00" friendlyPos="1"/>
+        <access lane="910652760#1_0" pos="0.20" length="46.90" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4622768695" name="Seymour St (NB) at Dunsmuir St" lane="24446046#4_0" startPos="20.13" endPos="35.13" friendlyPos="true" lines="N10 N9">
+        <access lane="1194869523#1_0" pos="0.20" length="49.32" friendlyPos="1"/>
+        <access lane="1195629740#1_0" pos="30.90" length="38.43" friendlyPos="1"/>
+        <access lane="892082960#3_0" pos="47.65" length="0.00" friendlyPos="1"/>
+        <access lane="892082962#2_0" pos="53.71" length="49.60" friendlyPos="1"/>
+        <access lane="892082962#3_0" pos="0.00" length="49.40" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4816231222" name="Homer St (NB) at West Pender St" lane="74366446#1_0" startPos="40.56" endPos="55.56" friendlyPos="true" lines="210 211">
+        <access lane="-43710704#0_0" pos="0.00" length="12.85" friendlyPos="1"/>
+        <access lane="-43710704#1_0" pos="2.20" length="12.89" friendlyPos="1"/>
+        <access lane="1370775514#1_0" pos="123.04" length="17.52" friendlyPos="1"/>
+        <access lane="1370775517#1_0" pos="5.11" length="0.00" friendlyPos="1"/>
+        <access lane="43710704#1_0" pos="0.00" length="17.54" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4842227323" name="West Pender St (EB) at Hamilton St" lane="687268241#0_0" startPos="6.02" endPos="21.02" friendlyPos="true" lines="19 22 5 17">
+        <access lane="1362914591#1_0" pos="62.80" length="0.00" friendlyPos="1"/>
+        <access lane="585754896#1_0" pos="61.65" length="45.92" friendlyPos="1"/>
+        <access lane="585754903#2_0" pos="41.90" length="69.12" friendlyPos="1"/>
+        <access lane="585754903#3_0" pos="0.00" length="85.33" friendlyPos="1"/>
+        <access lane="585754903#4_0" pos="7.04" length="84.20" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4844898127" name="Nelson St (EB) at Cambie St" lane="74268723#1_0" startPos="21.18" endPos="36.18" friendlyPos="true" lines="17">
+        <access lane="1204984287#1_0" pos="0.20" length="45.00" friendlyPos="1"/>
+        <access lane="1204984287#2_0" pos="0.20" length="42.08" friendlyPos="1"/>
+        <access lane="1204984288#0_0" pos="30.61" length="0.00" friendlyPos="1"/>
+        <access lane="1204984288#1_0" pos="0.00" length="44.48" friendlyPos="1"/>
+        <access lane="912617847#1_0" pos="0.00" length="42.50" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4957764222" name="Richards St (SB) at Dunsmuir St" lane="507852558#2_0" startPos="21.75" endPos="36.75" friendlyPos="true" lines="20">
+        <access lane="-43710682_0" pos="25.68" length="49.76" friendlyPos="1"/>
+        <access lane="1194869544#1_0" pos="133.12" length="39.32" friendlyPos="1"/>
+        <access lane="138646501#2_0" pos="58.26" length="21.38" friendlyPos="1"/>
+        <access lane="544695985#1_0" pos="8.51" length="48.69" friendlyPos="1"/>
+        <access lane="892082961#2_0" pos="29.31" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="5109874222" name="Davie St (EB) at Richards St" lane="36982445#3_0" startPos="35.17" endPos="50.17" friendlyPos="true" lines="6">
+        <access lane="1197763372#1_0" pos="0.20" length="22.48" friendlyPos="1"/>
+        <access lane="1197763373#1_0" pos="0.00" length="41.49" friendlyPos="1"/>
+        <access lane="723277867#1_0" pos="12.56" length="43.62" friendlyPos="1"/>
+        <access lane="724436969#2_0" pos="42.51" length="0.00" friendlyPos="1"/>
+        <access lane="724436969#3_0" pos="0.00" length="26.10" friendlyPos="1"/>
+    </busStop>
+    <busStop id="5131257030" name="Burrard Station Bay 6" lane="74272800#1_0" startPos="135.73" endPos="150.73" friendlyPos="true" lines="R5">
+        <access lane="-43710637#6_0" pos="0.00" length="17.33" friendlyPos="1"/>
+        <access lane="-43710637#7_0" pos="3.59" length="17.37" friendlyPos="1"/>
+        <access lane="1194857124#2_0" pos="89.54" length="0.00" friendlyPos="1"/>
+        <access lane="43710637#6_0" pos="122.75" length="22.04" friendlyPos="1"/>
+        <access lane="43710637#7_0" pos="0.00" length="22.07" friendlyPos="1"/>
+    </busStop>
+    <busStop id="5135902322" name="Howe St (SB) at Davie St" lane="74271369#9_0" startPos="142.45" endPos="157.45" friendlyPos="true" lines="N10 N9">
+        <access lane="1202075188_0" pos="0.00" length="34.57" friendlyPos="1"/>
+        <access lane="1202075189#1_0" pos="0.00" length="32.36" friendlyPos="1"/>
+        <access lane="887992623#3_0" pos="149.96" length="38.29" friendlyPos="1"/>
+        <access lane="887992624#0_0" pos="0.39" length="34.01" friendlyPos="1"/>
+        <access lane="887992624#1_0" pos="20.10" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="5179189722" name="West Pender St (WB) at Thurlow St" lane="74214596#1_0" startPos="27.57" endPos="42.57" friendlyPos="true" lines="19">
+        <access lane="1372536209#1_0" pos="283.44" length="0.00" friendlyPos="1"/>
+        <access lane="1377974616#0_0" pos="0.00" length="67.41" friendlyPos="1"/>
+        <access lane="913278899#3_0" pos="44.37" length="44.98" friendlyPos="1"/>
+        <access lane="913278904#0_0" pos="0.20" length="66.60" friendlyPos="1"/>
+        <access lane="913278904#1_0" pos="0.00" length="66.79" friendlyPos="1"/>
+    </busStop>
+    <busStop id="5297290321" name="Waterfront Station Bay 3" lane="29595922#1_0" startPos="27.42" endPos="42.42" friendlyPos="true" lines="50">
+        <access lane="1446762153#1_0" pos="0.00" length="29.45" friendlyPos="1"/>
+        <access lane="338228123_0" pos="4.38" length="0.00" friendlyPos="1"/>
+        <access lane="358464783#1_0" pos="21.93" length="23.84" friendlyPos="1"/>
+        <access lane="358464786#0_0" pos="0.00" length="14.03" friendlyPos="1"/>
+        <access lane="364284185_0" pos="0.00" length="11.06" friendlyPos="1"/>
+    </busStop>
+    <busStop id="5341879526" name="Cambie St (NB) at Dunsmuir St" lane="74252155#4_0" startPos="27.30" endPos="42.30" friendlyPos="true" lines="5">
+        <access lane="1196919327#1_0" pos="30.30" length="0.00" friendlyPos="1"/>
+        <access lane="1197239524#1_0" pos="5.71" length="49.24" friendlyPos="1"/>
+        <access lane="1197239525#2_0" pos="0.20" length="49.19" friendlyPos="1"/>
+        <access lane="1455919559#2_0" pos="37.82" length="25.23" friendlyPos="1"/>
+        <access lane="871798857#3_0" pos="92.55" length="37.39" friendlyPos="1"/>
+    </busStop>
+    <busStop id="5581881769" name="Dunsmuir St (NB) at Cambie St" lane="74252162#1_0" startPos="58.51" endPos="73.51" friendlyPos="true" lines="257">
+        <access lane="569482237#0_0" pos="0.00" length="7.83" friendlyPos="1"/>
+        <access lane="569482237#1_0" pos="0.00" length="12.77" friendlyPos="1"/>
+        <access lane="569482239#2_0" pos="36.62" length="17.62" friendlyPos="1"/>
+        <access lane="570414545#1_0" pos="20.85" length="11.40" friendlyPos="1"/>
+        <access lane="570414545#2_0" pos="2.61" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="5808314453" name="Cambie St (SB) at Nelson St" lane="4518138#2_0" startPos="12.57" endPos="27.57" friendlyPos="true" lines="6">
+        <access lane="1204984289#2_0" pos="0.00" length="40.09" friendlyPos="1"/>
+        <access lane="1371337281_0" pos="0.00" length="0.00" friendlyPos="1"/>
+        <access lane="892159548#0_0" pos="8.58" length="7.15" friendlyPos="1"/>
+        <access lane="892159548#1_0" pos="0.00" length="7.33" friendlyPos="1"/>
+        <access lane="892159549#3_0" pos="0.20" length="40.05" friendlyPos="1"/>
+    </busStop>
+    <busStop id="5839176971" name="West Georgia St (WB) at Seymour St" lane="24446503#1_0" startPos="21.62" endPos="36.62" friendlyPos="true" lines="257">
+        <access lane="1196919307#1_0" pos="0.20" length="48.58" friendlyPos="1"/>
+        <access lane="567741892#1_0" pos="93.90" length="0.00" friendlyPos="1"/>
+        <access lane="567741892#2_0" pos="0.00" length="49.82" friendlyPos="1"/>
+        <access lane="892082959#1_0" pos="85.86" length="48.77" friendlyPos="1"/>
+        <access lane="892082959#2_0" pos="0.00" length="48.50" friendlyPos="1"/>
+    </busStop>
+    <busStop id="5862689186" name="West Pender Street (WB) FS Howe Street" lane="475766252#1_0" startPos="40.76" endPos="55.76" friendlyPos="true" lines="5 22 19">
+        <access lane="1194857140#1_0" pos="72.70" length="0.00" friendlyPos="1"/>
+        <access lane="1194857140#2_0" pos="0.00" length="77.53" friendlyPos="1"/>
+        <access lane="1194864768#1_0" pos="72.74" length="43.37" friendlyPos="1"/>
+        <access lane="1372536215#1_0" pos="0.00" length="76.26" friendlyPos="1"/>
+        <access lane="910652746#1_0" pos="0.20" length="76.19" friendlyPos="1"/>
+    </busStop>
+    <busStop id="6468342578" name="Smithe St (WB) at Expo Blvd" lane="456392469#1_0" startPos="37.73" endPos="52.73" friendlyPos="true" lines="17">
+        <access lane="1196132700#1_0" pos="11.49" length="16.73" friendlyPos="1"/>
+        <access lane="1369236078#1_0" pos="1.15" length="23.97" friendlyPos="1"/>
+        <access lane="1391893980#1_0" pos="13.29" length="0.00" friendlyPos="1"/>
+        <access lane="1411247616_0" pos="0.10" length="27.25" friendlyPos="1"/>
+        <access lane="1411247619#1_0" pos="10.35" length="27.43" friendlyPos="1"/>
+    </busStop>
+    <busStop id="6663029944" name="Davie St (EB) at Granville St" lane="1294688836#1_0" startPos="18.81" endPos="33.81" friendlyPos="true" lines="6">
+        <access lane="1202075184#0_0" pos="0.00" length="46.00" friendlyPos="1"/>
+        <access lane="1202075186#1_0" pos="0.20" length="43.11" friendlyPos="1"/>
+        <access lane="724437459#1_0" pos="26.22" length="0.00" friendlyPos="1"/>
+        <access lane="724440415#1_0" pos="26.41" length="43.01" friendlyPos="1"/>
+        <access lane="738977913#1_0" pos="0.00" length="43.38" friendlyPos="1"/>
+    </busStop>
+    <busStop id="7996333918" name="Seymour St (NB) at West Georgia St" lane="36982443#1_0" startPos="164.62" endPos="179.62" friendlyPos="true" lines="N10 N9">
+        <access lane="-1097852706_0" pos="11.93" length="92.85" friendlyPos="1"/>
+        <access lane="1196919306#1_0" pos="171.79" length="39.73" friendlyPos="1"/>
+        <access lane="567741893#0_0" pos="0.00" length="92.40" friendlyPos="1"/>
+        <access lane="749115159#0_0" pos="0.00" length="92.56" friendlyPos="1"/>
+        <access lane="892082958#1_0" pos="59.27" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="9389598620" name="Waterfront Station Bay 1" lane="1153403244_0" startPos="34.76" endPos="49.76" friendlyPos="true" lines="44">
+        <access lane="-1153403245_0" pos="12.03" length="35.21" friendlyPos="1"/>
+        <access lane="1153403245_0" pos="38.22" length="30.41" friendlyPos="1"/>
+        <access lane="208599555_0" pos="20.87" length="47.22" friendlyPos="1"/>
+        <access lane="208599558#1_0" pos="30.48" length="28.99" friendlyPos="1"/>
+        <access lane="364284186#0_0" pos="37.27" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="9684523502" name="West Georgia St (WB) At Richards St" lane="588427962#1_0" startPos="22.12" endPos="37.12" friendlyPos="true" lines="250A 250">
+        <access lane="1194869544#1_0" pos="0.00" length="16.48" friendlyPos="1"/>
+        <access lane="1196919314#0_0" pos="0.00" length="22.73" friendlyPos="1"/>
+        <access lane="749115155#1_0" pos="8.56" length="16.25" friendlyPos="1"/>
+        <access lane="892082956#0_0" pos="0.12" length="19.56" friendlyPos="1"/>
+        <access lane="892082956#1_0" pos="8.09" length="0.00" friendlyPos="1"/>
+    </busStop>
+    <busStop id="995628784" name="West Georgia St (WB) at Bute St" lane="476569295#1_0" startPos="28.01" endPos="43.01" friendlyPos="true" lines="240 246">
+        <access lane="1196919277#1_0" pos="5.80" length="19.07" friendlyPos="1"/>
+        <access lane="1196919277#2_0" pos="3.87" length="9.10" friendlyPos="1"/>
+        <access lane="1196919277#3_0" pos="0.00" length="8.98" friendlyPos="1"/>
+        <access lane="1197568624_0" pos="30.81" length="18.01" friendlyPos="1"/>
+        <access lane="1369422112_0" pos="0.00" length="0.00" friendlyPos="1"/>
+    </busStop>
+</additional>

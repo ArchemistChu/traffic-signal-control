@@ -1,0 +1,657 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-01-09 22:53:57.008354 by osmWebWizard.py v1_24_0+0000-b72eb3fabc8
+<configuration>
+    <net-file value="C:\Users\Archemist\Sumo\2026-01-09-22-49-16\2026-01-09-22-52-11\osm.net.xml.gz"/>
+    <ptlines-file value="C:\Users\Archemist\Sumo\2026-01-09-22-49-16\2026-01-09-22-52-11\osm_ptlines.xml"/>
+    <ptstops-file value="C:\Users\Archemist\Sumo\2026-01-09-22-49-16\2026-01-09-22-52-11\osm_stops.add.xml"/>
+    <output-file value="C:\Users\Archemist\Sumo\2026-01-09-22-49-16\2026-01-09-22-52-11\osm_pt.rou.xml"/>
+    <stopinfos-file value="C:\Users\Archemist\Sumo\2026-01-09-22-49-16\2026-01-09-22-52-11\stopinfos.xml"/>
+    <routes-file value="C:\Users\Archemist\Sumo\2026-01-09-22-49-16\2026-01-09-22-52-11\vehroutes.xml"/>
+    <trips-file value="C:\Users\Archemist\Sumo\2026-01-09-22-49-16\2026-01-09-22-52-11\trips.trips.xml"/>
+    <min-stops value="0"/>
+    <extend-to-fringe value="True"/>
+    <random-begin value="True"/>
+    <seed value="42"/>
+    <ignore-errors value="True"/>
+    <vtype-prefix value="pt_"/>
+    <verbose value="True"/>
+</configuration>
+-->
+
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <vType id="pt_bus" vClass="bus"/>
+    <vType id="pt_tram" vClass="tram"/>
+    <vType id="pt_train" vClass="rail"/>
+    <vType id="pt_subway" vClass="subway"/>
+    <vType id="pt_light_rail" vClass="rail_urban"/>
+    <vType id="pt_monorail" vClass="rail_urban"/>
+    <vType id="pt_trolleybus" vClass="bus"/>
+    <vType id="pt_minibus" vClass="bus"/>
+    <vType id="pt_share_taxi" vClass="taxi"/>
+    <vType id="pt_aerialway" vClass="cable_car" length="2.5" width="2" personCapacity="4"/>
+    <vType id="pt_ferry" vClass="ship"/>
+    <route id="pt_bus_210:0" edges="37005661#1 341691666 305773435#0 305773435#1 305773435#2 -1184091183#2 -1184091183#0 -74226561#2 -74226561#1 -51528351#1 -51528351#0 -1255488015#1 -475766251#0 -1257486910#1 -341691692#2 -340383392#2 -753820893#3 -276830738#3 74366446#1 476572447#0 74366406#1 74366406#2 74366406#3 507948141" >
+        <stop busStop="4141243828" duration="20" until="49.0"/> <!-- Burrard Station Bay 2 -->
+        <stop busStop="-4230855444" duration="20" until="135.0"/> <!-- West Pender St (EB) at Thurlow St -->
+        <stop busStop="-3789883969" duration="20" until="211.0"/> <!-- West Pender St (EB) at Burrard St -->
+        <stop busStop="-4164839464" duration="20" until="322.0"/> <!-- West Pender St (EB) at Granville St -->
+        <stop busStop="-5129095623" duration="20" until="381.0"/> <!-- West Pender St (EB) at Seymour Street -->
+        <stop busStop="4816231222" duration="20" until="456.0"/> <!-- Homer St (NB) at West Pender St -->
+    </route>
+    <route id="pt_bus_210:1" edges="1207914964#0 74366431#1 476572446#0 476572445#1 276830738#1 753820893#1 340383392#1 341691692#1 74226324#1 74226324#2 476052130#1 80632628#0 117158481#1 1198442077#0 37005661#1" >
+        <stop busStop="4269894834" duration="20" until="71.0"/> <!-- West Pender St (WB) at Hamilton St -->
+        <stop busStop="3789883481" duration="20" until="205.0"/> <!-- West Pender Street (WB) at Seymour St -->
+        <stop busStop="4100889699" duration="20" until="296.0"/> <!-- Howe Street (SB) at West Pender Street (Unloading Only Stop) -->
+        <stop busStop="4141243828" duration="20" until="459.0"/> <!-- Burrard Station Bay 2 -->
+    </route>
+    <route id="pt_bus_211:0" edges="1207914964#0 74366431#1 476572446#0 476572445#1 276830738#1 753820893#1 340383392#1 341691692#1 74226324#1 74226324#2 476052130#1 80632628#0 117158481#1 1198442077#0 37005661#1" >
+        <stop busStop="4269894834" duration="20" until="93.0"/> <!-- West Pender St (WB) at Hamilton St -->
+        <stop busStop="3789883481" duration="20" until="225.0"/> <!-- West Pender Street (WB) at Seymour St -->
+        <stop busStop="4100889699" duration="20" until="331.0"/> <!-- Howe Street (SB) at West Pender Street (Unloading Only Stop) -->
+        <stop busStop="4141243828" duration="20" until="498.0"/> <!-- Burrard Station Bay 2 -->
+    </route>
+    <route id="pt_bus_211:1" edges="37005661#1 341691666 305773435#0 305773435#1 305773435#2 -1184091183#2 -1184091183#0 -74226561#2 -74226561#1 -51528351#1 -51528351#0 -1255488015#1 -475766251#0 -1257486910#1 -341691692#2 -340383392#2 -753820893#3 -276830738#3 74366446#1 476572447#0 74366406#1 74366406#2 74366406#3 507948141" >
+        <stop busStop="4141243828" duration="20" until="62.0"/> <!-- Burrard Station Bay 2 -->
+        <stop busStop="-4230855444" duration="20" until="182.0"/> <!-- West Pender St (EB) at Thurlow St -->
+        <stop busStop="-3789883969" duration="20" until="250.0"/> <!-- West Pender St (EB) at Burrard St -->
+        <stop busStop="-4164839464" duration="20" until="375.0"/> <!-- West Pender St (EB) at Granville St -->
+        <stop busStop="-5129095623" duration="20" until="433.0"/> <!-- West Pender St (EB) at Seymour Street -->
+        <stop busStop="4816231222" duration="20" until="503.0"/> <!-- Homer St (NB) at West Pender St -->
+    </route>
+    <route id="pt_bus_22:0" edges="-1184091183#2 -1184091183#0 -74226561#2 -74226561#1 -51528351#1 -51528351#0 -1255488015#1 -475766251#0 -1257486910#1 -341691692#2 -340383392#2 -753820893#3 -276830738#3 -476572445#2 -476572446#0 687268241#0 -1207914964#0" >
+        <stop busStop="-3789883969" duration="20" until="117.0"/> <!-- West Pender St (EB) at Burrard St -->
+        <stop busStop="-4164839464" duration="20" until="220.0"/> <!-- West Pender St (EB) at Granville St -->
+        <stop busStop="-5129095623" duration="20" until="290.0"/> <!-- West Pender St (EB) at Seymour Street -->
+        <stop busStop="4842227323" duration="20" until="398.0"/> <!-- West Pender St (EB) at Hamilton St -->
+    </route>
+    <route id="pt_bus_22:1" edges="1207914964#0 74366431#1 476572446#0 476572445#1 276830738#1 753820893#1 340383392#1 341691692#1 475766252#1 476311781#1 -74272800#3 -74272800#2 74272800#1 74272800#3 -475766251#0 -1257486910#1 -341691692#2 -340383392#2 340383392#1 341691692#1 475766252#1 476311781#1 -74272800#3 -74272800#2 37005661#1 341691666 305773435#0 305773435#1 305773435#2" >
+        <stop busStop="4269894834" duration="20" until="58.0"/> <!-- West Pender St (WB) at Hamilton St -->
+        <stop busStop="3789883481" duration="20" until="157.0"/> <!-- West Pender Street (WB) at Seymour St -->
+        <stop busStop="5862689186" duration="20" until="237.0"/> <!-- West Pender Street (WB) FS Howe Street -->
+        <stop busStop="-5340007413" duration="20" until="335.0"/> <!-- Burrard Station Bay 5 -->
+        <stop busStop="4164839463" duration="20" until="561.0"/> <!-- West Pender St (WB) at Granville St -->
+        <stop busStop="4230886498" duration="20" until="751.0"/> <!-- Burrard Station Bay 3 -->
+    </route>
+    <route id="pt_bus_240:0" edges="-50843616#1 -476569295#2 -476569286#2 -74245836#2 -475245604#3 -475245604#2 -24446234#4 -24446234#2 -470482469#2 -24446503#2 -507852560#1 -588427965#2 -588427962#2 -588427962#0 -507906233#2 -507337657#2 507337658#1 507337658#2 507337658#3 -74269429#2 -74269429#1 284143596#1" >
+        <stop busStop="-1001095593" duration="20" until="67.0"/> <!-- West Georgia St (EB) at Bute St -->
+        <stop busStop="-1006238910" duration="20" until="264.0"/> <!-- West Georgia St (EB) at Granville St -->
+        <stop busStop="-6844787262" duration="20" until="422.0"/> <!-- West Georgia St (EB) at Homer St -->
+    </route>
+    <route id="pt_bus_240:1" edges="-284143596#2 284143596#1 507906233#1 588427962#0 588427962#1 588427965#1 507852560#0 24446503#1 470482469#1 24446234#1 24446234#3 475245604#1 475245604#3 74245836#1 476569286#1 476569295#1 50843616#1" >
+        <stop busStop="3743637009" duration="20" until="101.0"/> <!-- West Georgia St (WB) at Homer St -->
+        <stop busStop="4175141371" duration="20" until="209.0"/> <!-- West Georgia St (WB) at Granville St -->
+        <stop busStop="995628784" duration="20" until="407.0"/> <!-- West Georgia St (WB) at Bute St -->
+    </route>
+    <route id="pt_bus_241:0" edges="-50843616#1 -476569295#2 -476569286#2 -74245836#2 -475245604#3 -475245604#2 -24446234#4 -24446234#2 -470482469#2 -24446503#2 -507852560#1 -588427965#2 -588427962#2 -588427962#0 -507906233#2 -507337657#2 507337657#1 507906233#1 588427962#0 588427962#1 588427965#1 507852560#0 24446503#1 470482469#1 24446234#1 24446234#3 475245604#1 475245604#3 -475245604#3 -475245604#2 -24446234#4 -24446234#2 39453117#1 39453117#3 39453117#4 1255913219#0 1255913219#1 1255913219#2 50098015#0 296215315#1 476313014#0 36982444#1 36982444#3 1053826278#2 1053826278#4 284143596#1" >
+        <stop busStop="-6844787262" duration="20" until="312.0"/> <!-- West Georgia St (EB) at Homer St -->
+        <stop busStop="-12138473172" duration="20" until="553.0"/> <!-- West Georgia Street (EB) at Burrard Street -->
+    </route>
+    <route id="pt_bus_246:0" edges="-284143596#2 284143596#1 507906233#1 588427962#0 588427962#1 588427965#1 507852560#0 24446503#1 470482469#1 24446234#1 24446234#3 475245604#1 475245604#3 74245836#1 476569286#1 476569295#1 50843616#1" >
+        <stop busStop="3743637009" duration="20" until="99.0"/> <!-- West Georgia St (WB) at Homer St -->
+        <stop busStop="4175141371" duration="20" until="207.0"/> <!-- West Georgia St (WB) at Granville St -->
+        <stop busStop="995628784" duration="20" until="349.0"/> <!-- West Georgia St (WB) at Bute St -->
+    </route>
+    <route id="pt_bus_246:1" edges="-50843616#1 -476569295#2 -476569286#2 -74245836#2 -475245604#3 -475245604#2 -24446234#4 -24446234#2 -470482469#2 -24446503#2 -507852560#1 -588427965#2 -588427962#2 -588427962#0 -507906233#2 -507337657#2 507337657#1 507906233#1 588427962#0 588427962#1 588427965#1 507852560#0 24446503#1 470482469#1 24446234#1 24446234#3 475245604#1 475245604#3 -475245604#3 -475245604#2 -24446234#4 -24446234#2 39453117#1 39453117#3 39453117#4 1255913219#0 1255913219#1 1255913219#2 50098015#0 296215315#1 476313014#0 36982444#1 36982444#3 1053826278#2 1053826278#4 284143596#1" >
+        <stop busStop="-1001095593" duration="20" until="82.0"/> <!-- West Georgia St (EB) at Bute St -->
+        <stop busStop="-1006238910" duration="20" until="249.0"/> <!-- West Georgia St (EB) at Granville St -->
+        <stop busStop="-6844787262" duration="20" until="368.0"/> <!-- West Georgia St (EB) at Homer St -->
+        <stop busStop="-12138473172" duration="20" until="615.0"/> <!-- West Georgia Street (EB) at Burrard Street -->
+    </route>
+    <route id="pt_bus_247:0" edges="-50843616#1 -476569295#2 -476569286#2 -74245836#2 -475245604#3 -475245604#2 -24446234#4 -24446234#2 -470482469#2 -24446503#2 -507852560#1 -588427965#2 -588427962#2 -588427962#0 -507906233#2 -507337657#2 507337658#1 507337658#2 507337658#3 -74269429#2 -74269429#1 284143596#1" >
+        <stop busStop="-6844787262" duration="20" until="382.0"/> <!-- West Georgia St (EB) at Homer St -->
+    </route>
+    <route id="pt_bus_250:0" edges="-284143596#2 284143596#1 507906233#1 588427962#0 588427962#1 588427965#1 507852560#0 24446503#1 470482469#1 24446234#1 24446234#3 475245604#1 475245604#3 74245836#1 476569286#1 476569295#1 50843616#1" >
+        <stop busStop="9684523502" duration="20" until="117.0"/> <!-- West Georgia St (WB) At Richards St -->
+        <stop busStop="3738439885" duration="20" until="200.0"/> <!-- West Georgia St (WB) at Granville St -->
+        <stop busStop="1012595218" duration="20" until="395.0"/> <!-- West Georgia St (WB) at Bute St -->
+    </route>
+    <route id="pt_bus_250:1" edges="-50843616#1 -476569295#2 -476569286#2 -74245836#2 -475245604#3 -475245604#2 -24446234#4 -24446234#2 -470482469#2 -24446503#2 -507852560#1 -588427965#2 507852561#1 507852561#2 1377233775#0 1053826278#2 1053826278#4 284143596#1" >
+        <stop busStop="-1001095593" duration="20" until="69.0"/> <!-- West Georgia St (EB) at Bute St -->
+        <stop busStop="-1006238910" duration="20" until="281.0"/> <!-- West Georgia St (EB) at Granville St -->
+    </route>
+    <route id="pt_bus_250A:0" edges="-507337657#2 507337657#1 507906233#1 588427962#0 588427962#1 588427965#1 507852560#0 24446503#1 470482469#1 24446234#1 24446234#3 475245604#1 475245604#3 74245836#1 476569286#1 476569295#1 50843616#1" >
+        <stop busStop="9684523502" duration="20" until="91.0"/> <!-- West Georgia St (WB) At Richards St -->
+        <stop busStop="3738439885" duration="20" until="176.0"/> <!-- West Georgia St (WB) at Granville St -->
+        <stop busStop="12138473173" duration="20" until="295.0"/> <!-- West Georgia Street (WB) at Burrard Street -->
+        <stop busStop="1012595218" duration="20" until="414.0"/> <!-- West Georgia St (WB) at Bute St -->
+    </route>
+    <route id="pt_bus_257:0" edges="-50843616#1 -476569295#2 -476569286#2 -74245836#2 -475245604#3 -475245604#2 -24446234#4 -24446234#2 -470482469#2 -24446503#2 -507852560#1 -588427965#2 -588427962#2 -588427962#0 -507906233#2 -507337657#2 -24446065#3 -24446065#2 74252155#1 74252155#3 74252155#4 74252155#6 74252162#0 74252162#1 1382805024#1 74252156#1 1382805027#0 507852556#1 507852556#2 507852559#1 476496799#0 476496800#1 476496800#2 476496800#3 470482418#1 1255163452#0 476052130#1 80632628#0 117158481#1 1198442077#0 -475244364#1 -74245835#2 -74245835#1 -475245604#3 -475245604#2 -24446234#4 -24446234#2 -470482469#2 -24446503#2 -507852560#1 -588427965#2 -588427962#2 -588427962#0 -507906233#2 -507337657#2 -24446065#3 -24446065#2 74252155#1 74252155#3 74252155#4 74252155#6 74252162#0 74252162#1 1382805024#1" >
+        <stop busStop="-1006238910" duration="20" until="202.0"/> <!-- West Georgia St (EB) at Granville St -->
+        <stop busStop="5581881769" duration="20" until="564.0"/> <!-- Dunsmuir St (NB) at Cambie St -->
+        <stop busStop="-12138473172" duration="20" until="896.0"/> <!-- West Georgia Street (EB) at Burrard Street -->
+    </route>
+    <route id="pt_bus_257:1" edges="74252162#0 74252162#1 1382805024#1 74252156#1 1382805027#0 507852556#1 507852556#2 507852558#1 507852558#2 1377233780#0 588427965#1 507852560#0 24446503#1 470482469#1 24446234#1 24446234#3 475245604#1 475245604#3 74245836#1 476569286#1 476569295#1 50843616#1" >
+        <stop busStop="5581881769" duration="20" until="103.0"/> <!-- Dunsmuir St (NB) at Cambie St -->
+        <stop busStop="5839176971" duration="20" until="343.0"/> <!-- West Georgia St (WB) at Seymour St -->
+    </route>
+    <route id="pt_bus_2:0" edges="-1184091183#0 -74226561#2 -74226561#1 -51528351#1 -51528351#0 -1255488015#1 -74272800#3 -74272800#2 -475244364#1 -74245835#2 -74245835#1 -475245605#1 -74366412#1 -74366412#0 -475245603#1 -74366380#3 -74366380#2 -74366380#1 -74366380#0 -475235032#3 -475235034#1 -513608213 -513608217 -74096518#9 -74096518#8 -74096518#4 -74096518#2 -476612031" >
+        <stop busStop="-5179200122" duration="20" until="37.0"/> <!-- Burrard Station Bay 4 -->
+        <stop busStop="-3763312405" duration="20" until="182.0"/> <!-- Burrard Station Bay 1 -->
+        <stop busStop="-3789883974" duration="20" until="334.0"/> <!-- Burrard St (SB) at Robson St -->
+        <stop busStop="-3789883874" duration="20" until="396.0"/> <!-- Burrard St (SB) at Smithe St -->
+        <stop busStop="-3789883501" duration="20" until="455.0"/> <!-- Burrard St (SB) at Nelson St -->
+    </route>
+    <route id="pt_bus_2:1" edges="476612031 74096518#1 74096518#3 74096518#7 74096518#9 513608217 513608213 475235034#0 475235032#2 74366380#0 74366380#1 74366380#2 74366380#3 475245603#1 74366412#0 74366412#1 475245605#1 74245835#1 74245835#2 475244364#0" >
+        <stop busStop="3745030474" duration="20" until="49.0"/> <!-- Burrard St (NB) at Comox St -->
+        <stop busStop="4231136844" duration="20" until="145.0"/> <!-- Burrard St (NB) at Robson St -->
+        <stop busStop="3789883872" duration="20" until="240.0"/> <!-- Burrard Station Bay 7 -->
+    </route>
+    <route id="pt_bus_2:2" edges="-1184091183#0 -74226561#2 -74226561#1 -51528351#1 -51528351#0 -1255488015#1 -74272800#3 -74272800#2 -475244364#1 -74245835#2 -74245835#1 -475245605#1 -74366412#1 -74366412#0 -475245603#1 -74366380#3 -74366380#2 -74366380#1 -74366380#0 -475235032#3 -475235034#1 -513608213 -513608217 -74096518#9 -74096518#8 -74096518#4 -74096518#2 -476612031" >
+        <stop busStop="-5179200122" duration="20" until="36.0"/> <!-- Burrard Station Bay 4 -->
+        <stop busStop="-3763312405" duration="20" until="191.0"/> <!-- Burrard Station Bay 1 -->
+        <stop busStop="-3789883974" duration="20" until="297.0"/> <!-- Burrard St (SB) at Robson St -->
+        <stop busStop="-3789883874" duration="20" until="382.0"/> <!-- Burrard St (SB) at Smithe St -->
+        <stop busStop="-3789883501" duration="20" until="456.0"/> <!-- Burrard St (SB) at Nelson St -->
+    </route>
+    <route id="pt_bus_2:3" edges="476612031 74096518#1 74096518#3 74096518#7 74096518#9 513608217 513608213 475235034#0 475235032#2 74366380#0 74366380#1 74366380#2 74366380#3 475245603#1 74366412#0 74366412#1 475245605#1 74245835#1 74245835#2 155893489#0 155893489#1 155893489#2 155893489#3 305773435#0 305773435#1 305773435#2 -1184091183#2 -1184091183#0 -74226561#2 -74226561#1 -706831749#1 -29110126#2 116527970#1 1255912489#0 -1255588460#1 -50162807#3 -50162807#2 -50162807#1 -50162807#0 -1255588459#2 -1255588459#1 -1153403243#0 340383391#0 -29595922#4 -29595922#2" >
+        <stop busStop="3745030474" duration="20" until="69.0"/> <!-- Burrard St (NB) at Comox St -->
+        <stop busStop="11511667038" duration="20" until="182.0"/> <!-- Burrard St (NB) at Smithe St -->
+        <stop busStop="4231136844" duration="20" until="273.0"/> <!-- Burrard St (NB) at Robson St -->
+        <stop busStop="3789883872" duration="20" until="349.0"/> <!-- Burrard Station Bay 7 -->
+        <stop busStop="-5179200122" duration="20" until="449.0"/> <!-- Burrard Station Bay 4 -->
+        <stop busStop="-3476035321" duration="20" until="679.0"/> <!-- Waterfront Station Bay 2 -->
+    </route>
+    <route id="pt_bus_44:0" edges="476612031 74096518#1 74096518#3 74096518#7 74096518#9 513608217 513608213 475235034#0 475235032#2 74366380#0 74366380#1 74366380#2 74366380#3 475245603#1 74366412#0 74366412#1 475245605#1 74245835#1 74245835#2 475244364#0 74272800#1 74272800#3 -475766251#0 -1257486910#1 -341691692#2 -340383392#2 74268725#1 74268725#2 74268725#3 340383381#1 340383381#2 29595922#1 29595922#3 1153403244 1153403243#0 1255588459#1 1255588459#2 50162807#0 50162807#1 50162807#2 50162807#3 1255588460#0 -74245831#3 -51528352#2 -74272800#3 -74272800#2 -475244364#1 -74245835#2 -74245835#1 74245835#1 74245835#2 475244364#0 74272800#1 74272800#3 51528352#1 74245831#1 -1255588460#1 -50162807#3 -50162807#2 -50162807#1 -50162807#0 -1255588459#2 -1255588459#1 -1153403243#0 340383391#0 -29595922#4 -29595922#2 29595922#1 29595922#3" >
+        <stop busStop="3745030474" duration="20" until="81.0"/> <!-- Burrard St (NB) at Comox St -->
+        <stop busStop="4231136844" duration="20" until="230.0"/> <!-- Burrard St (NB) at Robson St -->
+        <stop busStop="-4164839464" duration="20" until="397.0"/> <!-- West Pender St (EB) at Granville St -->
+        <stop busStop="3476051315" duration="20" until="487.0"/> <!-- Seymour St (NB) at West Hastings St -->
+        <stop busStop="3789883872" duration="20" until="835.0"/> <!-- Burrard Station Bay 7 -->
+    </route>
+    <route id="pt_bus_44:1" edges="1153403244 1153403243#0 1255588459#1 1255588459#2 50162807#0 50162807#1 50162807#2 50162807#3 1255588460#0 -74245831#3 -51528352#2 -74272800#3 -74272800#2 -475244364#1 -74245835#2 -74245835#1 -475245605#1 -74366412#1 -74366412#0 -475245603#1 -74366380#3 -74366380#2 -74366380#1 -74366380#0 -475235032#3 -475235034#1 -513608213 -513608217 -74096518#9 -74096518#8 -74096518#4 -74096518#2 -476612031" >
+        <stop busStop="9389598620" duration="20" until="42.0"/> <!-- Waterfront Station Bay 1 -->
+        <stop busStop="-5340007413" duration="20" until="197.0"/> <!-- Burrard Station Bay 5 -->
+        <stop busStop="-9692495007" duration="20" until="276.0"/> <!-- Burrard St (SB) At West Georgia St -->
+        <stop busStop="-3789883501" duration="20" until="429.0"/> <!-- Burrard St (SB) at Nelson St -->
+    </route>
+    <route id="pt_bus_50:0" edges="-507948141 -74366410#5 -74366410#4 -74366410#3 -475768297#1 -1197239554 -29595920#2 29595922#1 29595922#3 -110487498#1 -476572449#1 -341691652#2 -341691652#1 -476486822#4 -476486822#3 -470482470#2 -296215314#2 -50098014#4 1285844487#1 -1285844486#1 -975327012#3 -975327011#0" >
+        <stop busStop="5297290321" duration="20" until="126.0"/> <!-- Waterfront Station Bay 3 -->
+        <stop busStop="-3763056611" duration="20" until="246.0"/> <!-- Granville St (SB) at West Pender St -->
+        <stop busStop="-992235528" duration="20" until="326.0"/> <!-- Granville St (SB) at West Georgia St -->
+        <stop busStop="-5145443724" duration="20" until="385.0"/> <!-- Granville St (SB) at Robson St -->
+        <stop busStop="-994915200" duration="20" until="555.0"/> <!-- Granville St (SB) at Nelson St -->
+        <stop busStop="-994916966" duration="20" until="664.0"/> <!-- Granville St (SB) at Davie St -->
+    </route>
+    <route id="pt_bus_50:1" edges="975327011#0 975327012#1 975327013#1 -296215313#1 50098014#2 296215314#1 470482470#1 476486822#2 476486822#4 341691652#1 341691652#2 476572449#1 110487498#0 -29595922#4 -29595922#2 29595920#1 1197239554 475768297#0 74366410#2 74366410#4 74366410#5 507948141" >
+        <stop busStop="3738439095" duration="20" until="63.0"/> <!-- Granville St (NB) at Davie St -->
+        <stop busStop="4230886502" duration="20" until="281.0"/> <!-- Granville St (NB) at Smithe St -->
+        <stop busStop="1006238197" duration="20" until="362.0"/> <!-- Granville St (NB) at West Georgia St -->
+        <stop busStop="4230886302" duration="20" until="440.0"/> <!-- Granville St (NB) at Dunsmuir St -->
+        <stop busStop="4230888691" duration="20" until="518.0"/> <!-- Granville St (NB) at West Pender St -->
+        <stop busStop="4230853987" duration="20" until="667.0"/> <!-- Waterfront Station Bay 4 -->
+    </route>
+    <route id="pt_bus_N10:0" edges="36982443#1 24446046#1 24446046#2 24446046#3 24446046#4 476496800#1 476496800#2 476496800#3 470482418#1 1255163452#0 24446118#1 39453117#1 39453117#3 39453117#4 1255161405#1 1257346297#1 1257346296#0 1257346296#1 74271369#1 74271369#2 74271369#3 74271369#6 74271369#7 74271369#8 74271369#9 1353575702" >
+        <stop busStop="7996333918" duration="20" until="53.0"/> <!-- Seymour St (NB) at West Georgia St -->
+        <stop busStop="4622768695" duration="20" until="115.0"/> <!-- Seymour St (NB) at Dunsmuir St -->
+        <stop busStop="4100887898" duration="20" until="268.0"/> <!-- Howe St (SB) at West Georgia St -->
+        <stop busStop="4100889701" duration="20" until="358.0"/> <!-- Howe St (SB) at Robson St -->
+        <stop busStop="3947265000" duration="20" until="439.0"/> <!-- Howe St (SB) at Nelson St -->
+        <stop busStop="5135902322" duration="20" until="528.0"/> <!-- Howe St (SB) at Davie St -->
+    </route>
+    <route id="pt_bus_N10:1" edges="74366398#1 74366398#2 74366398#6 74366398#7 74366398#8 74366398#12 74366398#13 74366398#14 74366398#19 74366398#20 36982443#1" >
+        <stop busStop="4084222893" duration="20" until="81.0"/> <!-- Seymour St (NB) at Nelson St -->
+        <stop busStop="7996333918" duration="20" until="197.0"/> <!-- Seymour St (NB) at West Georgia St -->
+    </route>
+    <route id="pt_bus_N19:0" edges="1207914964#0 74366431#1 476572446#0 476572445#1 276830738#1 753820893#1 340383392#1 341691692#1 74226324#1 74226324#2" >
+        <stop busStop="4100887897" duration="20" until="247.0"/> <!-- Howe Street (SB) NS Dunsmuir Street (Bay 3) -->
+    </route>
+    <route id="pt_bus_N19:1" edges="74226324#1 74226324#2 24446118#1 -470482469#2 -24446503#2 24446046#1 24446046#2 24446046#3 24446046#4 476496798#2 476496797#0 -753820893#3 -276830738#3 -476572445#2 -476572446#0 687268241#0 -1207914964#0" >
+        <stop busStop="4100887897" duration="20" until="54.0"/> <!-- Howe Street (SB) NS Dunsmuir Street (Bay 3) -->
+    </route>
+    <route id="pt_bus_N22:0" edges="476612031 74096518#1 74096518#3 74096518#7 74096518#9 513608217 513608213 475235034#0 475235032#2 74366380#0 74366380#1 74366380#2 74366380#3 475245603#1 74366412#0 74366412#1 475245605#1 -475245604#3 -475245604#2 -24446234#4 -24446234#2 -470482469#2" >
+        <stop busStop="-12138473172" duration="20" until="229.0"/> <!-- West Georgia Street (EB) at Burrard Street -->
+    </route>
+    <route id="pt_bus_N24:0" edges="-50843616#1 -476569295#2 -476569286#2 -74245836#2 -475245604#3 -475245604#2 476504050#1 476504050#2 476504050#3 1285846333#0 476052129#1 456661225#0 456661225#1 456661225#2 456661225#3 -1257486910#1 74226324#1 74226324#2" >
+        <stop busStop="-12138473172" duration="20" until="146.0"/> <!-- West Georgia Street (EB) at Burrard Street -->
+    </route>
+    <route id="pt_bus_N9:0" edges="36982443#1 24446046#1 24446046#2 24446046#3 24446046#4 476496800#1 476496800#2 476496800#3 470482418#1 1255163452#0 24446118#1 39453117#1 39453117#3 39453117#4 1255161405#1 1257346297#1 1257346296#0 1257346296#1 74271369#1 74271369#2 74271369#3 74271369#6 74271369#7 74271369#8 74271369#9 1353575702" >
+        <stop busStop="7996333918" duration="20" until="54.0"/> <!-- Seymour St (NB) at West Georgia St -->
+        <stop busStop="4622768695" duration="20" until="125.0"/> <!-- Seymour St (NB) at Dunsmuir St -->
+        <stop busStop="4100887898" duration="20" until="269.0"/> <!-- Howe St (SB) at West Georgia St -->
+        <stop busStop="4100889701" duration="20" until="355.0"/> <!-- Howe St (SB) at Robson St -->
+        <stop busStop="3947265000" duration="20" until="469.0"/> <!-- Howe St (SB) at Nelson St -->
+        <stop busStop="5135902322" duration="20" until="559.0"/> <!-- Howe St (SB) at Davie St -->
+    </route>
+    <route id="pt_bus_R5:0" color="green" edges="74272800#1 74272800#3 51528352#1 476507078#1 74245829#0 476507077#2 1255287353#0 1255287354#1 1255287355 74589713#0 1257711667#1 110487496#0 22871087#1 74269431#2 74366435#1 70202020" >
+        <stop busStop="3789851068" duration="20" until="188.0"/> <!-- West Hastings St (EB) at Granville St -->
+    </route>
+    <route id="pt_bus_R5:1" color="green" edges="-70202020 -74366435#2 -74269431#4 -22871087#3 -110487496#1 -1257711667#1 -74589713#0 -1255287355 -1255287354#2 -1255287353#1 -476507077#3 -74245829#1 -476507078#2 -51528352#2 -74272800#3 -74272800#2 74272800#1 74272800#3" >
+        <stop busStop="-3739451261" duration="20" until="130.0"/> <!-- West Hastings St (WB) at Granville St -->
+        <stop busStop="5131257030" duration="20" until="386.0"/> <!-- Burrard Station Bay 6 -->
+    </route>
+    <route id="pt_trolleybus_10:0" edges="29595920#1 1197239554 475768297#0 23487135#1 1418012980#1 1356246660#0 74269432#1 1257711576 593886646#0 753820893#1 340383392#1 341691692#1 74226324#1 74226324#2 24446118#1 39453117#1 39453117#3 39453117#4 1255161405#1 1257346297#1 1257346296#0 1257346296#1 74271369#1 74271369#2 74271369#3 74271369#6 74271369#7 74271369#8 74271369#9 1353575702" >
+        <stop busStop="4164839463" duration="20" until="223.0"/> <!-- West Pender St (WB) at Granville St -->
+    </route>
+    <route id="pt_trolleybus_10:1" edges="-476486822#4 -476486822#3 -470482470#2 -296215314#2 -50098014#4 1285844487#1 -1285844486#1 -975327012#3 -975327011#0" >
+        <stop busStop="-3763056611" duration="20" until="48.0"/> <!-- Granville St (SB) at West Pender St -->
+        <stop busStop="-992235528" duration="20" until="151.0"/> <!-- Granville St (SB) at West Georgia St -->
+        <stop busStop="-5145443724" duration="20" until="209.0"/> <!-- Granville St (SB) at Robson St -->
+        <stop busStop="-994915200" duration="20" until="410.0"/> <!-- Granville St (SB) at Nelson St -->
+        <stop busStop="-994916966" duration="20" until="523.0"/> <!-- Granville St (SB) at Davie St -->
+    </route>
+    <route id="pt_trolleybus_10:2" edges="975327011#0 975327012#1 975327013#1 -296215313#1 50098014#2 296215314#1 470482470#1 476486822#2 476486822#4 341691652#1 341691652#2 476572449#1 110487498#0" >
+        <stop busStop="3738439095" duration="20" until="71.0"/> <!-- Granville St (NB) at Davie St -->
+        <stop busStop="4230886502" duration="20" until="209.0"/> <!-- Granville St (NB) at Smithe St -->
+        <stop busStop="1006238197" duration="20" until="324.0"/> <!-- Granville St (NB) at West Georgia St -->
+        <stop busStop="4230886302" duration="20" until="425.0"/> <!-- Granville St (NB) at Dunsmuir St -->
+        <stop busStop="4230888691" duration="20" until="494.0"/> <!-- Granville St (NB) at West Pender St -->
+        <stop busStop="4230886303" duration="20" until="552.0"/> <!-- Granville St (NB) at West Hastings St -->
+    </route>
+    <route id="pt_trolleybus_14:0" edges="975327011#0 975327012#1 975327013#1 -296215313#1 50098014#2 296215314#1 470482470#1 476486822#2 476486822#4 341691652#1 341691652#2 1257711667#1 110487496#0 22871087#1 74269431#2 74366435#1 70202020" >
+        <stop busStop="3738439095" duration="20" until="64.0"/> <!-- Granville St (NB) at Davie St -->
+        <stop busStop="4230886502" duration="20" until="213.0"/> <!-- Granville St (NB) at Smithe St -->
+        <stop busStop="1006238197" duration="20" until="305.0"/> <!-- Granville St (NB) at West Georgia St -->
+        <stop busStop="4230886302" duration="20" until="422.0"/> <!-- Granville St (NB) at Dunsmuir St -->
+        <stop busStop="4230888691" duration="20" until="538.0"/> <!-- Granville St (NB) at West Pender St -->
+        <stop busStop="4368127197" duration="20" until="637.0"/> <!-- West Hastings St (EB) at Seymour St -->
+        <stop busStop="4314691889" duration="20" until="766.0"/> <!-- West Hastings St (EB) at Homer St -->
+    </route>
+    <route id="pt_trolleybus_14:1" edges="-70202020 -74366435#2 -74269431#4 -22871087#3 -110487496#1 -1257711667#1 -341691652#2 -341691652#1 -476486822#4 -476486822#3 -470482470#2 -296215314#2 -50098014#4 1285844487#1 -1285844486#1 -975327012#3 -975327011#0" >
+        <stop busStop="-3725343232" duration="20" until="44.0"/> <!-- West Hastings St (WB) at Hamilton St -->
+        <stop busStop="-5131257123" duration="20" until="133.0"/> <!-- West Hastings St (WB) at Richards St -->
+        <stop busStop="-3763056611" duration="20" until="227.0"/> <!-- Granville St (SB) at West Pender St -->
+        <stop busStop="-992235528" duration="20" until="335.0"/> <!-- Granville St (SB) at West Georgia St -->
+        <stop busStop="-5145443724" duration="20" until="394.0"/> <!-- Granville St (SB) at Robson St -->
+        <stop busStop="-994915200" duration="20" until="542.0"/> <!-- Granville St (SB) at Nelson St -->
+        <stop busStop="-994916966" duration="20" until="673.0"/> <!-- Granville St (SB) at Davie St -->
+    </route>
+    <route id="pt_trolleybus_16:0" edges="975327011#0 975327012#1 975327013#1 -296215313#1 50098014#2 296215314#1 470482470#1 476486822#2 476486822#4 341691652#1 341691652#2 1257711667#1 110487496#0 22871087#1 74269431#2 74366435#1 70202020" >
+        <stop busStop="3738439095" duration="20" until="85.0"/> <!-- Granville St (NB) at Davie St -->
+        <stop busStop="4230886502" duration="20" until="241.0"/> <!-- Granville St (NB) at Smithe St -->
+        <stop busStop="1006238197" duration="20" until="339.0"/> <!-- Granville St (NB) at West Georgia St -->
+        <stop busStop="4230886302" duration="20" until="452.0"/> <!-- Granville St (NB) at Dunsmuir St -->
+        <stop busStop="4230888691" duration="20" until="522.0"/> <!-- Granville St (NB) at West Pender St -->
+        <stop busStop="4368127197" duration="20" until="666.0"/> <!-- West Hastings St (EB) at Seymour St -->
+        <stop busStop="4314691889" duration="20" until="748.0"/> <!-- West Hastings St (EB) at Homer St -->
+    </route>
+    <route id="pt_trolleybus_16:1" edges="-70202020 -74366435#2 -74269431#4 -22871087#3 -110487496#1 -1257711667#1 -341691652#2 -341691652#1 -476486822#4 -476486822#3 -470482470#2 -296215314#2 -50098014#4 1285844487#1 -1285844486#1 -975327012#3 -975327011#0" >
+        <stop busStop="-3725343232" duration="20" until="44.0"/> <!-- West Hastings St (WB) at Hamilton St -->
+        <stop busStop="-5131257123" duration="20" until="188.0"/> <!-- West Hastings St (WB) at Richards St -->
+        <stop busStop="-3763056611" duration="20" until="307.0"/> <!-- Granville St (SB) at West Pender St -->
+        <stop busStop="-992235528" duration="20" until="409.0"/> <!-- Granville St (SB) at West Georgia St -->
+        <stop busStop="-5145443724" duration="20" until="466.0"/> <!-- Granville St (SB) at Robson St -->
+        <stop busStop="-994915200" duration="20" until="620.0"/> <!-- Granville St (SB) at Nelson St -->
+        <stop busStop="-994916966" duration="20" until="741.0"/> <!-- Granville St (SB) at Davie St -->
+    </route>
+    <route id="pt_trolleybus_17:0" edges="-74269429#2 -74269429#1 -284143594#3 -284143592#5 -284143592#3 -284143592#2 1204951493#1 1205086613#1 554806092#1 1380353242#0 1380353242#1 74268723#1" >
+        <stop busStop="-5201120622" duration="20" until="42.0"/> <!-- Robson St (WB) at Hamilton St -->
+    </route>
+    <route id="pt_trolleybus_17:1" edges="-74269429#2 -74269429#1 -1053826278#4 -1053826278#3 -36982444#4 -36982444#2 -476313014#1 -296215315#2 296215314#1 470482470#1 476486822#2 476486822#4 -340383392#2 -753820893#3 -276830738#3 -476572445#2 -476572446#0 687268241#0 -74252160#10 -74252160#8 -74252160#7 -74252160#5 -74252160#4 -74252160#3 -74252160#1 -74252160#0 -74252155#6 -74252155#5 -74252155#3 -74252155#2 -826630871#3 -826630871#1 -1285856432#1 -1285856432#0 -74268720#2 -74268720#0 -1285856433#2 74268723#1" >
+        <stop busStop="-5201120622" duration="20" until="41.0"/> <!-- Robson St (WB) at Hamilton St -->
+        <stop busStop="-3786840508" duration="20" until="139.0"/> <!-- Robson Street (WB) at Granville Street -->
+        <stop busStop="1006238197" duration="20" until="199.0"/> <!-- Granville St (NB) at West Georgia St -->
+        <stop busStop="4230886302" duration="20" until="302.0"/> <!-- Granville St (NB) at Dunsmuir St -->
+        <stop busStop="4230888691" duration="20" until="393.0"/> <!-- Granville St (NB) at West Pender St -->
+        <stop busStop="-5129095623" duration="20" until="514.0"/> <!-- West Pender St (EB) at Seymour Street -->
+        <stop busStop="4842227323" duration="20" until="636.0"/> <!-- West Pender St (EB) at Hamilton St -->
+        <stop busStop="-3940288957" duration="20" until="775.0"/> <!-- Cambie St (SB) at West Georgia St -->
+        <stop busStop="-2985506428" duration="20" until="855.0"/> <!-- Cambie St (SB) at Robson St -->
+        <stop busStop="4844898127" duration="20" until="969.0"/> <!-- Nelson St (EB) at Cambie St -->
+    </route>
+    <route id="pt_trolleybus_17:2" edges="456392469#1 1285856430#2 1285856431#0 115939918#1 115939918#2 435300253#0 -1204977746#0 -507325065#5 -507325065#3 -507325065#2 -507325065#1 -74269429#2 -74269429#1 -1053826278#4 -1053826278#3" >
+        <stop busStop="6468342578" duration="20" until="43.0"/> <!-- Smithe St (WB) at Expo Blvd -->
+        <stop busStop="-5201120622" duration="20" until="236.0"/> <!-- Robson St (WB) at Hamilton St -->
+    </route>
+    <route id="pt_trolleybus_19:0" edges="-74214596#1 -51528351#1 -51528351#0 -1255488015#1 -475766251#0 -1257486910#1 -341691692#2 -340383392#2 -753820893#3 -276830738#3 -476572445#2 -476572446#0 687268241#0 -1207914964#0" >
+        <stop busStop="-4230853126" duration="20" until="43.0"/> <!-- West Pender St (EB) at Bute St -->
+        <stop busStop="-4230855444" duration="20" until="129.0"/> <!-- West Pender St (EB) at Thurlow St -->
+        <stop busStop="-3789883969" duration="20" until="217.0"/> <!-- West Pender St (EB) at Burrard St -->
+        <stop busStop="-4164839464" duration="20" until="319.0"/> <!-- West Pender St (EB) at Granville St -->
+        <stop busStop="-5129095623" duration="20" until="405.0"/> <!-- West Pender St (EB) at Seymour Street -->
+        <stop busStop="4842227323" duration="20" until="539.0"/> <!-- West Pender St (EB) at Hamilton St -->
+    </route>
+    <route id="pt_trolleybus_19:1" edges="1207914964#0 74366431#1 476572446#0 476572445#1 276830738#1 753820893#1 340383392#1 341691692#1 475766252#1 476311781#1 1255488015#1 51528351#0 51528351#1 74214596#1" >
+        <stop busStop="4269894834" duration="20" until="131.0"/> <!-- West Pender St (WB) at Hamilton St -->
+        <stop busStop="3789883481" duration="20" until="227.0"/> <!-- West Pender Street (WB) at Seymour St -->
+        <stop busStop="5862689186" duration="20" until="336.0"/> <!-- West Pender Street (WB) FS Howe Street -->
+        <stop busStop="5179189722" duration="20" until="501.0"/> <!-- West Pender St (WB) at Thurlow St -->
+    </route>
+    <route id="pt_trolleybus_20:0" edges="507852561#1 507852561#2 1377233775#0 1053826278#2 1053826278#4 284143596#1 117158484#1 507852557#1 595194293#0 74366446#1 476572447#0 74366435#1 70202020" >
+    </route>
+    <route id="pt_trolleybus_20:1" edges="-70202020 -74366435#2 -74269431#4 74269432#1 1257711576 593886646#0 74366402#1 74366402#2 595194292#0 595194292#1 507852558#1 507852558#2 1377233780#0 507852561#1 507852561#2 1377233775#0" >
+        <stop busStop="-3725343232" duration="20" until="76.0"/> <!-- West Hastings St (WB) at Hamilton St -->
+        <stop busStop="4183935589" duration="20" until="179.0"/> <!-- Richards St (SB) at West Hastings St -->
+        <stop busStop="4957764222" duration="20" until="314.0"/> <!-- Richards St (SB) at Dunsmuir St -->
+    </route>
+    <route id="pt_trolleybus_20:2" edges="507852558#2 1377233780#0 507852561#1 507852561#2 1377233775#0 -36982444#4 -36982444#2 -476313014#1 -296215315#2 296215314#1 470482470#1 476486822#2 476486822#4 341691652#1 341691652#2 1257711667#1 110487496#0 22871087#1 74269431#2 74366435#1 70202020" >
+        <stop busStop="4957764222" duration="20" until="40.0"/> <!-- Richards St (SB) at Dunsmuir St -->
+        <stop busStop="-3786840508" duration="20" until="173.0"/> <!-- Robson Street (WB) at Granville Street -->
+        <stop busStop="1006238197" duration="20" until="235.0"/> <!-- Granville St (NB) at West Georgia St -->
+        <stop busStop="4230886302" duration="20" until="296.0"/> <!-- Granville St (NB) at Dunsmuir St -->
+        <stop busStop="4230888691" duration="20" until="392.0"/> <!-- Granville St (NB) at West Pender St -->
+        <stop busStop="4368127197" duration="20" until="485.0"/> <!-- West Hastings St (EB) at Seymour St -->
+        <stop busStop="4314691889" duration="20" until="588.0"/> <!-- West Hastings St (EB) at Homer St -->
+    </route>
+    <route id="pt_trolleybus_3:0" edges="-70202020 -74366435#2 -74269431#4 -22871087#3 340383381#1 340383381#2 29595920#1 1197239554" >
+        <stop busStop="-3725343232" duration="20" until="46.0"/> <!-- West Hastings St (WB) at Hamilton St -->
+        <stop busStop="-5131257123" duration="20" until="111.0"/> <!-- West Hastings St (WB) at Richards St -->
+        <stop busStop="4230853987" duration="20" until="190.0"/> <!-- Waterfront Station Bay 4 -->
+    </route>
+    <route id="pt_trolleybus_3:1" edges="340383381#1 340383381#2 29595920#1 1197239554 475768297#0 74366410#2 74366410#4 74366410#5 507948141" >
+        <stop busStop="4230853987" duration="20" until="73.0"/> <!-- Waterfront Station Bay 4 -->
+    </route>
+    <route id="pt_trolleybus_4:0" edges="1207914964#0 74366431#1 476572446#0 476572445#1 276830738#1 753820893#1 340383392#1 -476486822#4 -476486822#3 -470482470#2 -296215314#2 -50098014#4 1285844487#1 -1285844486#1 -975327012#3 -975327011#0" >
+        <stop busStop="4269894834" duration="20" until="109.0"/> <!-- West Pender St (WB) at Hamilton St -->
+        <stop busStop="-3763056611" duration="20" until="274.0"/> <!-- Granville St (SB) at West Pender St -->
+        <stop busStop="-992235528" duration="20" until="372.0"/> <!-- Granville St (SB) at West Georgia St -->
+        <stop busStop="-5145443724" duration="20" until="431.0"/> <!-- Granville St (SB) at Robson St -->
+        <stop busStop="-994915200" duration="20" until="562.0"/> <!-- Granville St (SB) at Nelson St -->
+        <stop busStop="-994916966" duration="20" until="679.0"/> <!-- Granville St (SB) at Davie St -->
+    </route>
+    <route id="pt_trolleybus_4:1" edges="975327011#0 975327012#1 975327013#1 -296215313#1 50098014#2 296215314#1 470482470#1 476486822#2 476486822#4 341691652#1 341691652#2 476572449#1 110487498#0 -29595922#4 -29595922#2 29595920#1 1197239554 475768297#0 74366410#2 74366410#4 74366410#5 507948141" >
+        <stop busStop="3738439095" duration="20" until="61.0"/> <!-- Granville St (NB) at Davie St -->
+        <stop busStop="4230886502" duration="20" until="207.0"/> <!-- Granville St (NB) at Smithe St -->
+        <stop busStop="1006238197" duration="20" until="294.0"/> <!-- Granville St (NB) at West Georgia St -->
+        <stop busStop="4230886302" duration="20" until="411.0"/> <!-- Granville St (NB) at Dunsmuir St -->
+        <stop busStop="4230888691" duration="20" until="514.0"/> <!-- Granville St (NB) at West Pender St -->
+        <stop busStop="4230886303" duration="20" until="573.0"/> <!-- Granville St (NB) at West Hastings St -->
+        <stop busStop="4230853987" duration="20" until="648.0"/> <!-- Waterfront Station Bay 4 -->
+    </route>
+    <route id="pt_trolleybus_5:0" edges="1445703632#0 1445703632#1 1445703632#2 1445703632#3 74366383#1 475245603#1 74366412#0 74366412#1 475245605#1 74245835#1 74245835#2 475244364#0 74272800#1 74272800#3 -475766251#0 -1257486910#1 -341691692#2 -340383392#2 -753820893#3 -276830738#3 -476572445#2 -476572446#0 687268241#0 -74252160#10 -74252160#8 -74252160#7 -74252160#5 -74252160#4 -74252160#3 -74252160#1 -74252160#0 74252162#0 74252162#1 1382805024#1 74252156#1 1382805027#0 507852556#1 507852556#2 507852559#1 476496799#0 476496800#1 476496800#2 476496800#3 470482418#1 1255163452#0 476052130#1 80632628#0 117158481#1 1198442077#0 37005661#1 341691666 305773435#0 305773435#1 305773435#2 74272799#1 74272799#2 500682720#1 500682721#1 500682721#2 500682721#3 74366383#1 -74366383#1 -50097998#0 -1445703632#2 -1445703632#1 -1445703632#0 1445703632#0 1445703632#1 1445703632#2 1445703632#3 74366383#1 475245603#1 74366412#0 74366412#1 475245605#1 74245835#1 74245835#2 475244364#0 74272800#1 74272800#3 -475766251#0 -1257486910#1 -341691692#2 -340383392#2 -753820893#3 -276830738#3 -476572445#2 -476572446#0 687268241#0 -74252160#10 -74252160#8 -74252160#7 -74252160#5 -74252160#4 -74252160#3 -74252160#1 -74252160#0" >
+        <stop busStop="4231136844" duration="20" until="154.0"/> <!-- Burrard St (NB) at Robson St -->
+        <stop busStop="3789883872" duration="20" until="249.0"/> <!-- Burrard Station Bay 7 -->
+        <stop busStop="-3789883969" duration="20" until="343.0"/> <!-- West Pender St (EB) at Burrard St -->
+        <stop busStop="-4164839464" duration="20" until="434.0"/> <!-- West Pender St (EB) at Granville St -->
+        <stop busStop="-5129095623" duration="20" until="506.0"/> <!-- West Pender St (EB) at Seymour Street -->
+        <stop busStop="4842227323" duration="20" until="622.0"/> <!-- West Pender St (EB) at Hamilton St -->
+        <stop busStop="-4225958021" duration="20" until="728.0"/> <!-- Cambie St (SB) at Dunsmuir St -->
+        <stop busStop="12096148150" duration="20" until="1243.0"/> <!-- Robson St (EB) at Thurlow St -->
+        <stop busStop="13086158736" duration="20" until="1412.0"/> <!-- Robson St (EB) at Bute St -->
+    </route>
+    <route id="pt_trolleybus_5:1" edges="74252155#1 74252155#3 74252155#4 74252155#6 74252160#0 74252160#1 74252160#2 74252160#4 74252160#5 74252160#7 74252160#8 74252160#9 74366431#1 476572446#0 476572445#1 276830738#1 753820893#1 340383392#1 341691692#1 475766252#1 476311781#1 -74272800#3 -74272800#2 -475244364#1 -74245835#2 -74245835#1 -475245605#1 -74366412#1 -74366412#0 -475245603#1 -74366383#1 -50097998#0 -1445703632#2 -1445703632#1 -1445703632#0" >
+        <stop busStop="5341879526" duration="20" until="55.0"/> <!-- Cambie St (NB) at Dunsmuir St -->
+        <stop busStop="4269894834" duration="20" until="227.0"/> <!-- West Pender St (WB) at Hamilton St -->
+        <stop busStop="3789883481" duration="20" until="331.0"/> <!-- West Pender Street (WB) at Seymour St -->
+        <stop busStop="5862689186" duration="20" until="432.0"/> <!-- West Pender Street (WB) FS Howe Street -->
+        <stop busStop="-3763312405" duration="20" until="632.0"/> <!-- Burrard Station Bay 1 -->
+        <stop busStop="-4634183190" duration="20" until="730.0"/> <!-- Robson St (WB) at Burrard St -->
+    </route>
+    <route id="pt_trolleybus_6:0" edges="440764070#2 440764070#4 1294688836#1 1294688836#3 36982445#1 36982445#3 543458022#2" >
+        <stop busStop="3743637096" duration="20" until="39.0"/> <!-- Davie St (EB) at Howe St -->
+        <stop busStop="6663029944" duration="20" until="121.0"/> <!-- Davie St (EB) at Granville St -->
+        <stop busStop="5109874222" duration="20" until="196.0"/> <!-- Davie St (EB) at Richards St -->
+    </route>
+    <route id="pt_trolleybus_6:1" edges="-74252155#6 -74252155#5 -74252155#3 -74252155#2 -826630871#3 -826630871#1 -1285856432#1 -1285856432#0 -74268720#2 -74268720#0 -1285856433#2 4518138#2" >
+        <stop busStop="-4225958021@1145439" duration="20" until="31.0"/> <!-- Cambie St (SB) at Dunsmuir St -->
+        <stop busStop="-3940288957" duration="20" until="99.0"/> <!-- Cambie St (SB) at West Georgia St -->
+        <stop busStop="-2985506428" duration="20" until="169.0"/> <!-- Cambie St (SB) at Robson St -->
+        <stop busStop="5808314453" duration="20" until="285.0"/> <!-- Cambie St (SB) at Nelson St -->
+    </route>
+    <route id="pt_trolleybus_7:0" edges="1207914964#0 74366431#1 476572446#0 476572445#1 276830738#1 753820893#1 340383392#1 341691692#1 74226324#1 74226324#2 24446118#1 39453117#1 39453117#3 39453117#4 1255161405#1 1257346297#1 1257346296#0 1257346296#1 74271369#1 74271369#2 74271369#3 74271369#6 74271369#7 74271369#8 74271369#9 1353575702" >
+        <stop busStop="4164839463" duration="20" until="160.0"/> <!-- West Pender St (WB) at Granville St -->
+    </route>
+    <route id="pt_trolleybus_7:1" edges="975327011#0 975327012#1 975327013#1 -296215313#1 50098014#2 296215314#1 470482470#1 476486822#2 476486822#4 341691652#1 341691652#2 476572449#1 110487498#0 -29595922#4 -29595922#2 29595920#1 1197239554 475768297#0 74366410#2 74366410#4 74366410#5 507948141" >
+        <stop busStop="3738439095" duration="20" until="67.0"/> <!-- Granville St (NB) at Davie St -->
+        <stop busStop="4230886502" duration="20" until="266.0"/> <!-- Granville St (NB) at Smithe St -->
+        <stop busStop="1006238197" duration="20" until="332.0"/> <!-- Granville St (NB) at West Georgia St -->
+        <stop busStop="4230886302" duration="20" until="406.0"/> <!-- Granville St (NB) at Dunsmuir St -->
+        <stop busStop="4230888691" duration="20" until="466.0"/> <!-- Granville St (NB) at West Pender St -->
+        <stop busStop="4230853987" duration="20" until="638.0"/> <!-- Waterfront Station Bay 4 -->
+    </route>
+    <route id="pt_trolleybus_7:2" edges="1207914964#0 74366431#1 476572446#0 476572445#1 276830738#1 753820893#1 340383392#1 -476486822#4 -476486822#3 -470482470#2 -296215314#2 -50098014#4 1285844487#1 -1285844486#1 -975327012#3 -975327011#0" >
+        <stop busStop="4269894834" duration="20" until="111.0"/> <!-- West Pender St (WB) at Hamilton St -->
+        <stop busStop="4164839463" duration="20" until="288.0"/> <!-- West Pender St (WB) at Granville St -->
+        <stop busStop="-3763056611" duration="20" until="342.0"/> <!-- Granville St (SB) at West Pender St -->
+        <stop busStop="-992235528" duration="20" until="433.0"/> <!-- Granville St (SB) at West Georgia St -->
+        <stop busStop="-5145443724" duration="20" until="491.0"/> <!-- Granville St (SB) at Robson St -->
+        <stop busStop="-994915200" duration="20" until="651.0"/> <!-- Granville St (SB) at Nelson St -->
+        <stop busStop="-994916966" duration="20" until="760.0"/> <!-- Granville St (SB) at Davie St -->
+    </route>
+    <route id="pt_trolleybus_8:0" edges="29595920#1 1197239554 475768297#0 74366410#2 74366410#4 74366410#5 507948141" >
+        <stop busStop="4230853987" duration="20" until="42.0"/> <!-- Waterfront Station Bay 4 -->
+    </route>
+    <route id="pt_trolleybus_8:1" edges="-70202020 -74366435#2 -74269431#4 -22871087#3 340383381#1 340383381#2 29595920#1 1197239554" >
+        <stop busStop="-3725343232" duration="20" until="46.0"/> <!-- West Hastings St (WB) at Hamilton St -->
+        <stop busStop="-5131257123" duration="20" until="153.0"/> <!-- West Hastings St (WB) at Richards St -->
+        <stop busStop="4230853987" duration="20" until="218.0"/> <!-- Waterfront Station Bay 4 -->
+    </route>
+    <flow id="pt_bus_240:0" type="pt_bus" route="pt_bus_240:0" begin="3.0" end="3603.0" period="600" line="240:0" >
+        <param key="name" value="240 Downtown"/>
+        <param key="completeness" value="0.07"/>
+    </flow>
+    <flow id="pt_trolleybus_4:0" type="pt_trolleybus" route="pt_trolleybus_4:0" begin="93.0" end="3693.0" period="600" line="4:0" >
+        <param key="name" value="4 UBC"/>
+        <param key="completeness" value="0.12"/>
+    </flow>
+    <flow id="pt_trolleybus_7:2" type="pt_trolleybus" route="pt_trolleybus_7:2" begin="128.0" end="3728.0" period="600" line="7:2" >
+        <param key="name" value="7 Dunbar"/>
+        <param key="completeness" value="0.11"/>
+    </flow>
+    <flow id="pt_bus_2:1" type="pt_bus" route="pt_bus_2:1" begin="102.0" end="3702.0" period="600" line="2:1" >
+        <param key="name" value="2 Downtown"/>
+        <param key="completeness" value="0.15"/>
+    </flow>
+    <flow id="pt_bus_22:0" type="pt_bus" route="pt_bus_22:0" begin="119.0" end="3719.0" period="600" line="22:0" >
+        <param key="name" value="22 Knight"/>
+        <param key="completeness" value="0.09"/>
+    </flow>
+    <flow id="pt_bus_R5:1" type="pt_bus" route="pt_bus_R5:1" begin="125.0" end="3725.0" period="600" line="R5:1" >
+        <param key="name" value="R5 Burrard Station"/>
+        <param key="completeness" value="0.12"/>
+    </flow>
+    <flow id="pt_trolleybus_6:0" type="pt_trolleybus" route="pt_trolleybus_6:0" begin="131.0" end="3731.0" period="600" line="6:0" >
+        <param key="name" value="6 Downtown"/>
+        <param key="completeness" value="0.20"/>
+    </flow>
+    <flow id="pt_trolleybus_5:0" type="pt_trolleybus" route="pt_trolleybus_5:0" begin="132.0" end="3732.0" period="600" line="5:0" >
+        <param key="name" value="5 Downtown"/>
+        <param key="completeness" value="0.56"/>
+    </flow>
+    <flow id="pt_trolleybus_5:1" type="pt_trolleybus" route="pt_trolleybus_5:1" begin="133.0" end="3733.0" period="600" line="5:1" >
+        <param key="name" value="5 Robson"/>
+        <param key="completeness" value="0.38"/>
+    </flow>
+    <flow id="pt_trolleybus_6:1" type="pt_trolleybus" route="pt_trolleybus_6:1" begin="136.0" end="3736.0" period="600" line="6:1" >
+        <param key="name" value="6 Davie"/>
+        <param key="completeness" value="0.27"/>
+    </flow>
+    <flow id="pt_trolleybus_8:0" type="pt_trolleybus" route="pt_trolleybus_8:0" begin="139.0" end="3739.0" period="600" line="8:0" >
+        <param key="name" value="8 Fraser"/>
+        <param key="completeness" value="0.02"/>
+    </flow>
+    <flow id="pt_bus_240:1" type="pt_bus" route="pt_bus_240:1" begin="15.0" end="3615.0" period="600" line="240:1" >
+        <param key="name" value="240 Lynn Valley"/>
+        <param key="completeness" value="0.09"/>
+    </flow>
+    <flow id="pt_trolleybus_8:1" type="pt_trolleybus" route="pt_trolleybus_8:1" begin="160.0" end="3760.0" period="600" line="8:1" >
+        <param key="name" value="8 Waterfront Station"/>
+        <param key="completeness" value="0.07"/>
+    </flow>
+    <flow id="pt_trolleybus_10:1" type="pt_trolleybus" route="pt_trolleybus_10:1" begin="165.0" end="3765.0" period="600" line="10:1" >
+        <param key="name" value="10 Granville-Marine Dr Station"/>
+        <param key="completeness" value="0.13"/>
+    </flow>
+    <flow id="pt_trolleybus_10:2" type="pt_trolleybus" route="pt_trolleybus_10:2" begin="166.0" end="3766.0" period="600" line="10:2" >
+        <param key="name" value="10 Waterfront Station"/>
+        <param key="completeness" value="0.17"/>
+    </flow>
+    <flow id="pt_trolleybus_16:0" type="pt_trolleybus" route="pt_trolleybus_16:0" begin="189.0" end="3789.0" period="600" line="16:0" >
+        <param key="name" value="16 29th Avenue Station"/>
+        <param key="completeness" value="0.09"/>
+    </flow>
+    <flow id="pt_trolleybus_16:1" type="pt_trolleybus" route="pt_trolleybus_16:1" begin="201.0" end="3801.0" period="600" line="16:1" >
+        <param key="name" value="16 Arbutus"/>
+        <param key="completeness" value="0.09"/>
+    </flow>
+    <flow id="pt_trolleybus_20:1" type="pt_trolleybus" route="pt_trolleybus_20:1" begin="207.0" end="3807.0" period="600" line="20:1" >
+        <param key="name" value="20 Downtown"/>
+        <param key="completeness" value="0.06"/>
+    </flow>
+    <flow id="pt_trolleybus_20:2" type="pt_trolleybus" route="pt_trolleybus_20:2" begin="218.0" end="3818.0" period="600" line="20:2" >
+        <param key="name" value="20 Victoria"/>
+        <param key="completeness" value="0.13"/>
+    </flow>
+    <flow id="pt_bus_N19:0" type="pt_bus" route="pt_bus_N19:0" begin="222.0" end="3822.0" period="600" line="N19:0" >
+        <param key="name" value="N19 Downtown"/>
+        <param key="completeness" value="0.08"/>
+    </flow>
+    <flow id="pt_bus_N19:1" type="pt_bus" route="pt_bus_N19:1" begin="227.0" end="3827.0" period="600" line="N19:1" >
+        <param key="name" value="N19 Surrey Central Station"/>
+        <param key="completeness" value="0.01"/>
+    </flow>
+    <flow id="pt_bus_N10:0" type="pt_bus" route="pt_bus_N10:0" begin="227.0" end="3827.0" period="600" line="N10:0" >
+        <param key="name" value="N10 Richmond-Brighouse Station"/>
+        <param key="completeness" value="0.10"/>
+    </flow>
+    <flow id="pt_trolleybus_10:0" type="pt_trolleybus" route="pt_trolleybus_10:0" begin="15.0" end="3615.0" period="600" line="10:0" >
+        <param key="name" value="10 Granville-Marine Dr Station (via Howe)"/>
+        <param key="completeness" value="0.25"/>
+    </flow>
+    <flow id="pt_bus_N10:1" type="pt_bus" route="pt_bus_N10:1" begin="253.0" end="3853.0" period="600" line="N10:1" >
+        <param key="name" value="N10 Downtown"/>
+        <param key="completeness" value="0.04"/>
+    </flow>
+    <flow id="pt_bus_N9:0" type="pt_bus" route="pt_bus_N9:0" begin="303.0" end="3903.0" period="1800" line="N9:0" >
+        <param key="name" value="N9 Coquitlam Central Station"/>
+        <param key="completeness" value="0.10"/>
+    </flow>
+    <flow id="pt_trolleybus_14:0" type="pt_trolleybus" route="pt_trolleybus_14:0" begin="321.0" end="3921.0" period="600" line="14:0" >
+        <param key="name" value="14 Hastings"/>
+        <param key="completeness" value="0.11"/>
+    </flow>
+    <flow id="pt_trolleybus_14:1" type="pt_trolleybus" route="pt_trolleybus_14:1" begin="326.0" end="3926.0" period="600" line="14:1" >
+        <param key="name" value="14 UBC"/>
+        <param key="completeness" value="0.12"/>
+    </flow>
+    <flow id="pt_bus_44:0" type="pt_bus" route="pt_bus_44:0" begin="331.0" end="3931.0" period="600" line="44:0" >
+        <param key="name" value="44 Downtown"/>
+        <param key="completeness" value="0.36"/>
+    </flow>
+    <flow id="pt_bus_44:1" type="pt_bus" route="pt_bus_44:1" begin="346.0" end="3946.0" period="600" line="44:1" >
+        <param key="name" value="44 UBC"/>
+        <param key="completeness" value="0.29"/>
+    </flow>
+    <flow id="pt_bus_N24:0" type="pt_bus" route="pt_bus_N24:0" begin="353.0" end="3953.0" period="1800" line="N24:0" >
+        <param key="name" value="N24 Downtown"/>
+        <param key="completeness" value="1.00"/>
+    </flow>
+    <flow id="pt_bus_N22:0" type="pt_bus" route="pt_bus_N22:0" begin="371.0" end="3971.0" period="600" line="N22:0" >
+        <param key="name" value="N22 Downtown"/>
+        <param key="completeness" value="1.00"/>
+    </flow>
+    <flow id="pt_bus_250A:0" type="pt_bus" route="pt_bus_250A:0" begin="365.0" end="3965.0" period="600" line="250A:0" >
+        <param key="name" value="250A Dundarve"/>
+        <param key="completeness" value="0.17"/>
+    </flow>
+    <flow id="pt_bus_246:0" type="pt_bus" route="pt_bus_246:0" begin="371.0" end="3971.0" period="600" line="246:0" >
+        <param key="name" value="246 Highland"/>
+        <param key="completeness" value="0.10"/>
+    </flow>
+    <flow id="pt_trolleybus_7:0" type="pt_trolleybus" route="pt_trolleybus_7:0" begin="17.0" end="3617.0" period="600" line="7:0" >
+        <param key="name" value="7 Dunbar (via Howe)"/>
+        <param key="completeness" value="1.00"/>
+    </flow>
+    <flow id="pt_bus_22:1" type="pt_bus" route="pt_bus_22:1" begin="381.0" end="3981.0" period="600" line="22:1" >
+        <param key="name" value="22 Downtown"/>
+        <param key="completeness" value="0.13"/>
+    </flow>
+    <flow id="pt_trolleybus_19:1" type="pt_trolleybus" route="pt_trolleybus_19:1" begin="386.0" end="3986.0" period="600" line="19:1" >
+        <param key="name" value="19 Stanley Park"/>
+        <param key="completeness" value="0.08"/>
+    </flow>
+    <flow id="pt_trolleybus_4:1" type="pt_trolleybus" route="pt_trolleybus_4:1" begin="383.0" end="3983.0" period="600" line="4:1" >
+        <param key="name" value="4 Powell"/>
+        <param key="completeness" value="0.14"/>
+    </flow>
+    <flow id="pt_bus_50:0" type="pt_bus" route="pt_bus_50:0" begin="388.0" end="3988.0" period="600" line="50:0" >
+        <param key="name" value="50 S False Creek via Granville Isl"/>
+        <param key="completeness" value="0.30"/>
+    </flow>
+    <flow id="pt_trolleybus_17:1" type="pt_trolleybus" route="pt_trolleybus_17:1" begin="389.0" end="3989.0" period="600" line="17:1" >
+        <param key="name" value="17 Oak"/>
+        <param key="completeness" value="0.27"/>
+    </flow>
+    <flow id="pt_trolleybus_17:2" type="pt_trolleybus" route="pt_trolleybus_17:2" begin="406.0" end="4006.0" period="600" line="17:2" >
+        <param key="name" value="17 Downtown"/>
+        <param key="completeness" value="0.06"/>
+    </flow>
+    <flow id="pt_bus_50:1" type="pt_bus" route="pt_bus_50:1" begin="418.0" end="4018.0" period="600" line="50:1" >
+        <param key="name" value="50 Waterfront Station"/>
+        <param key="completeness" value="0.32"/>
+    </flow>
+    <flow id="pt_bus_250:0" type="pt_bus" route="pt_bus_250:0" begin="422.0" end="4022.0" period="600" line="250:0" >
+        <param key="name" value="250 Horseshoe Bay"/>
+        <param key="completeness" value="0.05"/>
+    </flow>
+    <flow id="pt_bus_250:1" type="pt_bus" route="pt_bus_250:1" begin="437.0" end="4037.0" period="600" line="250:1" >
+        <param key="name" value="250 Vancouver"/>
+        <param key="completeness" value="0.04"/>
+    </flow>
+    <flow id="pt_bus_257:0" type="pt_bus" route="pt_bus_257:0" begin="443.0" end="4043.0" period="600" line="257:0" >
+        <param key="name" value="257 Vancouver"/>
+        <param key="completeness" value="0.33"/>
+    </flow>
+    <flow id="pt_trolleybus_20:0" type="pt_trolleybus" route="pt_trolleybus_20:0" begin="27.0" end="3627.0" period="600" line="20:0" >
+        <param key="name" value="20 Victoria (via Seymour)"/>
+        <param key="completeness" value="0.00"/>
+    </flow>
+    <flow id="pt_bus_257:1" type="pt_bus" route="pt_bus_257:1" begin="441.0" end="4041.0" period="600" line="257:1" >
+        <param key="name" value="257 Horseshoe Bay Express"/>
+        <param key="completeness" value="0.25"/>
+    </flow>
+    <flow id="pt_bus_210:0" type="pt_bus" route="pt_bus_210:0" begin="483.0" end="4083.0" period="600" line="210:0" >
+        <param key="name" value="210 Upper Lynn Valley"/>
+        <param key="completeness" value="0.16"/>
+    </flow>
+    <flow id="pt_bus_210:1" type="pt_bus" route="pt_bus_210:1" begin="484.0" end="4084.0" period="600" line="210:1" >
+        <param key="name" value="210 Burrard Station"/>
+        <param key="completeness" value="0.12"/>
+    </flow>
+    <flow id="pt_bus_247:0" type="pt_bus" route="pt_bus_247:0" begin="485.0" end="4085.0" period="600" line="247:0" >
+        <param key="name" value="247 Downtown"/>
+        <param key="completeness" value="0.25"/>
+    </flow>
+    <flow id="pt_bus_211:0" type="pt_bus" route="pt_bus_211:0" begin="501.0" end="4101.0" period="600" line="211:0" >
+        <param key="name" value="211 Burrard Station"/>
+        <param key="completeness" value="0.10"/>
+    </flow>
+    <flow id="pt_bus_211:1" type="pt_bus" route="pt_bus_211:1" begin="508.0" end="4108.0" period="600" line="211:1" >
+        <param key="name" value="211 Seymour"/>
+        <param key="completeness" value="0.15"/>
+    </flow>
+    <flow id="pt_bus_241:0" type="pt_bus" route="pt_bus_241:0" begin="517.0" end="4117.0" period="600" line="241:0" >
+        <param key="name" value="241 Downtown"/>
+        <param key="completeness" value="0.29"/>
+    </flow>
+    <flow id="pt_bus_2:2" type="pt_bus" route="pt_bus_2:2" begin="535.0" end="4135.0" period="600" line="2:2" >
+        <param key="name" value="2 Macdonald"/>
+        <param key="completeness" value="0.16"/>
+    </flow>
+    <flow id="pt_bus_2:3" type="pt_bus" route="pt_bus_2:3" begin="561.0" end="4161.0" period="600" line="2:3" >
+        <param key="name" value="2 Downtown"/>
+        <param key="completeness" value="0.20"/>
+    </flow>
+    <flow id="pt_trolleybus_3:0" type="pt_trolleybus" route="pt_trolleybus_3:0" begin="574.0" end="4174.0" period="600" line="3:0" >
+        <param key="name" value="3 Downtown to Waterfront Station"/>
+        <param key="completeness" value="0.08"/>
+    </flow>
+    <flow id="pt_trolleybus_17:0" type="pt_trolleybus" route="pt_trolleybus_17:0" begin="47.0" end="3647.0" period="600" line="17:0" >
+        <param key="name" value="17 Oak (via Seymour)"/>
+        <param key="completeness" value="0.50"/>
+    </flow>
+    <flow id="pt_trolleybus_3:1" type="pt_trolleybus" route="pt_trolleybus_3:1" begin="583.0" end="4183.0" period="600" line="3:1" >
+        <param key="name" value="3 Main-Marine Drive Station"/>
+        <param key="completeness" value="0.03"/>
+    </flow>
+    <flow id="pt_bus_246:1" type="pt_bus" route="pt_bus_246:1" begin="593.0" end="4193.0" period="600" line="246:1" >
+        <param key="name" value="246 Downtown"/>
+        <param key="completeness" value="0.12"/>
+    </flow>
+    <flow id="pt_bus_2:0" type="pt_bus" route="pt_bus_2:0" begin="52.0" end="3652.0" period="600" line="2:0" >
+        <param key="name" value="2 Macdonald - 16th"/>
+        <param key="completeness" value="0.23"/>
+    </flow>
+    <flow id="pt_trolleybus_7:1" type="pt_trolleybus" route="pt_trolleybus_7:1" begin="55.0" end="3655.0" period="600" line="7:1" >
+        <param key="name" value="7 Nanaimo Station"/>
+        <param key="completeness" value="0.10"/>
+    </flow>
+    <flow id="pt_trolleybus_19:0" type="pt_trolleybus" route="pt_trolleybus_19:0" begin="58.0" end="3658.0" period="600" line="19:0" >
+        <param key="name" value="19 Metrotown Station"/>
+        <param key="completeness" value="0.10"/>
+    </flow>
+    <flow id="pt_bus_R5:0" type="pt_bus" route="pt_bus_R5:0" begin="60.0" end="3660.0" period="600" line="R5:0" >
+        <param key="name" value="R5 SFU"/>
+        <param key="completeness" value="0.06"/>
+    </flow>
+</routes>
