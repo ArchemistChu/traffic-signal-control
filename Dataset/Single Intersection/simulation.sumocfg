@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+               xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <!-- 网络文件 -->
+        <net-file value="intersection.net.xml"/>
+        
+        <!-- 路由文件 -->
+        <route-files value="routes.rou.xml"/>
+        
+        <!-- 附加文件（信号灯、检测器等） -->
+        <additional-files value="traffic_lights.add.xml"/>
+    </input>
+
+    <output>
+        <!-- 仿真输出统计 -->
+        <summary-output value="summary.xml"/>
+        
+        <!-- 车辆轨迹输出 -->
+        <fcd-output value="fcd_output.xml"/>
+        <fcd-output.geo value="false"/>
+        
+        <!-- 信号灯状态输出 -->
+        <!-- <tls-states-output value="tls_states.xml"/> -->
+        
+        <!-- 队列长度统计 -->
+        <queue-output value="queue.xml"/>
+        
+        <!-- 排放数据输出 -->
+        <emission-output value="emissions.xml"/>
+    </output>
+
+    <time>
+        <!-- 仿真开始时间 -->
+        <begin value="0"/>
+        
+        <!-- 仿真结束时间 (7200秒 = 2小时) -->
+        <end value="7200"/>
+        
+        <!-- 时间步长 (1秒) -->
+        <step-length value="1.0"/>
+    </time>
+
+    <processing>
+        <!-- 路由处理选项 -->
+        <ignore-route-errors value="true"/>
+        <!-- <unsorted-input value="false"/> -->
+        
+        <!-- 车辆碰撞检测 -->
+        <collision.action value="warn"/>
+        <collision.check-junctions value="true"/>
+        
+        <!-- 左转等待时间 -->
+        <!-- <junction-model.left-turn-penalty value="5.0"/> -->
+        
+        <!-- 信号灯处理 -->
+        <tls.all-off value="false"/>
+        <tls.actuated.jam-threshold value="20"/>
+    </processing>
+
+    <routing>
+        <!-- 路由算法选项 -->
+        <device.rerouting.probability value="0.1"/>
+        <device.rerouting.period value="300"/>
+        <device.rerouting.pre-period value="60"/>
+    </routing>
+
+    <report>
+        <!-- 输出详细程度 -->
+        <verbose value="true"/>
+        
+        <!-- 不显示警告 -->
+        <no-warnings value="false"/>
+        
+        <!-- 日志文件 -->
+        <log value="sumo.log"/>
+        
+        <!-- 运行时统计 -->
+        <duration-log.statistics value="true"/>
+        
+        <!-- 步骤日志间隔 -->
+        <step-log.period value="600"/>
+    </report>
+
+    <emissions>
+        <!-- 启用排放模型 -->
+        <device.emissions.probability value="1.0"/>
+        
+        <!-- 排放类别 -->
+        <device.emissions.explicit value="CO,CO2,HC,NOx,PMx,fuel"/>
+        
+        <!-- 使用HBEFA3排放模型 -->
+        <!-- <emission-model value="HBEFA3"/> -->
+    </emissions>
+
+    <random>
+        <!-- 随机种子 (用于重现性) -->
+        <seed value="12345"/>
+    </random>
+
+    <gui-only>
+        <!-- GUI特定设置 -->
+        <gui-settings-file value="view.settings.xml"/>
+        <start value="true"/>
+        <quit-on-end value="false"/>
+        <delay value="1000"/>  <!-- 仿真延迟1000ms (1秒)，大幅放慢速度 -->
+    </gui-only>
+
+</configuration> 

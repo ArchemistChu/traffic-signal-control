@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<edges>
+    <!-- Incoming edges: 3 lanes (0=right, 1=straight, 2=left) similar to Single Intersection -->
+    <edge id="TL1_east_in" from="TL1_east_end" to="TL1" priority="1" numLanes="3"/>
+    <edge id="TL1_west_in" from="TL1_west_end" to="TL1" priority="1" numLanes="3"/>
+    <edge id="TL1_north_in" from="TL1_north_end" to="TL1" priority="1" numLanes="3"/>
+    <edge id="TL1_south_in" from="TL1_south_end" to="TL1" priority="1" numLanes="3"/>
+
+    <edge id="TL1_east_out" from="TL1" to="TL1_east_end" priority="1" numLanes="2"/>
+    <edge id="TL1_west_out" from="TL1" to="TL1_west_end" priority="1" numLanes="2"/>
+    <edge id="TL1_north_out" from="TL1" to="TL1_north_end" priority="1" numLanes="2"/>
+    <edge id="TL1_south_out" from="TL1" to="TL1_south_end" priority="1" numLanes="2"/>
+
+    <edge id="TL2_east_in" from="TL2_east_end" to="TL2" priority="1" numLanes="3"/>
+    <edge id="TL2_west_in" from="TL2_west_end" to="TL2" priority="1" numLanes="3"/>
+    <edge id="TL2_north_in" from="TL2_north_end" to="TL2" priority="1" numLanes="3"/>
+    <edge id="TL2_south_in" from="TL2_south_end" to="TL2" priority="1" numLanes="3"/>
+
+    <edge id="TL2_east_out" from="TL2" to="TL2_east_end" priority="1" numLanes="2"/>
+    <edge id="TL2_west_out" from="TL2" to="TL2_west_end" priority="1" numLanes="2"/>
+    <edge id="TL2_north_out" from="TL2" to="TL2_north_end" priority="1" numLanes="2"/>
+    <edge id="TL2_south_out" from="TL2" to="TL2_south_end" priority="1" numLanes="2"/>
+
+    <edge id="TL3_east_in" from="TL3_east_end" to="TL3" priority="1" numLanes="3"/>
+    <edge id="TL3_west_in" from="TL3_west_end" to="TL3" priority="1" numLanes="3"/>
+    <edge id="TL3_north_in" from="TL3_north_end" to="TL3" priority="1" numLanes="3"/>
+    <edge id="TL3_south_in" from="TL3_south_end" to="TL3" priority="1" numLanes="3"/>
+
+    <edge id="TL3_east_out" from="TL3" to="TL3_east_end" priority="1" numLanes="2"/>
+    <edge id="TL3_west_out" from="TL3" to="TL3_west_end" priority="1" numLanes="2"/>
+    <edge id="TL3_north_out" from="TL3" to="TL3_north_end" priority="1" numLanes="2"/>
+    <edge id="TL3_south_out" from="TL3" to="TL3_south_end" priority="1" numLanes="2"/>
+
+    <edge id="TL4_east_in" from="TL4_east_end" to="TL4" priority="1" numLanes="3"/>
+    <edge id="TL4_west_in" from="TL4_west_end" to="TL4" priority="1" numLanes="3"/>
+    <edge id="TL4_north_in" from="TL4_north_end" to="TL4" priority="1" numLanes="3"/>
+    <edge id="TL4_south_in" from="TL4_south_end" to="TL4" priority="1" numLanes="3"/>
+
+    <edge id="TL4_east_out" from="TL4" to="TL4_east_end" priority="1" numLanes="2"/>
+    <edge id="TL4_west_out" from="TL4" to="TL4_west_end" priority="1" numLanes="2"/>
+    <edge id="TL4_north_out" from="TL4" to="TL4_north_end" priority="1" numLanes="2"/>
+    <edge id="TL4_south_out" from="TL4" to="TL4_south_end" priority="1" numLanes="2"/>
+
+    <!-- Connector roads between intersections: use 2 lanes to better match main approaches -->
+    <edge id="TL1_to_TL2" from="TL1" to="TL2" priority="1" numLanes="2"/>
+    <edge id="TL2_to_TL1" from="TL2" to="TL1" priority="1" numLanes="2"/>
+    <edge id="TL3_to_TL4" from="TL3" to="TL4" priority="1" numLanes="2"/>
+    <edge id="TL4_to_TL3" from="TL4" to="TL3" priority="1" numLanes="2"/>
+    <edge id="TL1_to_TL3" from="TL1" to="TL3" priority="1" numLanes="2"/>
+    <edge id="TL3_to_TL1" from="TL3" to="TL1" priority="1" numLanes="2"/>
+    <edge id="TL2_to_TL4" from="TL2" to="TL4" priority="1" numLanes="2"/>
+    <edge id="TL4_to_TL2" from="TL4" to="TL2" priority="1" numLanes="2"/>
+</edges>

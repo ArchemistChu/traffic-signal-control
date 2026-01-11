@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nodes>
+    <node id="TL1" x="-200" y="-200" type="traffic_light"/>
+    <node id="TL2" x="200" y="-200" type="traffic_light"/>
+    <node id="TL3" x="-200" y="200" type="traffic_light"/>
+    <node id="TL4" x="200" y="200" type="traffic_light"/>
+    <node id="TL1_east_end" x="0" y="-200" type="dead_end"/>
+    <node id="TL1_west_end" x="-400" y="-200" type="dead_end"/>
+    <node id="TL1_north_end" x="-200" y="-400" type="dead_end"/>
+    <node id="TL1_south_end" x="-200" y="0" type="dead_end"/>
+    <node id="TL2_east_end" x="400" y="-200" type="dead_end"/>
+    <node id="TL2_west_end" x="0" y="-200" type="dead_end"/>
+    <node id="TL2_north_end" x="200" y="-400" type="dead_end"/>
+    <node id="TL2_south_end" x="200" y="0" type="dead_end"/>
+    <node id="TL3_east_end" x="0" y="200" type="dead_end"/>
+    <node id="TL3_west_end" x="-400" y="200" type="dead_end"/>
+    <node id="TL3_north_end" x="-200" y="0" type="dead_end"/>
+    <node id="TL3_south_end" x="-200" y="400" type="dead_end"/>
+    <node id="TL4_east_end" x="400" y="200" type="dead_end"/>
+    <node id="TL4_west_end" x="0" y="200" type="dead_end"/>
+    <node id="TL4_north_end" x="200" y="0" type="dead_end"/>
+    <node id="TL4_south_end" x="200" y="400" type="dead_end"/>
+</nodes>

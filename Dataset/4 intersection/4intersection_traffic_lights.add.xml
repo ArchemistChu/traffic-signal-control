@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<additional xmlns="http://sumo.dlr.de/xsd/additional_file.xsd">
+    <tlLogic id="TL1" type="static" programID="0" offset="0">
+        <phase state="GGGgrrrrGGGgrrrr" duration="30"/>
+        <phase state="yyyyrrrryyyyrrrr" duration="5"/>
+        <phase state="rrrrGGGgrrrrGGGg" duration="30"/>
+        <phase state="rrrryyyyrrrryyyy" duration="5"/>
+    </tlLogic>
+    <tlLogic id="TL2" type="static" programID="0" offset="0">
+        <phase state="GGGgrrrrGGGgrrrr" duration="30"/>
+        <phase state="yyyyrrrryyyyrrrr" duration="5"/>
+        <phase state="rrrrGGGgrrrrGGGg" duration="30"/>
+        <phase state="rrrryyyyrrrryyyy" duration="5"/>
+    </tlLogic>
+    <tlLogic id="TL3" type="static" programID="0" offset="0">
+        <phase state="GGGgrrrrGGGgrrrr" duration="30"/>
+        <phase state="yyyyrrrryyyyrrrr" duration="5"/>
+        <phase state="rrrrGGGgrrrrGGGg" duration="30"/>
+        <phase state="rrrryyyyrrrryyyy" duration="5"/>
+    </tlLogic>
+    <tlLogic id="TL4" type="static" programID="0" offset="0">
+        <phase state="GGGgrrrrGGGgrrrr" duration="30"/>
+        <phase state="yyyyrrrryyyyrrrr" duration="5"/>
+        <phase state="rrrrGGGgrrrrGGGg" duration="30"/>
+        <phase state="rrrryyyyrrrryyyy" duration="5"/>
+    </tlLogic>
+</additional>

@@ -1,0 +1,24 @@
+[Date], 2026
+
+Department of Computer Science
+City University of Hong Kong
+83 Tat Chee Avenue, Kowloon
+Hong Kong
+
+Dear Esteemed Admission Committee,
+
+I am writing to express my strong support for Zhu Zhitao's application to the Master's program at your institution. I have known Zhu since June 2025, serving as his supervisor for his Final Year Project, "RL-based Traffic Control System". It is my firm belief that he will be an outstanding addition to your esteemed program.
+
+Throughout his time in his final year project, Zhu has demonstrated exceptional technical aptitude and intellectual maturity. His project required a sophisticated grasp of Reinforcement Learning, and he consistently impressed me with his ability to translate complex theoretical concepts into practical solutions. When faced with technical obstacles, Zhu did not merely rely on standard solutions; he approached problems methodically and independently, often proposing creative optimizations. His analytical skills and ability to navigate research challenges suggest he is well-equipped for the rigors of graduate-level computer science.
+
+Moreover, Zhu is an exceptional communicator, both written and oral. Throughout our collaboration, he presented his research progress with clarity and precision, both in our one-on-one meetings and in his written documentation. He is highly receptive to feedback, engaging constructively with suggestions, and he consistently seeks feedback from peers and instructors to further improve and refine his skills. This proficiency makes him an excellent team player in academia, a teamwork-oriented environment.
+
+I am confident that Zhu is prepared to excel in your Master's program and will be a valuable addition to your academic community. With his strong foundation in computer science, Zhu is well-prepared to take on the challenges of your rigorous program and make the most of the opportunities it offers.
+
+Sincerely,
+
+
+Minjing Dong, Assistant Professor
+Department of Computer Science
+City University of Hong Kong
+minjdong@cityu.edu.hk

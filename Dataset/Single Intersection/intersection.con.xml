@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<connections xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+             xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/connections_file.xsd">
+    
+    <!-- 东向进入的连接 (3 lanes: 0=right, 1=straight, 2=left) -->
+    <!-- 东向右转到南 -->
+    <connection from="east_in" to="south_out" fromLane="0" toLane="0"/>
+    <!-- 东向直行到西 -->
+    <connection from="east_in" to="west_out" fromLane="1" toLane="0"/>
+    <connection from="east_in" to="west_out" fromLane="1" toLane="1"/>
+    <!-- 东向左转到北 -->
+    <connection from="east_in" to="north_out" fromLane="2" toLane="1"/>
+    
+    <!-- 西向进入的连接 -->
+    <!-- 西向右转到北 -->
+    <connection from="west_in" to="north_out" fromLane="0" toLane="0"/>
+    <!-- 西向直行到东 -->
+    <connection from="west_in" to="east_out" fromLane="1" toLane="0"/>
+    <connection from="west_in" to="east_out" fromLane="1" toLane="1"/>
+    <!-- 西向左转到南 -->
+    <connection from="west_in" to="south_out" fromLane="2" toLane="1"/>
+    
+    <!-- 北向进入的连接 -->
+    <!-- 北向右转到西 -->
+    <connection from="north_in" to="west_out" fromLane="0" toLane="0"/>
+    <!-- 北向直行到南 -->
+    <connection from="north_in" to="south_out" fromLane="1" toLane="0"/>
+    <connection from="north_in" to="south_out" fromLane="1" toLane="1"/>
+    <!-- 北向左转到东 -->
+    <connection from="north_in" to="east_out" fromLane="2" toLane="1"/>
+    
+    <!-- 南向进入的连接 -->
+    <!-- 南向右转到东 -->
+    <connection from="south_in" to="east_out" fromLane="0" toLane="0"/>
+    <!-- 南向直行到北 -->
+    <connection from="south_in" to="north_out" fromLane="1" toLane="0"/>
+    <connection from="south_in" to="north_out" fromLane="1" toLane="1"/>
+    <!-- 南向左转到西 -->
+    <connection from="south_in" to="west_out" fromLane="2" toLane="1"/>
+    
+    <!-- 人行道连接 -->
+    <connection from="east_in_sidewalk" to="east_out_sidewalk" fromLane="0" toLane="0"/>
+    <connection from="west_in_sidewalk" to="west_out_sidewalk" fromLane="0" toLane="0"/>
+    <connection from="north_in_sidewalk" to="north_out_sidewalk" fromLane="0" toLane="0"/>
+    <connection from="south_in_sidewalk" to="south_out_sidewalk" fromLane="0" toLane="0"/>
+    
+</connections> 

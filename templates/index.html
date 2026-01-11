@@ -1,0 +1,533 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Dataset Selection -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Select Dataset</h5>
+                <select id="datasetSelect" class="form-select">
+                    <option value="custom" {% if current_dataset == 'custom' %}selected{% endif %}>Custom Single Intersection</option>
+                    <option value="4intersection" {% if current_dataset == '4intersection' %}selected{% endif %}>4-Intersection Grid Network</option>
+                    <option value="tapas_cologne" {% if current_dataset == 'tapas_cologne' %}selected{% endif %}>TAPASCologne (Real Cologne Network)</option>
+                </select>
+                <div class="alert alert-info mt-3 mb-0">
+                    <strong>📍 Current Dataset:</strong> {{ dataset_description }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">🎛️ Control Panel</h5>
+                
+                <!-- Strategy Selection -->
+                <div class="mb-3">
+                    <label class="form-label">Select Control Strategy</label>
+                    <select id="strategySelect" class="form-select">
+                        {% for key, value in strategy_options.items() %}
+                        <option value="{{ key }}" {% if selected_strategy == key %}selected{% endif %}>{{ value }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Strategy Description -->
+                <div id="strategyDescription" class="alert alert-info">
+                    {% if selected_strategy == 'FIXED_TIME' %}
+                    ⏰ Switch signals at fixed intervals<br>Suitable for regular traffic patterns
+                    {% elif selected_strategy == 'ADAPTIVE' %}
+                    🧠 Adjust intelligently based on vehicle counts<br>Suitable for varying traffic flows
+                    {% elif selected_strategy == 'MAX_PRESSURE' %}
+                    ⚖️ Serve the phase with the highest queued demand (MaxPressure)<br>Strong queue-based baseline for comparison
+                    {% else %}
+                    🤖 AI learns optimal control strategies<br>Suitable for complex traffic conditions
+                    {% endif %}
+                </div>
+                
+                <!-- Start Button -->
+                <div id="controlButtons">
+                    {% if not simulation_running %}
+                    <button id="startBtn" class="btn btn-primary btn-lg w-100" onclick="startSimulation()">
+                        🚀 Start Simulation
+                    </button>
+                    {% else %}
+                    <div class="status-running">
+                        <p><strong>⏳ Simulation is running, please wait...</strong></p>
+                        <p>🖥️ SUMO GUI window is open; you can watch the traffic simulation</p>
+                        <p>⏱️ The simulation will run for 2 minutes; please wait</p>
+                        <div class="mt-2">
+                            <button class="btn btn-warning me-2" onclick="cancelSimulation()">⏹️ Cancel Simulation</button>
+                            <button class="btn btn-secondary" onclick="resetSimulation()">🔄 Reset State</button>
+                        </div>
+                        <p class="text-muted small mt-2">If the simulation appears stuck, click "Reset State" to clear the session</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Simulation Status -->
+<div id="simulationStatus" class="card">
+    <div class="card-body">
+        <h5 class="card-title">📊 Simulation Status</h5>
+        <div id="statusContent">
+            {% if simulation_running %}
+            <div class="status-running">
+                <p><strong>🔄 Simulation is running...</strong></p>
+                <p>🖥️ SUMO GUI window is open; you can watch the traffic simulation</p>
+                <p>⏱️ The simulation will run for 2 minutes; please wait</p>
+                <div class="mt-2">
+                    <button class="btn btn-warning btn-sm me-2" onclick="cancelSimulation()">⏹️ Cancel</button>
+                    <button class="btn btn-secondary btn-sm" onclick="resetSimulation()">🔄 Reset State</button>
+                </div>
+            </div>
+            {% elif simulation_results %}
+            <div class="status-completed">
+                <p><strong>✅ Simulation completed!</strong></p>
+            </div>
+            {% else %}
+            <div class="alert alert-light">
+                <h6>🎯 Steps</h6>
+                <ol>
+                    <li><strong>Select a strategy</strong> - choose from the dropdown above</li>
+                    <li><strong>Start simulation</strong> - click the "Start Simulation" button</li>
+                    <li><strong>Watch</strong> - SUMO GUI window will open automatically</li>
+                    <li><strong>View results</strong> - data will appear here after completion</li>
+                </ol>
+                <h6 class="mt-3">💡 Tips</h6>
+                <ul>
+                    <li>During the simulation you will see vehicles moving through an intersection</li>
+                    <li>Observe how signals change under different strategies</li>
+                    <li>Results include waiting time, speed, emissions, and more</li>
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Results Section -->
+{% if simulation_results %}
+<div id="resultsSection">
+    <!-- History Management -->
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-9">
+                    <h5 class="card-title">🗂️ Simulation history management</h5>
+                    {% if all_strategy_results %}
+                    <div class="alert alert-success">
+                        <strong>✅ Number of executed strategies:</strong> {{ all_strategy_results|length }}
+                        <ul class="mt-2 mb-0">
+                            {% for key, data in all_strategy_results.items() %}
+                            <li>{{ data.display_name }} (Run at: {{ data.timestamp }})</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        📝 No strategies have been executed yet
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-danger w-100" onclick="clearHistory()">🗑️ Clear history</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Current Results -->
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">📈 Current simulation results</h5>
+            
+            <!-- Key Metrics -->
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <div class="metric-label">Average waiting time</div>
+                        <div class="metric-value">{{ "%.1f"|format(simulation_results.avg_waiting_time|default(0)) }}s</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                        <div class="metric-label">Average speed</div>
+                        <div class="metric-value">{{ "%.1f"|format(simulation_results.avg_speed|default(0)) }}m/s</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                        <div class="metric-label">Throughput per hour</div>
+                        <div class="metric-value">{{ "%.0f"|format(simulation_results.throughput_per_hour|default(0)) }}</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                        <div class="metric-label">CO₂ emissions</div>
+                        <div class="metric-value">{{ "%.1f"|format(simulation_results.total_co2|default(0)) }}mg</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Detailed Metrics Table -->
+            <h6 class="mt-4">📋 Detailed metrics</h6>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Average waiting time (s)</td>
+                            <td>{{ "%.2f"|format(simulation_results.avg_waiting_time|default(0)) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Maximum waiting time (s)</td>
+                            <td>{{ "%.2f"|format(simulation_results.max_waiting_time|default(0)) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Average speed (m/s)</td>
+                            <td>{{ "%.2f"|format(simulation_results.avg_speed|default(0)) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Maximum speed (m/s)</td>
+                            <td>{{ "%.2f"|format(simulation_results.max_speed|default(0)) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Vehicle throughput</td>
+                            <td>{{ "%.0f"|format(simulation_results.throughput|default(0)) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Throughput per hour</td>
+                            <td>{{ "%.0f"|format(simulation_results.throughput_per_hour|default(0)) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Congestion index</td>
+                            <td>{{ "%.3f"|format(simulation_results.congestion_index|default(0)) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Total CO₂ emissions (mg)</td>
+                            <td>{{ "%.2f"|format(simulation_results.total_co2|default(0)) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Fuel consumption (ml)</td>
+                            <td>{{ "%.2f"|format(simulation_results.total_fuel|default(0)) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Average lane occupancy</td>
+                            <td>{{ "%.3f"|format(simulation_results.avg_lane_occupancy|default(0)) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Strategy Comparison -->
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">📊 Real strategy comparison</h5>
+            {% if all_strategy_results|length < 2 %}
+            <div class="alert alert-info">
+                <strong>📝 More data needed for comparison</strong><br>
+                Currently only {{ all_strategy_results|length }} strategy result(s). To see comparisons:<br>
+                1. Select another strategy (Fixed-time, Adaptive, DQN)<br>
+                2. Click "Start Simulation" to run<br>
+                3. Once multiple results are collected, charts will appear here
+            </div>
+            {% else %}
+            <div class="alert alert-success">
+                <strong>✅ Real data comparison</strong> - based on {{ all_strategy_results|length }} executed strategies
+            </div>
+            
+            <div id="comparisonCharts" class="row">
+                <div class="col-md-6">
+                    <div id="waitingTimeChart" class="comparison-chart"></div>
+                </div>
+                <div class="col-md-6">
+                    <div id="throughputChart" class="comparison-chart"></div>
+                </div>
+            </div>
+            
+            <div id="comparisonTable" class="mt-4"></div>
+            
+            <div id="performanceAnalysis" class="row mt-4"></div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Conclusion -->
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">🎯 Conclusion</h5>
+            {% if simulation_results.avg_waiting_time|default(0) < 30 %}
+            <div class="alert alert-success">
+                ✅ Excellent! Short waiting time and smooth traffic flow
+            </div>
+            {% elif simulation_results.avg_waiting_time|default(0) < 45 %}
+            <div class="alert alert-warning">
+                🔶 Good! Moderate waiting time, room for improvement
+            </div>
+            {% else %}
+            <div class="alert alert-danger">
+                🔻 Needs improvement! Long waiting time, consider optimizing strategy
+            </div>
+            {% endif %}
+            
+            <div class="alert alert-info mt-3">
+                <strong>📁 Detailed data</strong><br>
+                🗂️ Full simulation data saved to the `output/` directory, including:<br>
+                - Vehicle trajectory data (CSV)<br>
+                - Traffic light state data (CSV)<br>
+                - Performance metrics report (JSON)
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+let checkInterval = null;
+
+// Update strategy description when selection changes
+$('#strategySelect').on('change', function() {
+    const strategy = $(this).val();
+    const descriptions = {
+        'FIXED_TIME': '⏰ Switch signals at fixed intervals<br>Suitable for regular traffic patterns',
+        'ADAPTIVE': '🧠 Adjust intelligently based on vehicle counts<br>Suitable for varying traffic flows',
+        'MAX_PRESSURE': '⚖️ Serve the phase with the highest queued demand (MaxPressure)<br>Strong queue-based baseline for comparison',
+        'DQN': '🤖 AI learns optimal control strategies<br>Suitable for complex traffic conditions'
+    };
+    $('#strategyDescription').html(descriptions[strategy] || '');
+});
+
+// Dataset selection
+$('#datasetSelect').on('change', function() {
+    const dataset = $(this).val();
+    $.ajax({
+        url: '/set_dataset',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({dataset: dataset}),
+        timeout: 5000,
+        success: function(response) {
+            if (response.status === 'success') {
+                // Small delay before reload
+                setTimeout(function() {
+                    window.location.href = window.location.pathname;
+                }, 300);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error setting dataset:', error);
+            alert('Failed to change dataset: ' + error);
+        }
+    });
+});
+
+// Start simulation
+function startSimulation() {
+    const strategy = $('#strategySelect').val();
+    
+    // Show loading state
+    $('#startBtn').prop('disabled', true).text('Starting...');
+    
+    $.ajax({
+        url: '/start_simulation',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({strategy: strategy}),
+        timeout: 10000,
+        success: function(response) {
+            if (response.status === 'success') {
+                // Small delay before reload to ensure session is saved
+                setTimeout(function() {
+                    window.location.href = window.location.pathname;
+                }, 300);
+            } else {
+                alert('Error: ' + response.message);
+                $('#startBtn').prop('disabled', false).text('🚀 Start Simulation');
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error starting simulation:', error);
+            alert('Failed to start simulation: ' + error);
+            $('#startBtn').prop('disabled', false).text('🚀 Start Simulation');
+        }
+    });
+}
+
+// Cancel simulation (stop the process if possible)
+function cancelSimulation() {
+    if (confirm('Are you sure you want to cancel the running simulation? This will stop the SUMO process.')) {
+        $.ajax({
+            url: '/reset_simulation',
+            method: 'POST',
+            timeout: 5000,
+            success: function(response) {
+                if (response.status === 'success') {
+                    alert('Simulation state reset. You can now start a new simulation.');
+                    location.reload();
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error canceling simulation:', error);
+                alert('Failed to cancel simulation. You may need to manually kill Python processes.');
+            }
+        });
+    }
+}
+
+// Reset simulation state (for stuck simulations)
+function resetSimulation() {
+    if (confirm('Reset the simulation state? This will clear the "running" status if the simulation is stuck.')) {
+        $.ajax({
+            url: '/reset_simulation',
+            method: 'POST',
+            timeout: 5000,
+            success: function(response) {
+                if (response.status === 'success') {
+                    alert('Simulation state has been reset. You can now start a new simulation.');
+                    location.reload();
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error resetting simulation:', error);
+                alert('Failed to reset simulation state: ' + error);
+            }
+        });
+    }
+}
+
+// Clear history
+function clearHistory() {
+    if (confirm('Are you sure you want to clear all simulation history?')) {
+        $.ajax({
+            url: '/clear_history',
+            method: 'POST',
+            success: function(response) {
+                if (response.status === 'success') {
+                    location.reload();
+                }
+            }
+        });
+    }
+}
+
+// Check simulation status
+function checkSimulationStatus() {
+    $.ajax({
+        url: '/check_simulation',
+        method: 'GET',
+        timeout: 10000, // 10 second timeout
+        success: function(response) {
+            if (response.status === 'completed') {
+                clearInterval(checkInterval);
+                // Add a small delay before reload to ensure session is saved
+                setTimeout(function() {
+                    window.location.href = window.location.pathname;
+                }, 500);
+            } else if (response.status === 'error') {
+                clearInterval(checkInterval);
+                checkInterval = null;
+                alert('Simulation error: ' + response.message);
+                // Reload page to reset state
+                setTimeout(function() {
+                    window.location.href = window.location.pathname;
+                }, 1000);
+            }
+            // If status is 'running' or 'idle', continue checking
+        },
+        error: function(xhr, status, error) {
+            console.error('Error checking simulation status:', error);
+            // Don't stop checking on network errors, just log them
+            if (status === 'timeout') {
+                console.warn('Request timeout, continuing to check...');
+            }
+        }
+    });
+}
+
+// Load comparison charts
+function loadComparisonCharts() {
+    $.ajax({
+        url: '/get_comparison_charts',
+        method: 'GET',
+        success: function(response) {
+            if (response.status === 'success') {
+                try {
+                    const waitingChart = JSON.parse(response.waiting_chart);
+                    const throughputChart = JSON.parse(response.throughput_chart);
+                    
+                    // Ensure we have the full figure structure
+                    const waitingConfig = {
+                        displayModeBar: true,
+                        responsive: true
+                    };
+                    const throughputConfig = {
+                        displayModeBar: true,
+                        responsive: true
+                    };
+                    
+                    // Plot charts with proper configuration
+                    Plotly.newPlot('waitingTimeChart', waitingChart.data, waitingChart.layout, waitingConfig);
+                    Plotly.newPlot('throughputChart', throughputChart.data, throughputChart.layout, throughputConfig);
+                } catch (error) {
+                    console.error('Error rendering charts:', error);
+                    $('#waitingTimeChart').html('<div class="alert alert-danger">Error rendering waiting time chart</div>');
+                    $('#throughputChart').html('<div class="alert alert-danger">Error rendering throughput chart</div>');
+                }
+                
+                // Create comparison table
+                let tableHTML = '<h6>📋 Detailed comparison data</h6><div class="table-responsive"><table class="table table-striped"><thead><tr><th>Strategy</th><th>Waiting time (s)</th><th>Average speed (m/s)</th><th>Throughput (veh/h)</th></tr></thead><tbody>';
+                response.comparison_data.Strategy.forEach((strategy, index) => {
+                    tableHTML += `<tr><td>${strategy}</td><td>${response.comparison_data['Waiting Time'][index].toFixed(2)}</td><td>${response.comparison_data.Speed[index].toFixed(2)}</td><td>${response.comparison_data.Throughput[index].toFixed(0)}</td></tr>`;
+                });
+                tableHTML += '</tbody></table></div>';
+                $('#comparisonTable').html(tableHTML);
+                
+                // Performance analysis
+                const waitingTimes = response.comparison_data['Waiting Time'];
+                const throughputs = response.comparison_data.Throughput;
+                const speeds = response.comparison_data.Speed;
+                
+                const bestWaitIdx = waitingTimes.indexOf(Math.min(...waitingTimes));
+                const bestThroughputIdx = throughputs.indexOf(Math.max(...throughputs));
+                const bestSpeedIdx = speeds.indexOf(Math.max(...speeds));
+                
+                let analysisHTML = '<h6>🎯 Performance analysis</h6><div class="row">';
+                analysisHTML += `<div class="col-md-4"><div class="alert alert-success"><strong>🏆 Shortest waiting time</strong><br>${response.comparison_data.Strategy[bestWaitIdx]}<br>${waitingTimes[bestWaitIdx].toFixed(1)}s</div></div>`;
+                analysisHTML += `<div class="col-md-4"><div class="alert alert-success"><strong>🚀 Highest throughput</strong><br>${response.comparison_data.Strategy[bestThroughputIdx]}<br>${throughputs[bestThroughputIdx].toFixed(0)} veh/h</div></div>`;
+                analysisHTML += `<div class="col-md-4"><div class="alert alert-success"><strong>⚡ Fastest speed</strong><br>${response.comparison_data.Strategy[bestSpeedIdx]}<br>${speeds[bestSpeedIdx].toFixed(1)}m/s</div></div>`;
+                analysisHTML += '</div>';
+                $('#performanceAnalysis').html(analysisHTML);
+            }
+        }
+    });
+}
+
+// Initialize
+$(document).ready(function() {
+    // Start checking simulation status if running
+    {% if simulation_running %}
+    checkInterval = setInterval(checkSimulationStatus, 3000);
+    {% endif %}
+    
+    // Load comparison charts if results exist
+    {% if simulation_results and all_strategy_results|length >= 2 %}
+    loadComparisonCharts();
+    {% endif %}
+});
+</script>
+{% endblock %}
+

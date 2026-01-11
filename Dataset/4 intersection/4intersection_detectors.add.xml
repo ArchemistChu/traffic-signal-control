@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+            xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
+    
+    <!-- Detectors for each intersection -->
+    <!-- Each intersection has 4 incoming lanes with detectors -->
+    
+    <!-- TL1 detectors -->
+    <inductionLoop id="det_TL1_east_0" lane="TL1_east_in_0" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL1_east_1" lane="TL1_east_in_1" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL1_west_0" lane="TL1_west_in_0" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL1_west_1" lane="TL1_west_in_1" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL1_north_0" lane="TL1_north_in_0" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL1_north_1" lane="TL1_north_in_1" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL1_south_0" lane="TL1_south_in_0" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL1_south_1" lane="TL1_south_in_1" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    
+    <!-- TL2 detectors -->
+    <inductionLoop id="det_TL2_east_0" lane="TL2_east_in_0" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL2_east_1" lane="TL2_east_in_1" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL2_west_0" lane="TL2_west_in_0" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL2_west_1" lane="TL2_west_in_1" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL2_north_0" lane="TL2_north_in_0" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL2_north_1" lane="TL2_north_in_1" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL2_south_0" lane="TL2_south_in_0" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL2_south_1" lane="TL2_south_in_1" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    
+    <!-- TL3 detectors -->
+    <inductionLoop id="det_TL3_east_0" lane="TL3_east_in_0" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL3_east_1" lane="TL3_east_in_1" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL3_west_0" lane="TL3_west_in_0" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL3_west_1" lane="TL3_west_in_1" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL3_north_0" lane="TL3_north_in_0" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL3_north_1" lane="TL3_north_in_1" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL3_south_0" lane="TL3_south_in_0" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL3_south_1" lane="TL3_south_in_1" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    
+    <!-- TL4 detectors -->
+    <inductionLoop id="det_TL4_east_0" lane="TL4_east_in_0" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL4_east_1" lane="TL4_east_in_1" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL4_west_0" lane="TL4_west_in_0" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL4_west_1" lane="TL4_west_in_1" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL4_north_0" lane="TL4_north_in_0" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL4_north_1" lane="TL4_north_in_1" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL4_south_0" lane="TL4_south_in_0" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    <inductionLoop id="det_TL4_south_1" lane="TL4_south_in_1" pos="150" freq="60" file="4intersection_detector_data.xml"/>
+    
+</additional>
+

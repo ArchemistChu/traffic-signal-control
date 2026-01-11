@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes xmlns="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <!-- Vehicle types - aligned with Single Intersection settings -->
+    <vType id="passenger" accel="2.6" decel="4.5" sigma="0.5" length="5.0"
+           minGap="2.5" maxSpeed="50" color="red" guiShape="passenger"/>
+    <vType id="truck" accel="1.3" decel="4.0" sigma="0.5" length="12.0"
+           minGap="3.0" maxSpeed="40" color="yellow" guiShape="truck"/>
+    <vType id="bus" accel="1.2" decel="4.0" sigma="0.5" length="18.0"
+           minGap="3.5" maxSpeed="35" color="blue" guiShape="bus"/>
+    <route id="TL1_east_to_west" edges="TL1_east_in TL1_west_out"/>
+    <route id="TL1_east_to_north" edges="TL1_east_in TL1_north_out"/>
+    <route id="TL1_east_to_south" edges="TL1_east_in TL1_south_out"/>
+    <route id="TL1_west_to_east" edges="TL1_west_in TL1_east_out"/>
+    <route id="TL1_west_to_north" edges="TL1_west_in TL1_north_out"/>
+    <route id="TL1_west_to_south" edges="TL1_west_in TL1_south_out"/>
+    <route id="TL1_north_to_south" edges="TL1_north_in TL1_south_out"/>
+    <route id="TL1_north_to_east" edges="TL1_north_in TL1_east_out"/>
+    <route id="TL1_north_to_west" edges="TL1_north_in TL1_west_out"/>
+    <route id="TL1_south_to_north" edges="TL1_south_in TL1_north_out"/>
+    <route id="TL1_south_to_east" edges="TL1_south_in TL1_east_out"/>
+    <route id="TL1_south_to_west" edges="TL1_south_in TL1_west_out"/>
+    <route id="TL2_east_to_west" edges="TL2_east_in TL2_west_out"/>
+    <route id="TL2_east_to_north" edges="TL2_east_in TL2_north_out"/>
+    <route id="TL2_east_to_south" edges="TL2_east_in TL2_south_out"/>
+    <route id="TL2_west_to_east" edges="TL2_west_in TL2_east_out"/>
+    <route id="TL2_west_to_north" edges="TL2_west_in TL2_north_out"/>
+    <route id="TL2_west_to_south" edges="TL2_west_in TL2_south_out"/>
+    <route id="TL2_north_to_south" edges="TL2_north_in TL2_south_out"/>
+    <route id="TL2_north_to_east" edges="TL2_north_in TL2_east_out"/>
+    <route id="TL2_north_to_west" edges="TL2_north_in TL2_west_out"/>
+    <route id="TL2_south_to_north" edges="TL2_south_in TL2_north_out"/>
+    <route id="TL2_south_to_east" edges="TL2_south_in TL2_east_out"/>
+    <route id="TL2_south_to_west" edges="TL2_south_in TL2_west_out"/>
+    <route id="TL3_east_to_west" edges="TL3_east_in TL3_west_out"/>
+    <route id="TL3_east_to_north" edges="TL3_east_in TL3_north_out"/>
+    <route id="TL3_east_to_south" edges="TL3_east_in TL3_south_out"/>
+    <route id="TL3_west_to_east" edges="TL3_west_in TL3_east_out"/>
+    <route id="TL3_west_to_north" edges="TL3_west_in TL3_north_out"/>
+    <route id="TL3_west_to_south" edges="TL3_west_in TL3_south_out"/>
+    <route id="TL3_north_to_south" edges="TL3_north_in TL3_south_out"/>
+    <route id="TL3_north_to_east" edges="TL3_north_in TL3_east_out"/>
+    <route id="TL3_north_to_west" edges="TL3_north_in TL3_west_out"/>
+    <route id="TL3_south_to_north" edges="TL3_south_in TL3_north_out"/>
+    <route id="TL3_south_to_east" edges="TL3_south_in TL3_east_out"/>
+    <route id="TL3_south_to_west" edges="TL3_south_in TL3_west_out"/>
+    <route id="TL4_east_to_west" edges="TL4_east_in TL4_west_out"/>
+    <route id="TL4_east_to_north" edges="TL4_east_in TL4_north_out"/>
+    <route id="TL4_east_to_south" edges="TL4_east_in TL4_south_out"/>
+    <route id="TL4_west_to_east" edges="TL4_west_in TL4_east_out"/>
+    <route id="TL4_west_to_north" edges="TL4_west_in TL4_north_out"/>
+    <route id="TL4_west_to_south" edges="TL4_west_in TL4_south_out"/>
+    <route id="TL4_north_to_south" edges="TL4_north_in TL4_south_out"/>
+    <route id="TL4_north_to_east" edges="TL4_north_in TL4_east_out"/>
+    <route id="TL4_north_to_west" edges="TL4_north_in TL4_west_out"/>
+    <route id="TL4_south_to_north" edges="TL4_south_in TL4_north_out"/>
+    <route id="TL4_south_to_east" edges="TL4_south_in TL4_east_out"/>
+    <route id="TL4_south_to_west" edges="TL4_south_in TL4_west_out"/>
+    <route id="TL1_to_TL2" edges="TL1_east_in TL1_to_TL2 TL2_west_out"/>
+    <route id="TL2_to_TL1" edges="TL2_west_in TL2_to_TL1 TL1_east_out"/>
+    <route id="TL3_to_TL4" edges="TL3_east_in TL3_to_TL4 TL4_west_out"/>
+    <route id="TL4_to_TL3" edges="TL4_west_in TL4_to_TL3 TL3_east_out"/>
+    <route id="TL1_to_TL3" edges="TL1_south_in TL1_to_TL3 TL3_north_out"/>
+    <route id="TL3_to_TL1" edges="TL3_north_in TL3_to_TL1 TL1_south_out"/>
+    <route id="TL2_to_TL4" edges="TL2_south_in TL2_to_TL4 TL4_north_out"/>
+    <route id="TL4_to_TL2" edges="TL4_north_in TL4_to_TL2 TL2_south_out"/>
+    <route id="TL1_to_TL4" edges="TL1_east_in TL1_to_TL2 TL2_south_in TL2_to_TL4 TL4_west_out"/>
+    <route id="TL4_to_TL1" edges="TL4_west_in TL4_to_TL3 TL3_north_in TL3_to_TL1 TL1_south_out"/>
+    <route id="TL2_to_TL3" edges="TL2_west_in TL2_to_TL1 TL1_south_in TL1_to_TL3 TL3_north_out"/>
+    <route id="TL3_to_TL2" edges="TL3_east_in TL3_to_TL4 TL4_north_in TL4_to_TL2 TL2_south_out"/>
+    <flow id="flow_TL1_east_to_west" type="passenger" route="TL1_east_to_west" begin="0" end="3600" period="8" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL1_west_to_east" type="passenger" route="TL1_west_to_east" begin="0" end="3600" period="11" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL1_north_to_south" type="passenger" route="TL1_north_to_south" begin="0" end="3600" period="9" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL1_south_to_north" type="passenger" route="TL1_south_to_north" begin="0" end="3600" period="14" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL2_east_to_west" type="passenger" route="TL2_east_to_west" begin="0" end="3600" period="11" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL2_west_to_east" type="passenger" route="TL2_west_to_east" begin="0" end="3600" period="10" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL2_north_to_south" type="passenger" route="TL2_north_to_south" begin="0" end="3600" period="10" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL2_south_to_north" type="passenger" route="TL2_south_to_north" begin="0" end="3600" period="9" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL3_east_to_west" type="passenger" route="TL3_east_to_west" begin="0" end="3600" period="15" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL3_west_to_east" type="passenger" route="TL3_west_to_east" begin="0" end="3600" period="12" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL3_north_to_south" type="passenger" route="TL3_north_to_south" begin="0" end="3600" period="14" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL3_south_to_north" type="passenger" route="TL3_south_to_north" begin="0" end="3600" period="15" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL4_east_to_west" type="passenger" route="TL4_east_to_west" begin="0" end="3600" period="15" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL4_west_to_east" type="passenger" route="TL4_west_to_east" begin="0" end="3600" period="15" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL4_north_to_south" type="passenger" route="TL4_north_to_south" begin="0" end="3600" period="9" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL4_south_to_north" type="passenger" route="TL4_south_to_north" begin="0" end="3600" period="14" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL1_to_TL2" type="passenger" route="TL1_to_TL2" begin="0" end="3600" period="24" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL2_to_TL1" type="passenger" route="TL2_to_TL1" begin="0" end="3600" period="20" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL3_to_TL4" type="passenger" route="TL3_to_TL4" begin="0" end="3600" period="20" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL4_to_TL3" type="passenger" route="TL4_to_TL3" begin="0" end="3600" period="18" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL1_to_TL3" type="passenger" route="TL1_to_TL3" begin="0" end="3600" period="22" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL3_to_TL1" type="passenger" route="TL3_to_TL1" begin="0" end="3600" period="18" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL2_to_TL4" type="passenger" route="TL2_to_TL4" begin="0" end="3600" period="23" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL4_to_TL2" type="passenger" route="TL4_to_TL2" begin="0" end="3600" period="18" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL1_to_TL4" type="passenger" route="TL1_to_TL4" begin="0" end="3600" period="19" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL4_to_TL1" type="passenger" route="TL4_to_TL1" begin="0" end="3600" period="19" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL2_to_TL3" type="passenger" route="TL2_to_TL3" begin="0" end="3600" period="19" departLane="best" departSpeed="max"/>
+    <flow id="flow_TL3_to_TL2" type="passenger" route="TL3_to_TL2" begin="0" end="3600" period="13" departLane="best" departSpeed="max"/>
+</routes>

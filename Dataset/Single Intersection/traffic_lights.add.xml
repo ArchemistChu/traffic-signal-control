@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+            xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
+    
+    <!-- 车辆检测器定义 (用于自适应控制) - 每个方向3个检测器对应3条车道 -->
+    <!-- 东向检测器 (3 lanes: 0=right, 1=straight, 2=left) -->
+    <inductionLoop id="det_east_0" lane="east_in_0" pos="-50" freq="60" file="detectors.xml"/>
+    <inductionLoop id="det_east_1" lane="east_in_1" pos="-50" freq="60" file="detectors.xml"/>
+    <inductionLoop id="det_east_2" lane="east_in_2" pos="-50" freq="60" file="detectors.xml"/>
+    
+    <!-- 西向检测器 (3 lanes: 0=right, 1=straight, 2=left) -->
+    <inductionLoop id="det_west_0" lane="west_in_0" pos="-50" freq="60" file="detectors.xml"/>
+    <inductionLoop id="det_west_1" lane="west_in_1" pos="-50" freq="60" file="detectors.xml"/>
+    <inductionLoop id="det_west_2" lane="west_in_2" pos="-50" freq="60" file="detectors.xml"/>
+    
+    <!-- 北向检测器 (3 lanes: 0=right, 1=straight, 2=left) -->
+    <inductionLoop id="det_north_0" lane="north_in_0" pos="-50" freq="60" file="detectors.xml"/>
+    <inductionLoop id="det_north_1" lane="north_in_1" pos="-50" freq="60" file="detectors.xml"/>
+    <inductionLoop id="det_north_2" lane="north_in_2" pos="-50" freq="60" file="detectors.xml"/>
+    
+    <!-- 南向检测器 (3 lanes: 0=right, 1=straight, 2=left) -->
+    <inductionLoop id="det_south_0" lane="south_in_0" pos="-50" freq="60" file="detectors.xml"/>
+    <inductionLoop id="det_south_1" lane="south_in_1" pos="-50" freq="60" file="detectors.xml"/>
+    <inductionLoop id="det_south_2" lane="south_in_2" pos="-50" freq="60" file="detectors.xml"/>
+    
+</additional> 

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<edges xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+       xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/edges_file.xsd">
+    
+    <!-- 进入交叉口的边 (每个方向3车道：0=右转, 1=直行, 2=左转) -->
+    <edge id="east_in" from="east_end" to="intersection" numLanes="3" speed="13.89"/>
+    <edge id="west_in" from="west_end" to="intersection" numLanes="3" speed="13.89"/>
+    <edge id="north_in" from="north_end" to="intersection" numLanes="3" speed="13.89"/>
+    <edge id="south_in" from="south_end" to="intersection" numLanes="3" speed="13.89"/>
+    
+    <!-- 离开交叉口的边 (每个方向2车道) -->
+    <edge id="east_out" from="intersection" to="east_end" numLanes="2" speed="13.89"/>
+    <edge id="west_out" from="intersection" to="west_end" numLanes="2" speed="13.89"/>
+    <edge id="north_out" from="intersection" to="north_end" numLanes="2" speed="13.89"/>
+    <edge id="south_out" from="intersection" to="south_end" numLanes="2" speed="13.89"/>
+    
+    <!-- 人行道边 (每个方向，偏移约5米) -->
+    <edge id="east_in_sidewalk" from="east_end_sw" to="intersection_sw_e" priority="-1">
+        <lane index="0" allow="pedestrian" speed="1.50" width="2.00" shape="200.0,5.0 5.0,0.0"/>
+    </edge>
+    <edge id="east_out_sidewalk" from="intersection_sw_e" to="east_end_sw" priority="-1">
+        <lane index="0" allow="pedestrian" speed="1.50" width="2.00" shape="5.0,0.0 200.0,5.0"/>
+    </edge>
+    
+    <edge id="west_in_sidewalk" from="west_end_sw" to="intersection_sw_w" priority="-1">
+        <lane index="0" allow="pedestrian" speed="1.50" width="2.00" shape="-200.0,-5.0 -5.0,0.0"/>
+    </edge>
+    <edge id="west_out_sidewalk" from="intersection_sw_w" to="west_end_sw" priority="-1">
+        <lane index="0" allow="pedestrian" speed="1.50" width="2.00" shape="-5.0,0.0 -200.0,-5.0"/>
+    </edge>
+    
+    <edge id="north_in_sidewalk" from="north_end_sw" to="intersection_sw_n" priority="-1">
+        <lane index="0" allow="pedestrian" speed="1.50" width="2.00" shape="-5.0,200.0 0.0,5.0"/>
+    </edge>
+    <edge id="north_out_sidewalk" from="intersection_sw_n" to="north_end_sw" priority="-1">
+        <lane index="0" allow="pedestrian" speed="1.50" width="2.00" shape="0.0,5.0 -5.0,200.0"/>
+    </edge>
+    
+    <edge id="south_in_sidewalk" from="south_end_sw" to="intersection_sw_s" priority="-1">
+        <lane index="0" allow="pedestrian" speed="1.50" width="2.00" shape="5.0,-200.0 0.0,-5.0"/>
+    </edge>
+    <edge id="south_out_sidewalk" from="intersection_sw_s" to="south_end_sw" priority="-1">
+        <lane index="0" allow="pedestrian" speed="1.50" width="2.00" shape="0.0,-5.0 5.0,-200.0"/>
+    </edge>
+    
+</edges> 

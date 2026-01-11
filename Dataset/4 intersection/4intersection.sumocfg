@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+               xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <!-- Network file -->
+        <net-file value="4intersection.net.xml"/>
+        
+        <!-- Route file -->
+        <route-files value="4intersection_routes.rou.xml"/>
+        
+        <!-- Additional files (traffic lights and detectors combined) -->
+        <additional-files value="4intersection_additional.add.xml"/>
+
+        <!-- GUI view settings (same visual style as single intersection) -->
+        <gui-settings-file value="view.settings.xml"/>
+    </input>
+
+    <output>
+        <!-- Simulation output statistics -->
+        <summary-output value="4intersection_summary.xml"/>
+        
+        <!-- Vehicle trajectory output -->
+        <fcd-output value="4intersection_fcd_output.xml"/>
+        <fcd-output.geo value="false"/>
+        
+        <!-- Queue length statistics -->
+        <queue-output value="4intersection_queue.xml"/>
+        
+        <!-- Emission data output -->
+        <emission-output value="4intersection_emissions.xml"/>
+    </output>
+
+    <time>
+        <!-- Simulation start time -->
+        <begin value="0"/>
+        
+        <!-- Simulation end time (3600 seconds = 1 hour) -->
+        <end value="3600"/>
+        
+        <!-- Time step length (1 second) -->
+        <step-length value="1.0"/>
+    </time>
+
+    <processing>
+        <!-- Route processing options -->
+        <ignore-route-errors value="true"/>
+        
+        <!-- Vehicle collision detection -->
+        <collision.action value="warn"/>
+        <collision.check-junctions value="true"/>
+        
+        <!-- Traffic light processing -->
+        <tls.all-off value="false"/>
+        <tls.actuated.jam-threshold value="20"/>
+    </processing>
+
+    <routing>
+        <!-- Routing algorithm options -->
+        <device.rerouting.probability value="0.1"/>
+        <device.rerouting.period value="300"/>
+        <device.rerouting.pre-period value="60"/>
+    </routing>
+
+    <report>
+        <!-- Output verbosity -->
+        <verbose value="true"/>
+        
+        <!-- Do not suppress warnings -->
+        <no-warnings value="false"/>
+        
+        <!-- Log file -->
+        <log value="4intersection_sumo.log"/>
+        
+        <!-- Runtime statistics -->
+        <duration-log.statistics value="true"/>
+        
+        <!-- Step log interval -->
+        <step-log.period value="600"/>
+    </report>
+
+    <emissions>
+        <!-- Enable emission model -->
+        <device.emissions.probability value="1.0"/>
+        
+        <!-- Emission categories -->
+        <device.emissions.explicit value="CO,CO2,HC,NOx,PMx,fuel"/>
+    </emissions>
+
+    <random>
+        <!-- Random seed (for reproducibility) -->
+        <seed value="12345"/>
+    </random>
+
+    <gui-only>
+        <!-- GUI specific settings -->
+        <start value="true"/>
+        <quit-on-end value="false"/>
+        <delay value="1000"/>  <!-- Simulation delay 1000ms (1 second) -->
+    </gui-only>
+
+</configuration>
+

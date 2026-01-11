@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nodes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+       xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/nodes_file.xsd">
+    <!-- 交叉口中心节点 -->
+    <node id="intersection" x="0.0" y="0.0" type="traffic_light"/>
+    
+    <!-- 东西南北四个方向的端点节点 -->
+    <node id="east_end" x="200.0" y="0.0" type="priority"/>
+    <node id="west_end" x="-200.0" y="0.0" type="priority"/>
+    <node id="north_end" x="0.0" y="200.0" type="priority"/>
+    <node id="south_end" x="0.0" y="-200.0" type="priority"/>
+    
+    <!-- 人行道节点 (偏移约5米，用于人行道) -->
+    <node id="east_end_sw" x="200.0" y="5.0" type="priority"/>
+    <node id="west_end_sw" x="-200.0" y="-5.0" type="priority"/>
+    <node id="north_end_sw" x="-5.0" y="200.0" type="priority"/>
+    <node id="south_end_sw" x="5.0" y="-200.0" type="priority"/>
+    <node id="intersection_sw_e" x="5.0" y="0.0" type="priority"/>
+    <node id="intersection_sw_w" x="-5.0" y="0.0" type="priority"/>
+    <node id="intersection_sw_n" x="0.0" y="5.0" type="priority"/>
+    <node id="intersection_sw_s" x="0.0" y="-5.0" type="priority"/>
+</nodes> 

@@ -1,0 +1,16 @@
+
+
+## 1. SUMO 安装
+
+### Windows 系统
+ 运行安装程序，按默认路径安装
+添加环境变量：
+   - 将 `C:\Program Files (x86)\Eclipse\Sumo\bin` 添加到系统 PATH 中
+   - 设置环境变量 `SUMO_HOME` 为 `C:\Program Files (x86)\Eclipse\Sumo`
+
+### 验证安装
+打开命令行，输入：
+```bash
+netconvert --version
+sumo --version
+```

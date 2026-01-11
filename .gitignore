@@ -1,0 +1,133 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.manifest
+*.spec
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# PyTorch models and checkpoints
+*.pth
+*.pt
+*.ckpt
+models/*.pth
+models/*.pt
+*.h5
+
+# SUMO output files
+*.xml
+*.log
+!**/*.net.xml
+!**/*.nod.xml
+!**/*.edg.xml
+!**/*.con.xml
+!**/*.sumocfg
+!**/*.rou.xml
+!**/*.add.xml
+!**/*.typ.xml
+!**/*.cfg
+!**/*.poly.xml
+!**/*.trips.xml
+
+# Keep network configuration files but ignore output XMLs
+**/detectors.xml
+**/emissions.xml
+**/fcd_output.xml
+**/queue.xml
+**/summary.xml
+**/*.log
+**/sumo.log
+**/cologne.log
+
+# SUMO GUI settings (user-specific)
+**/view.settings.xml
+**/gui-settings.xml
+
+# Output directories
+output/
+**/output/*.csv
+**/output/*.json
+**/output/*.txt
+**/output/*.md
+output/academic/
+*.json
+!package.json
+!requirements.txt
+
+# Temporary files
+temp_*.py
+temp_*.json
+*.tmp
+*.temp
+
+# Large dataset files (download separately)
+TAPASCologne-0.32.0/
+TC-DQN-master/
+setup/*.msi
+
+# TensorBoard logs
+runs/
+logs/
+*.tfevents.*
+
+# Flask session files
+flask_session/
+
+# OS files
+Thumbs.db
+.DS_Store
+~$*
+
+# Test files (optional - comment out if you want to keep them)
+# test_*.py
+# debug_*.py
+# analyze_*.py
+
+# Large images (optional - keep if needed for documentation)
+# *.png
+# *.jpg
+# *.jpeg
+
+# Documentation drafts (optional - keep if needed)
+# *draft*
+
+# Microsoft Office temp files
+~$*.docx
+~$*.xlsx
+~$*.pptx
+

@@ -1,0 +1,54 @@
+[3 tools called]
+
+### What algorithm TC‑DQN uses
+
+From `DQNAgent.py`, TC‑DQN<sup>+</sup> is a **Rainbow‑style DQN** implementation that can selectively combine these components:
+
+- **Double DQN** (`double_dqn` flag):  
+  - Uses the online network to choose next action and the target network to evaluate it → reduces Q‑value overestimation.
+
+- **Dueling DQN** (`dueling_dqn` flag, `FinalDQN` with separate value/advantage streams):  
+  - Splits the network into a **value branch** and an **advantage branch**, so the agent can learn which states are good even when actions look similar.
+
+- **PER – Prioritized Experience Replay** (`per` flag, `from PER import Memory`):  
+  - Samples “more important” transitions (with larger TD‑error) more often, instead of uniform replay.
+
+- **Noisy Networks** (`noisy_dqn` flag, `NoisyLinear` layers):  
+  - Replaces ε‑greedy with **learnable parameter noise** in the linear layers for state‑dependent exploration.
+
+- **Distributional DQN** (`dist_dqn` flag, `num_of_atoms = 41`, `projection_distribution`):  
+  - Learns a **full value distribution** over 41 atoms between \(V_{min}\) and \(V_{max}\) instead of a single expected Q.
+
+So, depending on the `options` vector, it can run as:
+
+- plain **vanilla DQN** (all flags off),
+- **single‑component ablations** (e.g. “no noisy”, “no PER”), or  
+- full **Rainbow‑like DQN** (all flags on: double + dueling + PER + noisy + distributional).
+
+---
+
+### Main advantages of TC‑DQN<sup>+</sup> vs a basic DQN
+
+- **Much more stable and data‑efficient learning**  
+  - Double DQN + target network + big replay buffer (`2**20`) reduce divergence and overestimation.
+  - PER focuses updates on informative experiences.
+
+- **Better representation of traffic uncertainty and risk**  
+  - Distributional DQN models the **whole return distribution**, not just the mean, which fits stochastic traffic conditions (incidents, bursts of demand).
+
+- **Stronger exploration**  
+  - Noisy networks give **state‑dependent exploration** instead of a fixed ε‑greedy schedule, which helps discover better signal patterns.
+
+- **Stronger function approximation**  
+  - Dueling architecture with large hidden layers (`512, 512, 64`) captures complex relationships between traffic states and control actions.
+
+- **Built‑in ablation and benchmarking**  
+  - The `options` flags and `PATH` naming (`network_all.pth`, `network_no_per_dqn.pth`, etc.) make it easy to compare:
+    - vanilla DQN vs TC‑DQN<sup>+</sup>  
+    - “no PER”, “no noisy”, “no dist” variants, etc.
+
+- **Grounded in a published method**  
+  - The repo directly implements the algorithm from  
+    **“Adaptive Traffic Control with Deep RL: Towards State‑of‑the‑art and Beyond” (Alemzadeh et al., 2020)**, so it follows a peer‑reviewed design with proven performance on benchmark scenarios.
+
+If you want, I can next map these components one‑by‑one to your own `rl_agent.py` (what you already have vs what TC‑DQN adds) and suggest concrete upgrade steps.
