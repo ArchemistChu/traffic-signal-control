@@ -46,7 +46,7 @@ class TrafficSimulator:
             config_file: SUMO configuration file path (None for auto from SimulationConfig)
             use_gui: whether to use graphical interface
             port: TraCI connection port
-            dataset: 'custom' or 'tapas_cologne' (None for current config)
+            dataset: 'custom', 'cologne', 'vancouver', or 'palo_alto' (None for current config)
         """
         # Set dataset if specified
         if dataset:
@@ -384,7 +384,7 @@ class TrafficSimulator:
                 
                 # If in GUI mode, add extra delay so user can see the process
                 if self.use_gui:
-                    time.sleep(0.2)  # 200ms delay to significantly slow down simulation
+                    time.sleep(0.04)  # 40ms delay (5x faster: 200ms -> 40ms)
                 
                 # Apply signal control strategy
                 # Check every step, but only make decisions when phase is about to end or controller requests change

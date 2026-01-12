@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Navigation -->
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">Home</a></li>
+                <li class="breadcrumb-item active">Academic Experiments</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<!-- Page Header -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h2 class="card-title">📊 Academic Experiments</h2>
+        <p class="card-text">
+            Run statistical experiments with multiple independent runs for academic research.
+            This feature provides comprehensive statistical analysis, confidence intervals, and significance testing.
+        </p>
+    </div>
+</div>
+
+<!-- Experiment Configuration -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h4 class="card-title">⚙️ Experiment Configuration</h4>
+        
+        <form id="experimentForm">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="experimentName" class="form-label">Experiment Name</label>
+                    <input type="text" class="form-control" id="experimentName" value="traffic_signal_control_comparison">
+                </div>
+                <div class="col-md-6">
+                    <label for="datasetSelect" class="form-label">Dataset</label>
+                    <select id="datasetSelect" class="form-select">
+                        <option value="custom" {% if current_dataset == 'custom' %}selected{% endif %}>Custom Single Intersection</option>
+                        <option value="cologne" {% if current_dataset == 'cologne' %}selected{% endif %}>OSM Cologne</option>
+                        <option value="vancouver" {% if current_dataset == 'vancouver' %}selected{% endif %}>OSM Vancouver</option>
+                        <option value="palo_alto" {% if current_dataset == 'palo_alto' %}selected{% endif %}>OSM Palo Alto</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="strategiesSelect" class="form-label">Strategies (select multiple)</label>
+                    <select id="strategiesSelect" class="form-select" multiple size="4">
+                        <option value="FIXED_TIME" selected>🕐 Fixed-time Control</option>
+                        <option value="ADAPTIVE" selected>🧠 Adaptive Control</option>
+                        <option value="MAX_PRESSURE" selected>⚖️ MaxPressure Control</option>
+                        <option value="DQN" selected>🤖 DQN Reinforcement Learning</option>
+                    </select>
+                    <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple</small>
+                </div>
+                <div class="col-md-6">
+                    <label for="numRuns" class="form-label">Number of Runs per Strategy</label>
+                    <input type="number" class="form-control" id="numRuns" value="10" min="1" max="50">
+                    <small class="form-text text-muted">More runs = better statistical significance</small>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="duration" class="form-label">Duration per Run (seconds)</label>
+                    <input type="number" class="form-control" id="duration" value="600" min="60" max="3600">
+                    <small class="form-text text-muted">Recommended: 600 seconds (10 minutes)</small>
+                </div>
+                <div class="col-md-6">
+                    <label for="randomSeed" class="form-label">Random Seed</label>
+                    <input type="number" class="form-control" id="randomSeed" value="42" min="0">
+                    <small class="form-text text-muted">For reproducibility</small>
+                </div>
+            </div>
+            
+            <div class="alert alert-info">
+                <strong>📝 Note:</strong> 
+                Total experiments = <span id="totalExperiments">40</span> runs 
+                (Estimated time: <span id="estimatedTime">~6.7</span> hours)
+                <br><small>This will run without GUI for faster execution. Results will be available after completion.</small>
+            </div>
+            
+            <button type="button" class="btn btn-primary btn-lg" id="startExperimentBtn" onclick="startAcademicExperiment()">
+                🚀 Start Academic Experiment
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Experiment Status -->
+<div id="experimentStatus" class="card mb-4" style="display: none;">
+    <div class="card-body">
+        <h4 class="card-title">📈 Experiment Status</h4>
+        <div id="statusContent">
+            <div class="status-running">
+                <p><strong>⏳ Experiment is running...</strong></p>
+                <p>Progress: <span id="progressText">Initializing...</span></p>
+                <div class="progress mb-3">
+                    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: 0%">0%</div>
+                </div>
+                <p class="text-muted">This may take a while. Please keep this page open.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Results Section -->
+<div id="resultsSection" class="card" style="display: none;">
+    <div class="card-body">
+        <h4 class="card-title">📊 Experiment Results</h4>
+        <div id="resultsContent"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let checkInterval = null;
+
+// Update total experiments count
+function updateTotalExperiments() {
+    const numRuns = parseInt($('#numRuns').val()) || 10;
+    const strategies = $('#strategiesSelect').val();
+    const duration = parseInt($('#duration').val()) || 600;
+    
+    const totalRuns = numRuns * (strategies ? strategies.length : 4);
+    const estimatedHours = (totalRuns * duration / 3600).toFixed(1);
+    
+    $('#totalExperiments').text(totalRuns);
+    $('#estimatedTime').text(estimatedHours);
+}
+
+$('#numRuns, #duration, #strategiesSelect').on('change', updateTotalExperiments);
+updateTotalExperiments();
+
+// Start academic experiment
+function startAcademicExperiment() {
+    const experimentName = $('#experimentName').val();
+    const dataset = $('#datasetSelect').val();
+    const strategies = $('#strategiesSelect').val();
+    const numRuns = parseInt($('#numRuns').val());
+    const duration = parseInt($('#duration').val());
+    const randomSeed = parseInt($('#randomSeed').val());
+    
+    if (!strategies || strategies.length === 0) {
+        alert('Please select at least one strategy');
+        return;
+    }
+    
+    if (confirm(`Start academic experiment?\n\nTotal runs: ${numRuns * strategies.length}\nEstimated time: ${(numRuns * strategies.length * duration / 3600).toFixed(1)} hours\n\nThis will run in the background.`)) {
+        $('#startExperimentBtn').prop('disabled', true).text('Starting...');
+        $('#experimentStatus').show();
+        $('#resultsSection').hide();
+        
+        $.ajax({
+            url: '/start_academic_experiment',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                experiment_name: experimentName,
+                dataset: dataset,
+                strategies: strategies,
+                num_runs: numRuns,
+                duration: duration,
+                random_seed: randomSeed
+            }),
+            timeout: 10000,
+            success: function(response) {
+                if (response.status === 'success') {
+                    // Start checking status
+                    if (checkInterval) clearInterval(checkInterval);
+                    checkInterval = setInterval(checkExperimentStatus, 5000);
+                    checkExperimentStatus();
+                } else {
+                    alert('Error: ' + response.message);
+                    $('#startExperimentBtn').prop('disabled', false).text('🚀 Start Academic Experiment');
+                    $('#experimentStatus').hide();
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error starting experiment:', error);
+                alert('Failed to start experiment: ' + error);
+                $('#startExperimentBtn').prop('disabled', false).text('🚀 Start Academic Experiment');
+                $('#experimentStatus').hide();
+            }
+        });
+    }
+}
+
+// Check experiment status
+function checkExperimentStatus() {
+    $.ajax({
+        url: '/check_academic_experiment',
+        method: 'GET',
+        timeout: 10000,
+        success: function(response) {
+            if (response.status === 'completed') {
+                clearInterval(checkInterval);
+                $('#experimentStatus').hide();
+                $('#startExperimentBtn').prop('disabled', false).text('🚀 Start Academic Experiment');
+                displayResults(response.results);
+                $('#resultsSection').show();
+            } else if (response.status === 'running') {
+                // Update progress
+                const progress = response.progress || {};
+                const progressText = `Running: ${progress.current_strategy || 'Initializing...'}`;
+                $('#progressText').text(progressText);
+                
+                // Update progress bar (simplified - actual progress tracking would need backend updates)
+                const progressPercent = Math.min(100, (progress.completed_runs || 0) / (progress.total_runs || 1) * 100);
+                $('#progressBar').css('width', progressPercent + '%').text(Math.round(progressPercent) + '%');
+            } else if (response.status === 'error') {
+                clearInterval(checkInterval);
+                alert('Experiment error: ' + response.message);
+                $('#startExperimentBtn').prop('disabled', false).text('🚀 Start Academic Experiment');
+                $('#experimentStatus').hide();
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error checking status:', error);
+        }
+    });
+}
+
+// Display results
+function displayResults(results) {
+    let html = '<div class="alert alert-success"><strong>✅ Experiment Completed!</strong></div>';
+    
+    if (results.report) {
+        html += '<div class="card mb-3"><div class="card-body"><h5>📄 Academic Report</h5>';
+        html += '<pre style="white-space: pre-wrap; background: #f5f5f5; padding: 15px; border-radius: 5px;">' + 
+                escapeHtml(results.report) + '</pre>';
+        html += '</div></div>';
+    }
+    
+    if (results.json_path) {
+        html += '<div class="alert alert-info">';
+        html += '<strong>📁 Results exported to:</strong> ' + results.json_path;
+        html += '</div>';
+    }
+    
+    if (results.all_results_summary) {
+        html += '<div class="card mb-3"><div class="card-body"><h5>📊 Results Summary</h5>';
+        html += '<table class="table table-striped"><thead><tr><th>Strategy</th><th>Number of Runs</th></tr></thead><tbody>';
+        for (const [strategy, summary] of Object.entries(results.all_results_summary)) {
+            html += `<tr><td>${strategy}</td><td>${summary.num_runs}</td></tr>`;
+        }
+        html += '</tbody></table></div></div>';
+    }
+    
+    html += '<div class="alert alert-info">';
+    html += '<strong>💡 Tip:</strong> Check the output directory for detailed JSON results with statistical analysis.';
+    html += '</div>';
+    
+    $('#resultsContent').html(html);
+}
+
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// Cleanup on page unload
+$(window).on('beforeunload', function() {
+    if (checkInterval) clearInterval(checkInterval);
+});
+</script>
+{% endblock %}

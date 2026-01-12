@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Configuration Module
-Manages settings for switching between custom intersection and TAPASCologne dataset
+Manages settings for switching between custom intersection and OSM-based maps
 """
 
 import os
@@ -9,8 +9,8 @@ import os
 class SimulationConfig:
     """Simulation configuration class"""
     
-    # Dataset selection: 'custom', '4intersection', or 'tapas_cologne'
-    DATASET = '4intersection'  # Options: 'custom' (single), '4intersection' (4-intersection grid), 'tapas_cologne'
+    # Dataset selection: 'custom', 'cologne', 'vancouver', or 'palo_alto'
+    DATASET = 'custom'  # Options: 'custom' (single intersection), 'cologne', 'vancouver', 'palo_alto'
     
     # Base directory
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -45,35 +45,57 @@ class SimulationConfig:
             'state_dim': 57,
             'action_dim': 8
         },
-        '4intersection': {
-            'sumo_config': os.path.join(BASE_DIR, 'Dataset', '4 intersection', '4intersection.sumocfg'),
-            'network_file': os.path.join(BASE_DIR, 'Dataset', '4 intersection', '4intersection.net.xml'),
-            'route_file': os.path.join(BASE_DIR, 'Dataset', '4 intersection', '4intersection_routes.rou.xml'),
-            'description': '4-intersection grid network simulation',
-            # Predefined traffic lights (4 intersections)
-            'traffic_lights': ['TL1', 'TL2', 'TL3', 'TL4'],
-            # Auto-detect lanes and detectors for redesigned multi-lane network
-            'lanes': None,
-            'detectors': None,
-            # Control mode: 'multi' for multiple intersections
-            'control_mode': 'multi',
-            # State dimension for RL (auto-calculated from simulator)
-            'state_dim': None,
-            'action_dim': 8
-        },
-        'tapas_cologne': {
-            'sumo_config': os.path.join(BASE_DIR, 'TAPASCologne-0.32.0', 'cologne.sumocfg'),
-            'network_file': os.path.join(BASE_DIR, 'TAPASCologne-0.32.0', 'cologne.net.xml'),
-            'route_file': os.path.join(BASE_DIR, 'TAPASCologne-0.32.0', 'cologne.trips.xml'),
-            'description': 'TAPASCologne - Real-world Cologne traffic network',
+        'cologne': {
+            'sumo_config': os.path.join(BASE_DIR, 'Cologne', 'osm.sumocfg'),
+            'network_file': os.path.join(BASE_DIR, 'Cologne', 'osm.net.xml.gz'),
+            'route_file': None,  # Multiple route files specified in sumocfg
+            'description': 'OSM Cologne - Real-world Cologne network from OpenStreetMap',
             # Traffic lights will be detected dynamically
             'traffic_lights': None,  # Auto-detect
             'lanes': None,  # Auto-detect
             'detectors': None,  # Auto-detect
-            # Control mode: 'multi' for multiple intersections, 'selected' for specific intersections
+            # Control mode: 'selected' for specific intersections
             'control_mode': 'selected',
             # For 'selected' mode, specify which traffic lights to control
-            'selected_traffic_lights': None,  # None means control all, or specify list like ['104255852', '1069892408']
+            'selected_traffic_lights': None,  # None means control first max_controlled_lights
+            # Max number of traffic lights to control (to limit computational load)
+            'max_controlled_lights': 10,
+            # State dimension for RL (will be calculated dynamically)
+            'state_dim': None,  # Auto-calculate based on selected intersections
+            'action_dim': None  # Auto-calculate based on phases
+        },
+        'vancouver': {
+            'sumo_config': os.path.join(BASE_DIR, 'Vancouver', 'osm.sumocfg'),
+            'network_file': os.path.join(BASE_DIR, 'Vancouver', 'osm.net.xml.gz'),
+            'route_file': None,  # Multiple route files specified in sumocfg
+            'description': 'OSM Vancouver - Real-world Vancouver network from OpenStreetMap',
+            # Traffic lights will be detected dynamically
+            'traffic_lights': None,  # Auto-detect
+            'lanes': None,  # Auto-detect
+            'detectors': None,  # Auto-detect
+            # Control mode: 'selected' for specific intersections
+            'control_mode': 'selected',
+            # For 'selected' mode, specify which traffic lights to control
+            'selected_traffic_lights': None,  # None means control first max_controlled_lights
+            # Max number of traffic lights to control (to limit computational load)
+            'max_controlled_lights': 10,
+            # State dimension for RL (will be calculated dynamically)
+            'state_dim': None,  # Auto-calculate based on selected intersections
+            'action_dim': None  # Auto-calculate based on phases
+        },
+        'palo_alto': {
+            'sumo_config': os.path.join(BASE_DIR, 'Palo Alto', 'osm.sumocfg'),
+            'network_file': os.path.join(BASE_DIR, 'Palo Alto', 'osm.net.xml.gz'),
+            'route_file': None,  # Multiple route files specified in sumocfg
+            'description': 'OSM Palo Alto - Real-world Palo Alto network from OpenStreetMap',
+            # Traffic lights will be detected dynamically
+            'traffic_lights': None,  # Auto-detect
+            'lanes': None,  # Auto-detect
+            'detectors': None,  # Auto-detect
+            # Control mode: 'selected' for specific intersections
+            'control_mode': 'selected',
+            # For 'selected' mode, specify which traffic lights to control
+            'selected_traffic_lights': None,  # None means control first max_controlled_lights
             # Max number of traffic lights to control (to limit computational load)
             'max_controlled_lights': 10,
             # State dimension for RL (will be calculated dynamically)
@@ -116,7 +138,7 @@ class SimulationConfig:
         Set active dataset
         
         Args:
-            dataset_name: 'custom', '4intersection', or 'tapas_cologne'
+            dataset_name: 'custom', 'cologne', 'vancouver', or 'palo_alto'
         """
         if dataset_name not in cls.CONFIGS:
             raise ValueError(f"Unknown dataset: {dataset_name}. Choose from: {list(cls.CONFIGS.keys())}")
@@ -140,11 +162,6 @@ class SimulationConfig:
     def is_custom_dataset(cls):
         """Check if using custom dataset"""
         return cls.DATASET == 'custom'
-    
-    @classmethod
-    def is_tapas_cologne(cls):
-        """Check if using TAPASCologne dataset"""
-        return cls.DATASET == 'tapas_cologne'
     
     @classmethod
     def create_output_dirs(cls):

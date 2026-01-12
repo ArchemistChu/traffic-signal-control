@@ -1,31 +1,36 @@
 #!/usr/bin/env python3
 """
 Start Intelligent Traffic Light Control System
-Simple Version, Avoid complex config
+Flask Web Interface
 """
 
 import subprocess
 import sys
 
 def main():
-    print("🚀 Starting now...")
-    print("📍 Local browser will open: http://localhost:8501")
+    print("🚀 Starting Flask application...")
+    print("📍 Local browser: http://localhost:5000")
     print("=" * 45)
-    print("🎯 New interface highlights:")
+    print("🎯 Interface highlights:")
     print("  • Select strategy → Click Start → Watch simulation → View results")
-    print("  • Single Start button, simple operation")
-    print("  • Data presentation is clear and intuitive")
+    print("  • Academic experiments with statistical analysis")
+    print("  • Multiple datasets (Custom, Cologne, Vancouver, Palo Alto)")
     print("  • SUMO GUI starts automatically")
     print("=" * 45)
     
     try:
-        cmd = ['streamlit', 'run', 'app.py']
-        subprocess.run(cmd, check=True)
+        # Run Flask app
+        from app_flask import app
+        app.run(debug=True, host='0.0.0.0', port=5000)
     except KeyboardInterrupt:
         print("\n⏹️ System stopped")
+    except ImportError:
+        print(f"❌ Failed to import Flask app")
+        print("Please ensure Flask is installed: pip install flask")
     except Exception as e:
         print(f"❌ Failed to start: {e}")
-        print("Please ensure streamlit is installed: pip install streamlit")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     main() 

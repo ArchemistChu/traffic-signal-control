@@ -104,7 +104,7 @@
         <gui-settings-file value="view.settings.xml"/>
         <start value="true"/>
         <quit-on-end value="false"/>
-        <delay value="1000"/>  <!-- 仿真延迟1000ms (1秒)，大幅放慢速度 -->
+        <delay value="200"/>  <!-- 仿真延迟200ms (5x faster: 1000ms -> 200ms) -->
     </gui-only>
 
 </configuration> 

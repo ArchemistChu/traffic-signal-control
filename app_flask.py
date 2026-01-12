@@ -24,6 +24,10 @@ if sys.platform != 'win32':
 # Import configuration
 sys.path.append(".")
 from src.config import SimulationConfig
+from src.academic_evaluator import (
+    AcademicEvaluator, ExperimentConfig, run_batch_experiments
+)
+from src.traffic_simulator import TrafficSimulator
 
 app = Flask(__name__)
 app.secret_key = 'traffic_signal_control_secret_key_2024'  # Change this in production
@@ -40,6 +44,12 @@ def init_session():
         session['selected_strategy'] = 'FIXED_TIME'
     if 'current_dataset' not in session:
         session['current_dataset'] = SimulationConfig.DATASET
+    if 'academic_experiment_running' not in session:
+        session['academic_experiment_running'] = False
+    if 'academic_experiment_results' not in session:
+        session['academic_experiment_results'] = None
+    if 'academic_experiment_progress' not in session:
+        session['academic_experiment_progress'] = {}
 
 @app.route('/')
 def index():
@@ -175,7 +185,7 @@ SimulationConfig.set_dataset("{dataset}")
 
 simulator = TrafficSimulator(use_gui=True, dataset="{dataset}")
 
-duration = 600 if SimulationConfig.is_tapas_cologne() else 600
+duration = 600
 print(f"Running simulation for {{duration}} seconds...")
 
 metrics = simulator.run_simulation(duration=duration, strategy="{strategy}")
@@ -524,6 +534,170 @@ def get_comparison_charts():
         'waiting_chart': waiting_chart,
         'throughput_chart': throughput_chart,
         'comparison_data': serializable_data
+    })
+
+@app.route('/academic_experiments')
+def academic_experiments():
+    """Academic experiments page"""
+    init_session()
+    current_config = SimulationConfig.get_current_config()
+    
+    return render_template('academic_experiments.html',
+                         current_dataset=session.get('current_dataset', 'custom'),
+                         dataset_description=current_config['description'])
+
+@app.route('/start_academic_experiment', methods=['POST'])
+def start_academic_experiment():
+    """Start academic experiment"""
+    data = request.get_json()
+    
+    # Get experiment parameters
+    dataset = data.get('dataset', 'custom')
+    strategies = data.get('strategies', ['FIXED_TIME', 'ADAPTIVE', 'MAX_PRESSURE', 'DQN'])
+    num_runs = int(data.get('num_runs', 10))
+    duration = int(data.get('duration', 600))
+    experiment_name = data.get('experiment_name', 'traffic_signal_control_comparison')
+    random_seed = data.get('random_seed', 42)
+    
+    if session.get('academic_experiment_running', False):
+        return jsonify({'status': 'error', 'message': 'Academic experiment already running'})
+    
+    try:
+        # Create experiment config
+        experiment_config = ExperimentConfig(
+            experiment_name=experiment_name,
+            dataset=dataset,
+            strategies=strategies,
+            num_runs=num_runs,
+            duration=duration,
+            random_seed=random_seed,
+            traffic_flow_level="moderate",
+            notes="Academic experiment with statistical analysis"
+        )
+        
+        # Store in session (convert dataclass to dict)
+        from dataclasses import asdict
+        results_file = f"temp_academic_results_{experiment_name.replace(' ', '_')}.json"
+        
+        # Clean up old results file
+        if os.path.exists(results_file):
+            try:
+                os.remove(results_file)
+            except:
+                pass
+        
+        session['academic_experiment_running'] = True
+        session['academic_experiment_file'] = results_file
+        session['academic_experiment_config'] = asdict(experiment_config)
+        session.modified = True
+        
+        # Start experiment in background thread
+        # Use file-based storage for results (sessions don't work well in background threads)
+        
+        def run_experiment():
+            try:
+                # Set dataset
+                SimulationConfig.set_dataset(dataset)
+                
+                # Factory function for simulator
+                def create_simulator_and_run(strategy: str, duration: int):
+                    simulator = TrafficSimulator(use_gui=False, dataset=dataset)
+                    metrics = simulator.run_simulation(duration=duration, strategy=strategy)
+                    simulator.close_simulation()
+                    return metrics
+                
+                # Run batch experiments
+                all_results = run_batch_experiments(experiment_config, create_simulator_and_run)
+                
+                # Analyze results
+                evaluator = AcademicEvaluator()
+                
+                # Generate report
+                report = evaluator.generate_academic_report(experiment_config, all_results)
+                
+                # Export results
+                json_path = evaluator.export_results_json(experiment_config, all_results)
+                
+                # Store results in file (simplified for JSON serialization)
+                from dataclasses import asdict
+                results_data = {
+                    'all_results_summary': {},
+                    'report': report,
+                    'json_path': json_path,
+                    'config': asdict(experiment_config),
+                    'status': 'completed'
+                }
+                
+                # Create summary of results
+                for strategy, result_list in all_results.items():
+                    if result_list and len(result_list) > 0:
+                        results_data['all_results_summary'][strategy] = {
+                            'num_runs': len(result_list),
+                            'sample_result': result_list[0] if result_list else {}
+                        }
+                
+                # Write to file
+                with open(results_file, 'w', encoding='utf-8') as f:
+                    json.dump(results_data, f, indent=2, ensure_ascii=False, default=str)
+                
+            except Exception as e:
+                print(f"Academic experiment error: {e}")
+                import traceback
+                traceback.print_exc()
+                # Write error to file
+                error_data = {'status': 'error', 'message': str(e)}
+                with open(results_file, 'w', encoding='utf-8') as f:
+                    json.dump(error_data, f, indent=2)
+        
+        # Start thread
+        import threading
+        thread = threading.Thread(target=run_experiment, daemon=True)
+        thread.start()
+        
+        return jsonify({'status': 'success', 'message': 'Academic experiment started'})
+        
+    except Exception as e:
+        session['academic_experiment_running'] = False
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/check_academic_experiment', methods=['GET'])
+def check_academic_experiment():
+    """Check academic experiment status"""
+    running = session.get('academic_experiment_running', False)
+    results_file = session.get('academic_experiment_file', None)
+    
+    if not running:
+        return jsonify({'status': 'idle'})
+    
+    # Check if results file exists
+    if results_file and os.path.exists(results_file):
+        try:
+            with open(results_file, 'r', encoding='utf-8') as f:
+                results_data = json.load(f)
+            
+            if results_data.get('status') == 'completed':
+                # Mark as not running in session
+                session['academic_experiment_running'] = False
+                session.modified = True
+                
+                return jsonify({
+                    'status': 'completed',
+                    'results': results_data
+                })
+            elif results_data.get('status') == 'error':
+                session['academic_experiment_running'] = False
+                session.modified = True
+                return jsonify({
+                    'status': 'error',
+                    'message': results_data.get('message', 'Unknown error')
+                })
+        except Exception as e:
+            print(f"Error reading results file: {e}")
+    
+    # Still running
+    return jsonify({
+        'status': 'running',
+        'progress': {'message': 'Experiment in progress...'}
     })
 
 if __name__ == '__main__':

@@ -96,7 +96,7 @@
         <!-- GUI specific settings -->
         <start value="true"/>
         <quit-on-end value="false"/>
-        <delay value="1000"/>  <!-- Simulation delay 1000ms (1 second) -->
+        <delay value="200"/>  <!-- Simulation delay 200ms (5x faster: 1000ms -> 200ms) -->
     </gui-only>
 
 </configuration>

@@ -9,8 +9,9 @@
                 <h5 class="card-title">Select Dataset</h5>
                 <select id="datasetSelect" class="form-select">
                     <option value="custom" {% if current_dataset == 'custom' %}selected{% endif %}>Custom Single Intersection</option>
-                    <option value="4intersection" {% if current_dataset == '4intersection' %}selected{% endif %}>4-Intersection Grid Network</option>
-                    <option value="tapas_cologne" {% if current_dataset == 'tapas_cologne' %}selected{% endif %}>TAPASCologne (Real Cologne Network)</option>
+                    <option value="cologne" {% if current_dataset == 'cologne' %}selected{% endif %}>OSM Cologne</option>
+                    <option value="vancouver" {% if current_dataset == 'vancouver' %}selected{% endif %}>OSM Vancouver</option>
+                    <option value="palo_alto" {% if current_dataset == 'palo_alto' %}selected{% endif %}>OSM Palo Alto</option>
                 </select>
                 <div class="alert alert-info mt-3 mb-0">
                     <strong>📍 Current Dataset:</strong> {{ dataset_description }}
