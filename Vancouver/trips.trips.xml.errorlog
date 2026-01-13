@@ -1,18 +1,14 @@
+Warning: At actuated tlLogic 'cluster_11106021175_12724509870_12724509871_13332756082_#10more', actuated phase 3 has no controlling detector.
+Warning: At actuated tlLogic 'cluster_11106021175_12724509870_12724509871_13332756082_#10more', linkIndex 40,41,42 has no controlling detector.
+Warning: At actuated tlLogic 'cluster_11144653175_7785941031_8291589412_8291589413_#4more', actuated phase 3 has no controlling detector.
+Warning: At actuated tlLogic 'cluster_11144653175_7785941031_8291589412_8291589413_#4more', linkIndex 7,8,9,10,19,20,21 has no controlling detector.
 Warning: At actuated tlLogic 'cluster_245719331_8483770517_8483770518_8483770519_#1more', linkIndex 8,9,10 has no controlling detector.
-Warning: At actuated tlLogic 'cluster_257879165_8483770455_8483770456_8483770457_#1more', linkIndex 16,17,18 has no controlling detector.
-Warning: Program '0' at tlLogic 'joinedS_11141932403_11141932404_cluster_1319731164_288982291_3714338134_3714338137_#4more' is incompatible with logic at junction 'cluster_1319731164_288982291_3714338134_3714338137_#4more' (mutual conflict between link indices 1,32 tl indices 3,34 phase 3).
+Warning: At actuated tlLogic 'cluster_430375277_8292120476_8292120477_8292120478_#1more', linkIndex 14,15,16 has no controlling detector.
+Warning: At actuated tlLogic 'joinedS_7044674492_cluster_11108823305_2400013422_4366718125_5141198828_#4more', linkIndex 24,25,26,27 has no controlling detector.
+Warning: Program '0' at tlLogic 'joinedS_9750629307_cluster_11106021178_13433586065_13433586066_6919159463_#9more' is incompatible with logic at junction 'cluster_11106021178_13433586065_13433586066_6919159463_#9more' (mutual conflict between link indices 10,18 tl indices 14,22 phase 0).
   To avoid deadlock/collisions, either: rebuild the signal plan with a newer version of netconvert/netedit
   or rebuild the network with option '--tls.ignore-internal-junction-jam' or include the program when building.
-Warning: Program '0' at tlLogic 'joinedS_1313402033_cluster_11112523440_1313402032_250760634_5464008300_#2more' is incompatible with logic at junction 'cluster_11112523440_1313402032_250760634_5464008300_#2more' (mutual conflict between link indices 4,8 tl indices 8,12 phase 0).
-  To avoid deadlock/collisions, either: rebuild the signal plan with a newer version of netconvert/netedit
-  or rebuild the network with option '--tls.ignore-internal-junction-jam' or include the program when building.
-Warning: At actuated tlLogic 'joinedS_7044674495_cluster_11108823305_2400013422_4366718125_5141198828_#3more', linkIndex 23,24,25,26 has no controlling detector.
-Warning: At actuated tlLogic 'joinedS_7785941030_7888591247_8272253302_cluster_11106039357_11106039359_8272253300_8272253301_#3more', linkIndex 27,28,37,38 has no controlling detector.
-Warning: At actuated tlLogic 'joinedS_8119871074_cluster_11106021178_6919159463_6919159464_6919159465_#3more_cluster_8119871071_9244788005_9244788006', linkIndex 16,17,18 has no controlling detector.
-Warning: Program '0' at tlLogic 'joinedS_8120154907_cluster_146537847_8120154909_8120154910_8120154911_#2more' is incompatible with logic at junction 'cluster_146537847_8120154909_8120154910_8120154911_#2more' (mutual conflict between link indices 5,11 tl indices 9,15 phase 0).
-  To avoid deadlock/collisions, either: rebuild the signal plan with a newer version of netconvert/netedit
-  or rebuild the network with option '--tls.ignore-internal-junction-jam' or include the program when building.
-Warning: Program '0' at tlLogic 'joinedS_8483770580_8483770581_cluster_11186231624_8483770582_8483770583_8483770584_#2more' is incompatible with logic at junction 'cluster_11186231624_8483770582_8483770583_8483770584_#2more' (mutual conflict between link indices 2,16 tl indices 10,24 phase 9).
-  To avoid deadlock/collisions, either: rebuild the signal plan with a newer version of netconvert/netedit
-  or rebuild the network with option '--tls.ignore-internal-junction-jam' or include the program when building.
-Warning: 6 total messages of type: At actuated tlLogic '%', linkIndex % has no controlling detector.
+Warning: Teleporting vehicle '23_trolleybus_16:0'; collision with vehicle '22_trolleybus_10:2', lane='975327011#0_0', gap=-14.50, time=173.00, stage=insertion.
+Warning: Vehicle '23_trolleybus_16:0' ends teleporting on edge '975327012#1', time=173.00.
+Warning: Teleporting vehicle '25_trolleybus_20:1'; collision with vehicle '24_trolleybus_16:1', lane='-155893490#2_0', gap=-14.50, time=204.00, stage=insertion.
+Warning: Vehicle '25_trolleybus_20:1' ends teleporting on edge '-70202020#1', time=204.00.

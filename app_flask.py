@@ -32,12 +32,29 @@ from src.traffic_simulator import TrafficSimulator
 app = Flask(__name__)
 app.secret_key = 'traffic_signal_control_secret_key_2024'  # Change this in production
 
+# Store large results on disk (avoid cookie-session overflow)
+WEB_RESULTS_DIR = os.path.join(SimulationConfig.OUTPUT_DIR, "web_results")
+
+def _ensure_dir(path: str) -> None:
+    try:
+        os.makedirs(path, exist_ok=True)
+    except Exception:
+        pass
+
+def _safe_json_load(path: str):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
 # Initialize session variables
 def init_session():
     if 'simulation_running' not in session:
         session['simulation_running'] = False
-    if 'simulation_results' not in session:
-        session['simulation_results'] = None
+    # NOTE: Don't store full results in session (cookie size limit). Store a file path instead.
+    if 'simulation_results_path' not in session:
+        session['simulation_results_path'] = None
     if 'all_strategy_results' not in session:
         session['all_strategy_results'] = {}
     if 'selected_strategy' not in session:
@@ -62,64 +79,33 @@ def index():
             'FIXED_TIME': '🕐 Fixed-time Control',
             'ADAPTIVE': '🧠 Adaptive Control', 
             'DQN': '🤖 DQN Reinforcement Learning',
-            'MAX_PRESSURE': '⚖️ MaxPressure Control'
+            'MAX_PRESSURE': '⚖️ MaxPressure Control',
+            'MARL_DQN': '🤝 Multi-Agent DQN (trained)'
         }
         
-        # Ensure session is properly initialized
-        if 'simulation_running' not in session:
-            session['simulation_running'] = False
-        if 'simulation_results' not in session:
-            session['simulation_results'] = None
-        if 'all_strategy_results' not in session:
-            session['all_strategy_results'] = {}
-        if 'selected_strategy' not in session:
-            session['selected_strategy'] = 'FIXED_TIME'
-        if 'current_dataset' not in session:
-            session['current_dataset'] = SimulationConfig.DATASET
-        
-        # Check if simulation is actually still running (not just stuck in session)
+        # Render-time results: load from disk (not session cookie)
+        simulation_results = None
+        results_path = session.get('simulation_results_path')
+        if results_path and os.path.exists(results_path):
+            simulation_results = _safe_json_load(results_path)
+
+        # If session says running but the temp script is gone AND there's no temp results,
+        # clear stale running flag to avoid "stuck running" UI.
         if session.get('simulation_running', False):
-            # Check if results file exists (simulation completed)
-            if os.path.exists("temp_results.json"):
-                # Simulation completed, update session
-                try:
-                    with open("temp_results.json", "r", encoding="utf-8") as f:
-                        results = json.load(f)
-                    session['simulation_results'] = results
-                    session['simulation_running'] = False
-                    session.modified = True
-                except:
-                    pass
-            # Check if simulation script still exists
-            elif not os.path.exists("temp_simulation.py"):
-                # Script deleted but no results - simulation crashed or completed
-                # Check timeout
-                start_time_str = session.get('simulation_start_time')
-                if start_time_str:
-                    try:
-                        start_time = datetime.fromisoformat(start_time_str)
-                        elapsed = (datetime.now() - start_time).total_seconds()
-                        if elapsed > 5:  # At least 5 seconds passed, likely crashed
-                            session['simulation_running'] = False
-                            session.modified = True
-                    except:
-                        session['simulation_running'] = False
-                        session.modified = True
-                else:
-                    # No start time recorded, likely stale state
-                    session['simulation_running'] = False
-                    session.modified = True
-        
-        session.modified = True
-        
+            if not os.path.exists("temp_simulation.py") and not os.path.exists("temp_results.json"):
+                session['simulation_running'] = False
+                session.modified = True
+
+        use_gui = session.get('use_gui', True)
         return render_template('index.html',
                              current_dataset=session.get('current_dataset', 'custom'),
                              dataset_description=current_config['description'],
                              strategy_options=strategy_options,
                              selected_strategy=session.get('selected_strategy', 'FIXED_TIME'),
                              simulation_running=session.get('simulation_running', False),
-                             simulation_results=session.get('simulation_results'),
-                             all_strategy_results=session.get('all_strategy_results', {}))
+                             simulation_results=simulation_results,
+                             all_strategy_results=session.get('all_strategy_results', {}),
+                             use_gui=use_gui)
     except Exception as e:
         print(f"Error in index route: {e}")
         import traceback
@@ -135,7 +121,7 @@ def set_dataset():
     
     if dataset_option != SimulationConfig.DATASET:
         session['simulation_running'] = False
-        session['simulation_results'] = None
+        session['simulation_results_path'] = None
         session['all_strategy_results'] = {}
         SimulationConfig.set_dataset(dataset_option)
         session['current_dataset'] = dataset_option
@@ -143,32 +129,82 @@ def set_dataset():
     
     return jsonify({'status': 'success', 'dataset': dataset_option})
 
+def kill_existing_sumo_processes():
+    """Kill any existing SUMO processes to prevent duplicate windows"""
+    try:
+        if sys.platform == 'win32':
+            # Windows: Kill all sumo-gui.exe and sumo.exe processes
+            subprocess.run(['taskkill', '/F', '/IM', 'sumo-gui.exe'], 
+                         capture_output=True, timeout=3)
+            subprocess.run(['taskkill', '/F', '/IM', 'sumo.exe'], 
+                         capture_output=True, timeout=3)
+        else:
+            # Linux/Mac: Use pkill
+            subprocess.run(['pkill', '-f', 'sumo-gui'], 
+                         capture_output=True, timeout=3)
+            subprocess.run(['pkill', '-f', 'sumo'], 
+                         capture_output=True, timeout=3)
+    except Exception as e:
+        # Ignore errors - processes might not exist
+        pass
+
 @app.route('/start_simulation', methods=['POST'])
 def start_simulation():
     """Start simulation"""
     data = request.get_json()
     strategy = data.get('strategy', 'FIXED_TIME')
+    use_gui_option = data.get('use_gui', None)  # Optional: allow user to override
+    requested_duration = int(data.get('duration', 600))  # Get duration from request, default 600s
     
     if session.get('simulation_running', False):
         return jsonify({'status': 'error', 'message': 'Simulation already running'})
     
     try:
-        # Clean up old temporary files
-        for temp_file in ["temp_results.json", "temp_simulation.py"]:
+        # Kill any existing SUMO processes first to prevent duplicate windows
+        kill_existing_sumo_processes()
+        time.sleep(0.5)  # Give processes time to close
+        
+        # Clean up old temporary files (but keep temp_results.json if it exists - might be from previous run)
+        for temp_file in ["temp_simulation.py"]:
             if os.path.exists(temp_file):
                 try:
                     os.remove(temp_file)
                 except Exception:
                     pass
+        # Also clean up old results file if it's stale (older than 5 minutes)
+        if os.path.exists("temp_results.json"):
+            try:
+                file_age = time.time() - os.path.getmtime("temp_results.json")
+                if file_age > 300:  # 5 minutes
+                    os.remove("temp_results.json")
+            except:
+                pass
         
         # Get current dataset
         dataset = session.get('current_dataset', SimulationConfig.DATASET)
+        
+        # Determine if we should use GUI based on map size
+        # Large maps (Cologne, Vancouver) are slower with GUI
+        large_maps = ['cologne', 'vancouver', 'los_angeles']
+        if use_gui_option is None:
+            # Auto-detect: use GUI for small maps, headless for large maps
+            use_gui = dataset not in large_maps
+        else:
+            use_gui = use_gui_option
+        
         session['selected_strategy'] = strategy
+        session['use_gui'] = use_gui  # Store GUI preference
+        session['simulation_duration'] = requested_duration  # Store duration
         session['simulation_running'] = True
-        session['simulation_results'] = None
+        session['simulation_results_path'] = None
         session.modified = True
         
+        # Validate duration
+        if requested_duration < 60 or requested_duration > 7200:
+            return jsonify({'status': 'error', 'message': 'Duration must be between 60 and 7200 seconds'})
+        
         # Create simulation script
+        gui_text = "GUI" if use_gui else "headless (faster)"
         script_content = f'''import sys
 import os
 sys.path.append(".")
@@ -177,16 +213,16 @@ from src.config import SimulationConfig
 
 os.chdir(".")
 
-print("Starting SUMO GUI simulation...")
+print("Starting SUMO {gui_text} simulation...")
 print("Strategy: {strategy}")
 print("Dataset: {dataset}")
 
 SimulationConfig.set_dataset("{dataset}")
 
-simulator = TrafficSimulator(use_gui=True, dataset="{dataset}")
+simulator = TrafficSimulator(use_gui={use_gui}, dataset="{dataset}")
 
-duration = 600
-print(f"Running simulation for {{duration}} seconds...")
+duration = {requested_duration}
+print(f"Running simulation for {{duration}} seconds ({requested_duration/60:.1f} minutes)...")
 
 metrics = simulator.run_simulation(duration=duration, strategy="{strategy}")
 
@@ -217,6 +253,23 @@ with open("temp_results.json", "w", encoding="utf-8") as f:
 
 simulator.export_data()
 print("Simulation finished, results saved")
+
+# Force close SUMO GUI to prevent dialog from appearing
+import time
+time.sleep(0.5)  # Give time for results to be saved
+if {use_gui}:
+    import subprocess
+    import sys
+    try:
+        if sys.platform == 'win32':
+            # Force kill SUMO GUI to avoid dialog
+            subprocess.run(['taskkill', '/F', '/IM', 'sumo-gui.exe'], 
+                         capture_output=True, timeout=3)
+        else:
+            subprocess.run(['pkill', '-f', 'sumo-gui'], 
+                         capture_output=True, timeout=3)
+    except:
+        pass
 '''
         
         # Write script
@@ -238,16 +291,35 @@ print("Simulation finished, results saved")
 def check_simulation():
     """Check simulation status and results"""
     try:
+        # If we already have a results file saved, treat as completed.
+        existing_path = session.get('simulation_results_path')
+        if existing_path and os.path.exists(existing_path):
+            if session.get('simulation_running', False):
+                session['simulation_running'] = False
+                session.modified = True
+            return jsonify({'status': 'completed'})
+        
+        # Check for results file
         if os.path.exists("temp_results.json"):
             try:
-                with open("temp_results.json", "r", encoding="utf-8") as f:
-                    results = json.load(f)
-                
-                session['simulation_results'] = results
+                # Move results to a persistent location (avoid storing in session cookie)
+                _ensure_dir(WEB_RESULTS_DIR)
+                dataset = session.get('current_dataset', SimulationConfig.DATASET)
+                ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+                dest_dir = os.path.join(WEB_RESULTS_DIR, dataset)
+                _ensure_dir(dest_dir)
+                current_strategy = session.get('selected_strategy', 'UNKNOWN')
+                dest_path = os.path.join(dest_dir, f"{ts}_{current_strategy}.json")
+                try:
+                    os.replace("temp_results.json", dest_path)
+                except Exception:
+                    # Fallback: keep temp file and point to it
+                    dest_path = os.path.abspath("temp_results.json")
+
                 session['simulation_running'] = False
+                session['simulation_results_path'] = dest_path
                 
                 # Save into all strategies' results
-                current_strategy = session.get('selected_strategy', 'UNKNOWN')
                 strategy_names = {
                     'FIXED_TIME': '🕐 Fixed-time Control',
                     'ADAPTIVE': '🧠 Adaptive Control', 
@@ -262,24 +334,23 @@ def check_simulation():
                 
                 session['all_strategy_results'][current_strategy] = {
                     'display_name': strategy_display_name,
-                    'results': results,
-                    'timestamp': datetime.now().strftime('%H:%M:%S')
+                    'timestamp': datetime.now().strftime('%H:%M:%S'),
+                    'results_path': dest_path,
+                    'dataset': dataset
                 }
                 session.modified = True  # Mark session as modified
                 
-                # Clean up temporary files
+                print(f"✅ Simulation completed! Results saved. Strategy: {current_strategy}")
+                
+                # Clean up simulation script only
                 try:
-                    os.remove("temp_results.json")
                     if os.path.exists("temp_simulation.py"):
                         os.remove("temp_simulation.py")
                 except:
                     pass
                 
-                return jsonify({
-                    'status': 'completed',
-                    'results': results,
-                    'strategy': current_strategy
-                })
+                # Don’t return full results payload (can be large); frontend will reload.
+                return jsonify({'status': 'completed'})
                 
             except Exception as e:
                 print(f"Error reading results: {e}")
@@ -295,7 +366,7 @@ def check_simulation():
                     elapsed = (datetime.now() - start_time).total_seconds()
                     if elapsed > 1800:  # 30 minutes timeout
                         session['simulation_running'] = False
-                        session['simulation_results'] = None
+                        session['simulation_results_path'] = None
                         session.modified = True
                         # Clean up stuck files
                         for temp_file in ["temp_simulation.py", "temp_results.json"]:
@@ -304,6 +375,16 @@ def check_simulation():
                                     os.remove(temp_file)
                                 except:
                                     pass
+                        # Force close SUMO GUI
+                        try:
+                            if sys.platform == 'win32':
+                                subprocess.run(['taskkill', '/F', '/IM', 'sumo-gui.exe'], 
+                                             capture_output=True, timeout=3)
+                            else:
+                                subprocess.run(['pkill', '-f', 'sumo-gui'], 
+                                             capture_output=True, timeout=3)
+                        except:
+                            pass
                         return jsonify({
                             'status': 'error',
                             'message': 'Simulation timed out after 30 minutes. Please try again.'
@@ -311,39 +392,88 @@ def check_simulation():
                 except Exception:
                     pass
             
-            # Check if temp_simulation.py still exists (it gets deleted when simulation completes)
-            if os.path.exists("temp_simulation.py"):
+            # Check if process is actually still running
+            process_id = session.get('simulation_process_id')
+            process_still_running = False
+            
+            if process_id:
+                try:
+                    # Check if process exists (Windows)
+                    if sys.platform == 'win32':
+                        result = subprocess.run(['tasklist', '/FI', f'PID eq {process_id}'], 
+                                              capture_output=True, text=True, timeout=2)
+                        process_still_running = str(process_id) in result.stdout
+                    else:
+                        # Linux/Mac: try to send signal 0 (doesn't kill, just checks)
+                        try:
+                            os.kill(process_id, 0)
+                            process_still_running = True
+                        except OSError:
+                            process_still_running = False
+                except Exception as e:
+                    print(f"Error checking process: {e}")
+                    # Assume still running if we can't check
+                    process_still_running = True
+            
+            if process_still_running:
                 return jsonify({'status': 'running'})
             else:
-                # Script file deleted but no results - simulation might have crashed
-                # Wait a bit more in case results are still being written
-                if not os.path.exists("temp_results.json"):
-                    # Give it 5 more seconds
-                    if start_time_str:
-                        try:
-                            start_time = datetime.fromisoformat(start_time_str)
-                            elapsed = (datetime.now() - start_time).total_seconds()
-                            if elapsed > 5:  # At least 5 seconds have passed
-                                session['simulation_running'] = False
-                                session.modified = True
-                                return jsonify({
-                                    'status': 'error',
-                                    'message': 'Simulation process ended without creating results. Please try again.'
-                                })
-                        except:
-                            pass
-                return jsonify({'status': 'running'})  # Still waiting
+                # Process has ended - check for results immediately
+                # Wait a moment for file to be fully written
+                time.sleep(0.2)
+                
+                if os.path.exists("temp_results.json"):
+                    # Let the main temp_results.json handler above process it
+                    return jsonify({'status': 'running'})
+                else:
+                    # Process ended but no results - simulation failed
+                    session['simulation_running'] = False
+                    session['simulation_results_path'] = None
+                    session.modified = True
+                    
+                    # Force close SUMO GUI if still open
+                    try:
+                        if sys.platform == 'win32':
+                            subprocess.run(['taskkill', '/F', '/IM', 'sumo-gui.exe'], 
+                                         capture_output=True, timeout=3)
+                        else:
+                            subprocess.run(['pkill', '-f', 'sumo-gui'], 
+                                         capture_output=True, timeout=3)
+                    except:
+                        pass
+                    
+                    # Clean up
+                    for temp_file in ["temp_simulation.py", "temp_results.json"]:
+                        if os.path.exists(temp_file):
+                            try:
+                                os.remove(temp_file)
+                            except:
+                                pass
+                    
+                    return jsonify({
+                        'status': 'error',
+                        'message': 'Simulation ended but no results were saved. Check console for errors.'
+                    })
         else:
-            return jsonify({'status': 'idle'})
+            # No results file and not running - check session state
+            if not session.get('simulation_running', False):
+                return jsonify({'status': 'idle'})
+            else:
+                # Session says running but no process and no results - might be stuck
+                # Give it a moment and check again
+                return jsonify({'status': 'running'})
             
     except Exception as e:
         print(f"Error in check_simulation: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'status': 'error', 'message': str(e)})
 
 @app.route('/clear_history', methods=['POST'])
 def clear_history():
     """Clear simulation history"""
     session['all_strategy_results'] = {}
+    session['simulation_results_path'] = None
     session.modified = True
     return jsonify({'status': 'success'})
 
@@ -398,7 +528,7 @@ def reset_simulation():
     
     # Reset session state
     session['simulation_running'] = False
-    session['simulation_results'] = None
+    session['simulation_results_path'] = None
     session['simulation_process_id'] = None
     session['simulation_start_time'] = None
     
@@ -430,8 +560,11 @@ def get_comparison_charts():
     }
     
     for strategy_key, strategy_data in all_results.items():
-        results_data = strategy_data['results']
-        comparison_data['Strategy'].append(strategy_data['display_name'])
+        results_path = strategy_data.get('results_path')
+        if not results_path or not os.path.exists(results_path):
+            continue
+        results_data = _safe_json_load(results_path) or {}
+        comparison_data['Strategy'].append(strategy_data.get('display_name', strategy_key))
         comparison_data['Waiting Time'].append(results_data.get('avg_waiting_time', 0))
         comparison_data['Speed'].append(results_data.get('avg_speed', 0))
         comparison_data['Throughput'].append(results_data.get('throughput_per_hour', 0))

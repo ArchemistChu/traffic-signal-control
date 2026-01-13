@@ -1,19 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-01-09 21:56:47 by Eclipse SUMO sumo Version 1.24.0
+<!-- generated on 2026-01-13T14:16:32.994840+08:00 by Eclipse SUMO sumo 1.25.0
 -->
 
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
         <net-file value="osm.net.xml.gz"/>
-        <route-files value="osm_pt.rou.xml,osm.bus.trips.xml,osm.passenger.trips.xml,osm.pedestrian.rou.xml,osm.truck.trips.xml"/>
-        <additional-files value="osm.poly.xml.gz,osm_stops.add.xml,output.add.xml"/>
+        <route-files value="osm.bus.trips.xml,osm.passenger.trips.xml,osm.pedestrian.rou.xml,osm.truck.trips.xml"/>
+        <additional-files value="osm.poly.xml.gz,output.add.xml"/>
     </input>
 
     <output>
         <tripinfo-output value="tripinfos.xml"/>
-        <stop-output value="stopinfos.xml"/>
         <statistic-output value="stats.xml"/>
     </output>
 
@@ -32,5 +31,7 @@
         <duration-log.statistics value="true"/>
         <no-step-log value="true"/>
     </report>
+
+    <!-- GUI settings removed: osm.view.xml not included -->
 
 </sumoConfiguration>

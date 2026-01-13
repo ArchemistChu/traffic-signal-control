@@ -383,28 +383,40 @@ class RLAgent:
         states = torch.FloatTensor(np.array([e.state for e in batch])).to(self.device)
         actions = torch.LongTensor([e.action for e in batch]).to(self.device)
         rewards = torch.FloatTensor([e.reward for e in batch]).to(self.device)
-        next_states = torch.FloatTensor(np.array([e.next_state for e in batch if e.next_state is not None])).to(self.device)
         dones = torch.BoolTensor([e.done for e in batch]).to(self.device)
+
+        # Build next_states for the whole batch (mask-safe).
+        # Some code paths may store a next_state even for terminal transitions.
+        # We compute target Q for all and then zero-out terminal ones.
+        has_next = torch.BoolTensor([e.next_state is not None for e in batch]).to(self.device)
+        state_dim = states.shape[1]
+        next_state_np = np.array([
+            (e.next_state if e.next_state is not None else np.zeros(state_dim, dtype=np.float32))
+            for e in batch
+        ], dtype=np.float32)
+        next_states = torch.FloatTensor(next_state_np).to(self.device)
         
         # Calculate current Q values
         current_q_values = self.q_network(states).gather(1, actions.unsqueeze(1))
         
         # --- Double DQN target calculation (online selects action, target evaluates) ---
         with torch.no_grad():
+            effective_nonterminal = (~dones) & has_next
+
+            if self.config.get('double_dqn', False):
+                # Actions from online network
+                online_next_q = self.q_network(next_states)
+                best_actions = online_next_q.argmax(1)
+                # Q-values from target network for those actions
+                target_next_q = self.target_network(next_states).gather(
+                    1, best_actions.unsqueeze(1)
+                ).squeeze(1)
+            else:
+                # Standard DQN: max over target network
+                target_next_q = self.target_network(next_states).max(1)[0]
+
             next_q_values = torch.zeros(self.config['batch_size']).to(self.device)
-            if len(next_states) > 0:
-                if self.config.get('double_dqn', False):
-                    # Actions from online network
-                    online_next_q = self.q_network(next_states)
-                    best_actions = online_next_q.argmax(1)
-                    # Q-values from target network for those actions
-                    target_next_q = self.target_network(next_states).gather(
-                        1, best_actions.unsqueeze(1)
-                    ).squeeze(1)
-                    next_q_values[~dones] = target_next_q
-                else:
-                    # Standard DQN: max over target network
-                    next_q_values[~dones] = self.target_network(next_states).max(1)[0]
+            next_q_values[effective_nonterminal] = target_next_q[effective_nonterminal]
             target_q_values = rewards + self.config['gamma'] * next_q_values
         
         # Calculate loss

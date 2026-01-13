@@ -49,7 +49,7 @@ class PhaseConfig:
 
 @dataclass
 class TrafficState:
-    """Traffic state information"""
+    """Traffic state information with support for buses and pedestrians"""
     time: float
     lane_vehicle_counts: Dict[str, int]
     lane_queue_lengths: Dict[str, int]
@@ -57,6 +57,10 @@ class TrafficState:
     detector_occupancy: Dict[str, float]
     current_phase: int
     phase_remaining_time: float
+    # Vehicle type breakdowns (for buses, pedestrians, etc.) - Optional fields with defaults
+    lane_bus_counts: Optional[Dict[str, int]] = None  # Number of buses per lane
+    lane_pedestrian_counts: Optional[Dict[str, int]] = None  # Number of pedestrians waiting per lane
+    bus_waiting_time: Optional[Dict[str, float]] = None  # Average waiting time for buses per lane
 
 class BaseController(ABC):
     """Signal controller base class"""
@@ -181,36 +185,77 @@ class AdaptiveController(BaseController):
         self.speed_threshold = 5.0        # Speed threshold (m/s)
     
     def decide_next_phase(self, traffic_state: TrafficState) -> Tuple[int, float]:
-        """Adaptive control logic - simplified to avoid detector issues"""
+        """Adaptive control logic with bus priority and pedestrian awareness"""
         current_phase = traffic_state.current_phase
 
         # Simple logic: check if current phase has waiting vehicles
         current_lanes = self._get_phase_lanes(current_phase)
-        current_queue = sum(traffic_state.lane_queue_lengths.get(lane, 0) for lane in current_lanes)
+        # Handle None or empty lanes - use all available lanes from traffic_state for OSM maps
+        if not current_lanes and hasattr(traffic_state, 'lane_list') and traffic_state.lane_list:
+            current_lanes = traffic_state.lane_list
+        
+        # Calculate weighted queue (buses count more due to transit priority)
+        current_queue = 0
+        current_bus_count = 0
+        current_bus_wait = 0.0
+        for lane in (current_lanes or []):
+            queue = traffic_state.lane_queue_lengths.get(lane, 0)
+            bus_count = (traffic_state.lane_bus_counts or {}).get(lane, 0)
+            bus_wait = (traffic_state.bus_waiting_time or {}).get(lane, 0.0)
+            # Buses count as 2x regular vehicles (transit priority)
+            current_queue += queue + bus_count  # Add bus count as extra weight
+            current_bus_count += bus_count
+            current_bus_wait += bus_wait
 
-        # If current phase has significant queue and time remaining, extend it
-        if current_queue > 2 and traffic_state.phase_remaining_time > 5:
-            extension = min(self.max_green_extension, current_queue * 2.0)  # 2 seconds per waiting vehicle
-            reason = f"Current phase has {current_queue} waiting vehicles, extend {extension:.1f}s"
+        # Transit priority: If buses are waiting, give them priority
+        bus_priority_bonus = 0
+        if current_bus_count > 0:
+            # Add extra time for buses (they're longer and need more time to clear)
+            bus_priority_bonus = min(10.0, current_bus_count * 3.0 + current_bus_wait * 0.5)
+
+        # If current phase has significant queue (including bus priority) and time remaining, extend it
+        if (current_queue > 2 or current_bus_count > 0) and traffic_state.phase_remaining_time > 5:
+            extension = min(self.max_green_extension, current_queue * 2.0 + bus_priority_bonus)
+            reason = f"Current phase has {current_queue} vehicles ({current_bus_count} buses), extend {extension:.1f}s"
+            if current_bus_count > 0:
+                reason += f" [Transit Priority: +{bus_priority_bonus:.1f}s]"
             self.log_decision(traffic_state, (current_phase, extension), reason)
             return current_phase, extension
 
         # Otherwise, switch to next phase in sequence (like fixed time but adaptive duration)
         next_phase = (current_phase + 1) % len(self.phases)
 
-        # Adjust duration based on queue length for next phase
+        # Adjust duration based on queue length and bus priority for next phase
         next_lanes = self._get_phase_lanes(next_phase)
-        next_queue = sum(traffic_state.lane_queue_lengths.get(lane, 0) for lane in next_lanes)
+        # Handle None or empty lanes
+        if not next_lanes and hasattr(traffic_state, 'lane_list') and traffic_state.lane_list:
+            next_lanes = traffic_state.lane_list
+        
+        next_queue = 0
+        next_bus_count = 0
+        next_bus_wait = 0.0
+        for lane in (next_lanes or []):
+            queue = traffic_state.lane_queue_lengths.get(lane, 0)
+            bus_count = (traffic_state.lane_bus_counts or {}).get(lane, 0)
+            bus_wait = (traffic_state.bus_waiting_time or {}).get(lane, 0.0)
+            next_queue += queue + bus_count  # Buses count extra
+            next_bus_count += bus_count
+            next_bus_wait += bus_wait
+        
         base_duration = self.phases[next_phase].duration
+        next_bus_bonus = min(10.0, next_bus_count * 3.0 + next_bus_wait * 0.5) if next_bus_count > 0 else 0
 
-        if next_queue > 5:
-            duration = min(self.phases[next_phase].max_duration, base_duration * 1.5)
+        if next_queue > 5 or next_bus_count > 0:
+            duration = min(self.phases[next_phase].max_duration, 
+                          base_duration * 1.5 + next_bus_bonus)
         elif next_queue < 1:
             duration = max(self.phases[next_phase].min_duration, base_duration * 0.7)
         else:
-            duration = base_duration
+            duration = base_duration + next_bus_bonus
 
         reason = f"Switch to {self.get_phase_name(next_phase)}, queue: {next_queue}"
+        if next_bus_count > 0:
+            reason += f" ({next_bus_count} buses, Transit Priority)"
         self.log_decision(traffic_state, (next_phase, duration), reason)
 
         return next_phase, duration
@@ -326,35 +371,71 @@ class DQNController(BaseController):
             }
             return phase_lane_mapping.get(phase_id, [])
         else:
-            # For TAPASCologne, use all lanes (simplified approach)
-            # In a real implementation, you'd map phases to specific lanes
+            # For OSM maps, lanes are auto-detected and stored in traffic_state
+            # Use lanes from traffic_state if available, otherwise return empty list
+            # This prevents TypeError when lanes is None in config
             config = SimulationConfig.get_current_config()
-            return config.get('lanes', [])
+            lanes = config.get('lanes')
+            if lanes is None:
+                # For OSM maps, return empty list and use traffic_state lanes instead
+                # The calling code should handle this by using traffic_state.lane_list
+                return []
+            return lanes if isinstance(lanes, list) else []
 
     def decide_next_phase(self, traffic_state: TrafficState) -> Tuple[int, float]:
-        """DQN control logic - simplified for stability"""
+        """DQN control logic with bus priority - simplified for stability"""
         current_phase = traffic_state.current_phase
 
         # Simple rule-based decision (can be enhanced with actual RL later)
         current_lanes = self._get_phase_lanes(current_phase)
-        current_queue = sum(traffic_state.lane_queue_lengths.get(lane, 0) for lane in current_lanes)
+        # Handle None or empty lanes - use all available lanes from traffic_state for OSM maps
+        if not current_lanes and hasattr(traffic_state, 'lane_list') and traffic_state.lane_list:
+            current_lanes = traffic_state.lane_list
+        
+        # Calculate weighted queue with bus priority
+        current_queue = 0
+        current_bus_count = 0
+        for lane in (current_lanes or []):
+            queue = traffic_state.lane_queue_lengths.get(lane, 0)
+            bus_count = (traffic_state.lane_bus_counts or {}).get(lane, 0)
+            current_queue += queue + (bus_count * 2.0)  # Buses count as 2x
+            current_bus_count += bus_count
+        
+        bus_bonus = min(8.0, current_bus_count * 2.5) if current_bus_count > 0 else 0
 
-        # If current phase has vehicles waiting, keep it green longer
-        if current_queue > 1 and traffic_state.phase_remaining_time > 3:
+        # If current phase has vehicles waiting (including bus priority), keep it green longer
+        if (current_queue > 1 or current_bus_count > 0) and traffic_state.phase_remaining_time > 3:
             next_phase = current_phase
             duration = min(self.phases[current_phase].max_duration,
-                          self.phases[current_phase].duration + current_queue * 1.5)
-            reason = f"DQN: Keep current phase (queue: {current_queue})"
+                          self.phases[current_phase].duration + current_queue * 1.5 + bus_bonus)
+            reason = f"DQN: Keep current phase (queue: {current_queue}"
+            if current_bus_count > 0:
+                reason += f", {current_bus_count} buses [Transit Priority]"
+            reason += ")"
         else:
             # Switch to next phase
             next_phase = (current_phase + 1) % len(self.phases)
             next_lanes = self._get_phase_lanes(next_phase)
-            next_queue = sum(traffic_state.lane_queue_lengths.get(lane, 0) for lane in next_lanes)
-
+            # Handle None or empty lanes - use all available lanes from traffic_state for OSM maps
+            if not next_lanes and hasattr(traffic_state, 'lane_list') and traffic_state.lane_list:
+                next_lanes = traffic_state.lane_list
+            
+            next_queue = 0
+            next_bus_count = 0
+            for lane in (next_lanes or []):
+                queue = traffic_state.lane_queue_lengths.get(lane, 0)
+                bus_count = (traffic_state.lane_bus_counts or {}).get(lane, 0)
+                next_queue += queue + (bus_count * 2.0)
+                next_bus_count += bus_count
+            
+            next_bus_bonus = min(8.0, next_bus_count * 2.5) if next_bus_count > 0 else 0
             base_duration = self.phases[next_phase].duration
             duration = min(self.phases[next_phase].max_duration,
-                          max(self.phases[next_phase].min_duration, base_duration + next_queue * 1.0))
-            reason = f"DQN: Switch to next phase (next_queue: {next_queue})"
+                          max(self.phases[next_phase].min_duration, base_duration + next_queue * 1.0 + next_bus_bonus))
+            reason = f"DQN: Switch to next phase (next_queue: {next_queue}"
+            if next_bus_count > 0:
+                reason += f", {next_bus_count} buses [Transit Priority]"
+            reason += ")"
 
         # Log decision
         self.log_decision(traffic_state, (next_phase, duration), reason)
@@ -378,26 +459,40 @@ class DQNController(BaseController):
         return np.array(state_vector)
     
     def _calculate_reward(self, traffic_state: TrafficState) -> float:
-        """Calculate reward function"""
+        """Calculate reward function with bus priority"""
         # Reward function: negative waiting time - negative queue length
         total_queue_length = sum(traffic_state.lane_queue_lengths.values())
         
         # Base reward: reduce queue length
         queue_penalty = -0.1 * total_queue_length
         
+        # Bus priority reward: strongly penalize bus waiting (transit priority)
+        total_bus_count = sum((traffic_state.lane_bus_counts or {}).values())
+        total_bus_wait = sum((traffic_state.bus_waiting_time or {}).values())
+        bus_penalty = -0.3 * total_bus_count - 0.2 * total_bus_wait  # Higher penalty for buses
+        
         # Speed reward: encourage high speed
-        avg_speed = np.mean(list(traffic_state.lane_mean_speeds.values()))
+        avg_speed = np.mean(list(traffic_state.lane_mean_speeds.values())) if traffic_state.lane_mean_speeds else 0
         speed_reward = 0.05 * avg_speed
         
         # Balance reward: encourage balance across directions
-        ew_vehicles = sum(traffic_state.lane_vehicle_counts.get(lane, 0) 
-                         for lane in ['east_in_0', 'east_in_1', 'west_in_0', 'west_in_1'])
-        ns_vehicles = sum(traffic_state.lane_vehicle_counts.get(lane, 0)
-                         for lane in ['north_in_0', 'north_in_1', 'south_in_0', 'south_in_1'])
+        # For OSM maps, use all lanes if custom lanes not available
+        if hasattr(traffic_state, 'lane_list') and traffic_state.lane_list:
+            all_lanes = traffic_state.lane_list
+            # Split lanes roughly in half for balance calculation
+            mid = len(all_lanes) // 2
+            ew_vehicles = sum(traffic_state.lane_vehicle_counts.get(lane, 0) for lane in all_lanes[:mid])
+            ns_vehicles = sum(traffic_state.lane_vehicle_counts.get(lane, 0) for lane in all_lanes[mid:])
+        else:
+            # Custom dataset lanes
+            ew_vehicles = sum(traffic_state.lane_vehicle_counts.get(lane, 0) 
+                             for lane in ['east_in_0', 'east_in_1', 'west_in_0', 'west_in_1'])
+            ns_vehicles = sum(traffic_state.lane_vehicle_counts.get(lane, 0)
+                             for lane in ['north_in_0', 'north_in_1', 'south_in_0', 'south_in_1'])
         
         balance_penalty = -0.05 * abs(ew_vehicles - ns_vehicles)
         
-        total_reward = queue_penalty + speed_reward + balance_penalty
+        total_reward = queue_penalty + bus_penalty + speed_reward + balance_penalty
         
         return total_reward
     
@@ -490,17 +585,31 @@ class MaxPressureController(BaseController):
         self.max_extension = 20.0
 
     def decide_next_phase(self, traffic_state: TrafficState) -> Tuple[int, float]:
-        """MaxPressure control logic"""
+        """MaxPressure control logic with bus priority"""
         current_phase = traffic_state.current_phase
 
-        # Compute pressure for all phases
+        # Compute pressure for all phases (with bus priority weighting)
         phase_pressures: Dict[int, float] = {}
+        # Get all available lanes (for OSM maps, use traffic_state lanes)
+        all_lanes = []
+        if hasattr(traffic_state, 'lane_list') and traffic_state.lane_list:
+            all_lanes = traffic_state.lane_list
+        elif hasattr(self, 'lane_list') and self.lane_list:
+            all_lanes = self.lane_list
+        
         for phase_id in self.phases.keys():
             lanes = self._get_phase_lanes(phase_id)
+            # Handle None or empty lanes - use all available lanes for OSM maps
+            if not lanes:
+                lanes = all_lanes
             pressure = 0.0
-            for lane in lanes:
+            for lane in (lanes or []):
                 q = traffic_state.lane_queue_lengths.get(lane, 0)
-                pressure += q
+                # Add bus priority: buses count as 2.5x regular vehicles
+                bus_count = (traffic_state.lane_bus_counts or {}).get(lane, 0)
+                bus_wait = (traffic_state.bus_waiting_time or {}).get(lane, 0.0)
+                # Transit priority: buses add significant pressure
+                pressure += q + (bus_count * 2.5) + (bus_wait * 0.3)
             phase_pressures[phase_id] = pressure
 
         # Choose phase with maximum pressure
@@ -510,11 +619,22 @@ class MaxPressureController(BaseController):
 
         # If current phase is already best and has remaining time, extend it
         if best_phase == current_phase and traffic_state.phase_remaining_time > 0:
+            # Calculate bus bonus for current phase
+            current_lanes = self._get_phase_lanes(current_phase)
+            if not current_lanes and hasattr(traffic_state, 'lane_list') and traffic_state.lane_list:
+                current_lanes = traffic_state.lane_list
+            
+            current_bus_count = sum((traffic_state.lane_bus_counts or {}).get(lane, 0) 
+                                   for lane in (current_lanes or []))
+            bus_bonus = min(8.0, current_bus_count * 2.0) if current_bus_count > 0 else 0
+            
             pressure_factor = min(1.0, best_pressure / 10.0)  # 10 queued vehicles → full factor
             extension = max(self.min_extension,
-                            min(self.max_extension, pressure_factor * self.max_extension))
+                            min(self.max_extension, pressure_factor * self.max_extension + bus_bonus))
             reason = (f"Keep current phase (MaxPressure) - pressure={current_pressure:.1f}, "
                       f"extend {extension:.1f}s")
+            if current_bus_count > 0:
+                reason += f" [Transit Priority: {current_bus_count} buses]"
             self.log_decision(traffic_state, (current_phase, extension), reason)
             return current_phase, extension
 

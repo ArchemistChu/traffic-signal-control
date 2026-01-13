@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-01-12 18:44:01.384437 by Eclipse SUMO $Id: ptlines2flows.py v1_3_1+0313-ccb31df3eb jakob.erdmann@dlr.de 2019-09-02 13:26:32 +0200 $ v1_25_0+0000-ac6c5a6752d
+<configuration>
+    <net-file value="C:\Users\User\Sumo\2026-01-12-18-43-41\osm.net.xml.gz"/>
+    <ptlines-file value="C:\Users\User\Sumo\2026-01-12-18-43-41\osm_ptlines.xml"/>
+    <ptstops-file value="C:\Users\User\Sumo\2026-01-12-18-43-41\osm_stops.add.xml"/>
+    <output-file value="C:\Users\User\Sumo\2026-01-12-18-43-41\osm_pt.rou.xml"/>
+    <stopinfos-file value="C:\Users\User\Sumo\2026-01-12-18-43-41\stopinfos.xml"/>
+    <routes-file value="C:\Users\User\Sumo\2026-01-12-18-43-41\vehroutes.xml"/>
+    <trips-file value="C:\Users\User\Sumo\2026-01-12-18-43-41\trips.trips.xml"/>
+    <end value="1200.0"/>
+    <min-stops value="0"/>
+    <extend-to-fringe value="True"/>
+    <random-begin value="True"/>
+    <seed value="42"/>
+    <ignore-errors value="True"/>
+    <vtype-prefix value="pt_"/>
+    <verbose value="True"/>
+</configuration>
+-->
+
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <vType id="pt_bus" vClass="bus" speedFactor="0.95"/>
+    <vType id="pt_tram" vClass="tram" speedFactor="1.0"/>
+    <vType id="pt_train" vClass="rail"/>
+    <vType id="pt_subway" vClass="subway"/>
+    <vType id="pt_light_rail" vClass="rail_urban"/>
+    <vType id="pt_monorail" vClass="rail_urban"/>
+    <vType id="pt_trolleybus" vClass="bus" speedFactor="0.95"/>
+    <vType id="pt_minibus" vClass="bus" speedFactor="0.95"/>
+    <vType id="pt_share_taxi" vClass="taxi" speedFactor="0.95"/>
+    <vType id="pt_aerialway" vClass="cable_car" length="2.5" width="2" personCapacity="4"/>
+    <vType id="pt_ferry" vClass="ship"/>
+    <trip id="0_bus_172:0" type="pt_bus" depart="3.0" departLane="best" from="147549213" to="206149607#1">
+        <stop busStop="7021491530" duration="30"/>  <!-- Friesenplatz -->
+        <stop busStop="7021491532" duration="30"/>  <!-- Auf dem Berlich -->
+        <stop busStop="7022495309" duration="30"/>  <!-- Unter Sachsenhausen -->
+        <stop busStop="7021491557" duration="30"/>  <!-- Dom/Hbf -->
+    </trip>
+    <trip id="1_bus_172:1" type="pt_bus" depart="15.0" departLane="best" from="206149607#1" to="-620340705">
+        <stop busStop="7021491557" duration="30"/>  <!-- Dom/Hbf -->
+        <stop busStop="7021491531" duration="30"/>  <!-- Auf dem Berlich -->
+        <stop busStop="-7021491530" duration="30"/>  <!-- Friesenplatz -->
+    </trip>
+    <trip id="2_bus_171:0" type="pt_bus" depart="15.0" departLane="best" from="465425611" to="169453895">
+        <stop busStop="442698924" duration="30"/>  <!-- Breslauer Platz/Hbf -->
+        <stop busStop="7022495310" duration="30"/>  <!-- Unter Sachsenhausen -->
+        <stop busStop="7022495311" duration="30"/>  <!-- Offenbachplatz -->
+        <stop busStop="7022495307" duration="30"/>  <!-- Blaubach -->
+    </trip>
+    <trip id="3_bus_171:1" type="pt_bus" depart="17.0" departLane="best" from="37873571#0" to="465425611">
+        <stop busStop="7022495308" duration="30"/>  <!-- Blaubach -->
+        <stop busStop="7022495312" duration="30"/>  <!-- Offenbachplatz -->
+        <stop busStop="7022495309" duration="30"/>  <!-- Unter Sachsenhausen -->
+        <stop busStop="442698924" duration="30"/>  <!-- Breslauer Platz/Hbf -->
+    </trip>
+    <trip id="4_bus_173:0" type="pt_bus" depart="52.0" departLane="best" from="206149607#1" to="-620340705">
+        <stop busStop="7021491557" duration="30"/>  <!-- Dom/Hbf -->
+        <stop busStop="7021491531" duration="30"/>  <!-- Auf dem Berlich -->
+        <stop busStop="-7021491530" duration="30"/>  <!-- Friesenplatz -->
+    </trip>
+    <trip id="5_bus_173:1" type="pt_bus" depart="93.0" departLane="best" from="147549213" to="206149607#1">
+        <stop busStop="7021491530" duration="30"/>  <!-- Friesenplatz -->
+        <stop busStop="7021491532" duration="30"/>  <!-- Auf dem Berlich -->
+        <stop busStop="7022495309" duration="30"/>  <!-- Unter Sachsenhausen -->
+        <stop busStop="7021491557" duration="30"/>  <!-- Dom/Hbf -->
+    </trip>
+    <trip id="6_bus_133:0" type="pt_bus" depart="119.0" departLane="best" from="675775079" to="500272213#4">
+        <stop busStop="4603900825" duration="30"/>  <!-- Breslauer Platz/Hbf -->
+        <stop busStop="1854470184" duration="30"/>  <!-- Heumarkt -->
+        <stop busStop="4072608219" duration="30"/>  <!-- Schokoladenmuseum -->
+    </trip>
+    <trip id="7_bus_260:0" type="pt_bus" depart="131.0" departLane="best" from="173514626" to="4531783">
+        <stop busStop="4603900824" duration="30"/>  <!-- Breslauer Platz/Hbf -->
+        <stop busStop="1051792004" duration="30"/>  <!-- Heumarkt -->
+    </trip>
+    <trip id="8_bus_978:0" type="pt_bus" depart="132.0" departLane="best" from="154502579" to="37873578#2">
+        <stop busStop="1051841189" duration="30"/>  <!-- Rothgerberbach/Poststraße -->
+        <stop busStop="-1051671286" duration="30"/>  <!-- Mühlenbach -->
+        <stop busStop="1051792013" duration="30"/>  <!-- Heumarkt -->
+        <stop busStop="1051457183" duration="30"/>  <!-- Breslauer Platz/Hbf -->
+    </trip>
+    <trip id="9_bus_978:1" type="pt_bus" depart="133.0" departLane="best" from="37873578#2" to="9823971#2">
+        <stop busStop="1051457183" duration="30"/>  <!-- Breslauer Platz/Hbf -->
+        <stop busStop="1854470184" duration="30"/>  <!-- Heumarkt -->
+        <stop busStop="1051671286" duration="30"/>  <!-- Mühlenbach -->
+        <stop busStop="443844" duration="30"/>  <!-- Rothgerberbach/Poststraße -->
+    </trip>
+    <trip id="10_bus_SB40:0" type="pt_bus" depart="165.0" departLane="best" from="37873578#2" to="141230384#1">
+        <stop busStop="1051457183" duration="30"/>  <!-- Breslauer Platz/Hbf -->
+    </trip>
+    <trip id="11_bus_SB40:1" type="pt_bus" depart="201.0" departLane="best" from="863733569" to="37873578#2">
+        <stop busStop="1051457183" duration="30"/>  <!-- Breslauer Platz/Hbf -->
+    </trip>
+    <trip id="12_bus_SB25:0" type="pt_bus" depart="204.0" departLane="best" from="256617815" to="465425611">
+        <stop busStop="59642214" duration="30"/>  <!-- Heumarkt -->
+        <stop busStop="442698924" duration="30"/>  <!-- Breslauer Platz/Hbf -->
+    </trip>
+    <trip id="13_bus_SB25:1" type="pt_bus" depart="253.0" departLane="best" from="465425611" to="4531783">
+        <stop busStop="442698924" duration="30"/>  <!-- Breslauer Platz/Hbf -->
+        <stop busStop="1051792004" duration="30"/>  <!-- Heumarkt -->
+    </trip>
+    <trip id="14_bus_Kölner_City_Tour:0" type="pt_bus" depart="303.0" departLane="best" from="8672022#0" to="667410644#2">
+        <stop busStop="11764700918" duration="30"/>  <!-- CityTour Haltestelle 1: Dom -->
+        <stop busStop="3373248444" duration="30"/>  <!-- CityTour Haltestelle 2: Altstadt -->
+        <stop busStop="28164199" duration="30"/>  <!-- CityTour Haltestelle 3: Gürzenich / Hard Rock Cafe -->
+        <stop busStop="443863" duration="30"/>  <!-- CityTour Haltestelle 4: Neumarkt -->
+        <stop busStop="974769682" duration="30"/>  <!-- Kölner CityTour -->
+        <stop busStop="443844" duration="30"/>  <!-- Rothgerberbach/Poststraße -->
+    </trip>
+    <trip id="15_bus_260:1" type="pt_bus" depart="326.0" departLane="best" from="256617815" to="173514626">
+        <stop busStop="59642214" duration="30"/>  <!-- Heumarkt -->
+        <stop busStop="4603900824" duration="30"/>  <!-- Breslauer Platz/Hbf -->
+    </trip>
+    <trip id="16_bus_133:1" type="pt_bus" depart="353.0" departLane="best" from="690337666#2" to="675775079">
+        <stop busStop="320626322" duration="30"/>  <!-- Schokoladenmuseum -->
+        <stop busStop="1854470184" duration="30"/>  <!-- Heumarkt -->
+        <stop busStop="4603900825" duration="30"/>  <!-- Breslauer Platz/Hbf -->
+    </trip>
+    <trip id="17_bus_106:0" type="pt_bus" depart="383.0" departLane="best" from="37873577" to="500272213#4">
+        <stop busStop="1051792013" duration="30"/>  <!-- Heumarkt -->
+        <stop busStop="4072608219" duration="30"/>  <!-- Schokoladenmuseum -->
+    </trip>
+    <trip id="18_bus_106:1" type="pt_bus" depart="389.0" departLane="best" from="37873571#0" to="403498462">
+        <stop busStop="7039911393" duration="30"/>  <!-- Waidmarkt -->
+        <stop busStop="1854470184" duration="30"/>  <!-- Heumarkt -->
+    </trip>
+    <trip id="19_bus_132:0" type="pt_bus" depart="406.0" departLane="best" from="37873571#0" to="23561663">
+        <stop busStop="7039911393" duration="30"/>  <!-- Waidmarkt -->
+        <stop busStop="1854470184" duration="30"/>  <!-- Heumarkt -->
+        <stop busStop="1051457186" duration="30"/>  <!-- Breslauer Platz/Hbf -->
+    </trip>
+    <trip id="20_bus_132:1" type="pt_bus" depart="418.0" departLane="best" from="23561663" to="500272213#4">
+        <stop busStop="1051457186" duration="30"/>  <!-- Breslauer Platz/Hbf -->
+        <stop busStop="1854470184" duration="30"/>  <!-- Heumarkt -->
+        <stop busStop="1051792013" duration="30"/>  <!-- Heumarkt -->
+        <stop busStop="4072608219" duration="30"/>  <!-- Schokoladenmuseum -->
+    </trip>
+    <trip id="21_bus_132:2" type="pt_bus" depart="441.0" departLane="best" from="23561663" to="500272213#4">
+        <stop busStop="1051457186" duration="30"/>  <!-- Breslauer Platz/Hbf -->
+        <stop busStop="1854470184" duration="30"/>  <!-- Heumarkt -->
+        <stop busStop="1051792013" duration="30"/>  <!-- Heumarkt -->
+        <stop busStop="4072608219" duration="30"/>  <!-- Schokoladenmuseum -->
+    </trip>
+    <trip id="22_bus_132:3" type="pt_bus" depart="483.0" departLane="best" from="37873571#0" to="23561663">
+        <stop busStop="7039911393" duration="30"/>  <!-- Waidmarkt -->
+        <stop busStop="1854470184" duration="30"/>  <!-- Heumarkt -->
+        <stop busStop="1051457186" duration="30"/>  <!-- Breslauer Platz/Hbf -->
+    </trip>
+    <trip id="23_bus_124:0" type="pt_bus" depart="485.0" departLane="best" from="1174540043#1" to="1174540043#1">
+        <stop busStop="267477578" duration="30"/>  <!-- Breslauer Platz/Hbf -->
+    </trip>
+    <trip id="24_bus_124:1" type="pt_bus" depart="535.0" departLane="best" from="1174540043#1" to="1174540043#1">
+        <stop busStop="267477578" duration="30"/>  <!-- Breslauer Platz/Hbf -->
+    </trip>
+</routes>

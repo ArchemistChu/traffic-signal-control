@@ -99,12 +99,7 @@
         <seed value="12345"/>
     </random>
 
-    <gui-only>
-        <!-- GUI特定设置 -->
-        <gui-settings-file value="view.settings.xml"/>
-        <start value="true"/>
-        <quit-on-end value="false"/>
-        <delay value="200"/>  <!-- 仿真延迟200ms (5x faster: 1000ms -> 200ms) -->
-    </gui-only>
+    <!-- GUI settings removed - view.settings.xml file not available -->
+    <!-- GUI delay can be controlled directly in SUMO GUI interface -->
 
 </configuration> 

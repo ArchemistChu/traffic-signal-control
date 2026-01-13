@@ -1,0 +1,16 @@
+Warning: At actuated tlLogic 'GS_cluster_32950099_474438', linkIndex 16,17,18 has no controlling detector.
+Warning: At actuated tlLogic 'cluster_1587632933_1587632938_1806157952_1806157953_#12more', linkIndex 3,4,5,6 has no controlling detector.
+Warning: At actuated tlLogic 'cluster_1672454760_359416602_619450075_619450081_#2more', linkIndex 2,3,4 has no controlling detector.
+Warning: At actuated tlLogic 'cluster_1679641152_168536264_168536277_1691864247_#16more', linkIndex 3,4,5 has no controlling detector.
+Warning: At actuated tlLogic 'cluster_2106346103_2139839870_2177395468_5172648690_#3more', linkIndex 7,8,9 has no controlling detector.
+Warning: Program '0' at tlLogic 'joinedS_1496402283_cluster_12880735921_1496387766_1496402284_1496402287_#19more' is incompatible with logic at junction 'cluster_12880735921_1496387766_1496402284_1496402287_#19more' (mutual conflict between link indices 0,19 tl indices 5,24 phase 5).
+  To avoid deadlock/collisions, either: rebuild the signal plan with a newer version of netconvert/netedit
+  or rebuild the network with option '--tls.ignore-internal-junction-jam' or include the program when building.
+Warning: Program '0' at tlLogic 'joinedS_cluster_1672380662_2419064930_25630547_32950326_#1more_cluster_2419064926_25630553' is incompatible with logic at junction 'cluster_2419064926_25630553' (mutual conflict between link indices 0,1 tl indices 16,17 phase 5).
+  To avoid deadlock/collisions, either: rebuild the signal plan with a newer version of netconvert/netedit
+  or rebuild the network with option '--tls.ignore-internal-junction-jam' or include the program when building.
+Warning: No connection between edge '37276382' and edge '403498462' found.
+Warning: Vehicle '16_bus_133:1' has no valid route from edge '37276382' to stop edge '403498462'.
+Warning: Teleporting vehicle '16_bus_133:1'; waited too long (wrong lane, disconnected), lane='37276382_0', time=470.00.
+Warning: Vehicle '16_bus_133:1' ends teleporting on edge '403498462', time=470.00.
+Warning: 10 total messages of type: At actuated tlLogic '%', linkIndex % has no controlling detector.

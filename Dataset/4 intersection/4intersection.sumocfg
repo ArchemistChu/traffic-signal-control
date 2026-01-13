@@ -13,7 +13,7 @@
         <additional-files value="4intersection_additional.add.xml"/>
 
         <!-- GUI view settings (same visual style as single intersection) -->
-        <gui-settings-file value="view.settings.xml"/>
+        <!-- GUI settings file removed - file not available -->
     </input>
 
     <output>

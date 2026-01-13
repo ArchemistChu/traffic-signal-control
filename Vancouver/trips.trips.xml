@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-01-09 22:53:53.782815 by $Id: ptlines2flows.py v1_3_1+0313-ccb31df3eb jakob.erdmann@dlr.de 2019-09-02 13:26:32 +0200 $ v1_24_0+0000-b72eb3fabc8
+<!-- generated on 2026-01-12 18:39:31.891799 by Eclipse SUMO $Id: ptlines2flows.py v1_3_1+0313-ccb31df3eb jakob.erdmann@dlr.de 2019-09-02 13:26:32 +0200 $ v1_25_0+0000-ac6c5a6752d
 <configuration>
-    <net-file value="C:\Users\Archemist\Sumo\2026-01-09-22-49-16\2026-01-09-22-52-11\osm.net.xml.gz"/>
-    <ptlines-file value="C:\Users\Archemist\Sumo\2026-01-09-22-49-16\2026-01-09-22-52-11\osm_ptlines.xml"/>
-    <ptstops-file value="C:\Users\Archemist\Sumo\2026-01-09-22-49-16\2026-01-09-22-52-11\osm_stops.add.xml"/>
-    <output-file value="C:\Users\Archemist\Sumo\2026-01-09-22-49-16\2026-01-09-22-52-11\osm_pt.rou.xml"/>
-    <stopinfos-file value="C:\Users\Archemist\Sumo\2026-01-09-22-49-16\2026-01-09-22-52-11\stopinfos.xml"/>
-    <routes-file value="C:\Users\Archemist\Sumo\2026-01-09-22-49-16\2026-01-09-22-52-11\vehroutes.xml"/>
-    <trips-file value="C:\Users\Archemist\Sumo\2026-01-09-22-49-16\2026-01-09-22-52-11\trips.trips.xml"/>
+    <net-file value="C:\Users\User\Sumo\2026-01-12-18-39-21\osm.net.xml.gz"/>
+    <ptlines-file value="C:\Users\User\Sumo\2026-01-12-18-39-21\osm_ptlines.xml"/>
+    <ptstops-file value="C:\Users\User\Sumo\2026-01-12-18-39-21\osm_stops.add.xml"/>
+    <output-file value="C:\Users\User\Sumo\2026-01-12-18-39-21\osm_pt.rou.xml"/>
+    <stopinfos-file value="C:\Users\User\Sumo\2026-01-12-18-39-21\stopinfos.xml"/>
+    <routes-file value="C:\Users\User\Sumo\2026-01-12-18-39-21\vehroutes.xml"/>
+    <trips-file value="C:\Users\User\Sumo\2026-01-12-18-39-21\trips.trips.xml"/>
+    <end value="1200.0"/>
     <min-stops value="0"/>
     <extend-to-fringe value="True"/>
     <random-begin value="True"/>
@@ -31,33 +32,35 @@
     <vType id="pt_share_taxi" vClass="taxi" speedFactor="0.95"/>
     <vType id="pt_aerialway" vClass="cable_car" length="2.5" width="2" personCapacity="4"/>
     <vType id="pt_ferry" vClass="ship"/>
-    <trip id="0_bus_240:0" type="pt_bus" depart="3.0" departLane="best" from="-50843616#1" to="284143596#1">
+    <trip id="0_bus_240:0" type="pt_bus" depart="3.0" departLane="best" from="-476569295" to="284143596#1">
         <stop busStop="-1001095593" duration="30"/>  <!-- West Georgia St (EB) at Bute St -->
         <stop busStop="-1006238910" duration="30"/>  <!-- West Georgia St (EB) at Granville St -->
         <stop busStop="-6844787262" duration="30"/>  <!-- West Georgia St (EB) at Homer St -->
     </trip>
-    <trip id="1_bus_240:1" type="pt_bus" depart="15.0" departLane="best" from="-284143596#2" to="50843616#1">
+    <trip id="1_bus_240:1" type="pt_bus" depart="15.0" departLane="best" from="-284143596#2" to="476569295">
         <stop busStop="3743637009" duration="30"/>  <!-- West Georgia St (WB) at Homer St -->
         <stop busStop="4175141371" duration="30"/>  <!-- West Georgia St (WB) at Granville St -->
         <stop busStop="995628784" duration="30"/>  <!-- West Georgia St (WB) at Bute St -->
     </trip>
-    <trip id="2_trolleybus_10:0" type="pt_trolleybus" depart="15.0" departLane="best" from="29595920#1" to="1353575702">
+    <trip id="2_trolleybus_10:0" type="pt_trolleybus" depart="15.0" departLane="best" from="1197239554" to="1257346294#2">
         <stop busStop="4164839463" duration="30"/>  <!-- West Pender St (WB) at Granville St -->
     </trip>
-    <trip id="3_trolleybus_7:0" type="pt_trolleybus" depart="17.0" departLane="best" from="1207914964#0" to="1353575702">
+    <trip id="3_trolleybus_7:0" type="pt_trolleybus" depart="17.0" departLane="best" from="1207914964#0" to="1257346294#2">
         <stop busStop="4164839463" duration="30"/>  <!-- West Pender St (WB) at Granville St -->
     </trip>
-    <trip id="4_trolleybus_20:0" type="pt_trolleybus" depart="27.0" departLane="best" from="507852561#1" to="70202020">
+    <trip id="4_trolleybus_20:0" type="pt_trolleybus" depart="27.0" departLane="best" from="507852561#1" to="155893490#2">
+        <stop busStop="4957764222" duration="30"/>  <!-- Richards St (SB) at Dunsmuir St -->
     </trip>
-    <trip id="5_trolleybus_17:0" type="pt_trolleybus" depart="47.0" departLane="best" from="-74269429#2" to="74268723#1">
+    <trip id="5_trolleybus_17:0" type="pt_trolleybus" depart="47.0" departLane="best" from="-74269429#2" to="-74268720#1">
         <stop busStop="-5201120622" duration="30"/>  <!-- Robson St (WB) at Hamilton St -->
     </trip>
-    <trip id="6_bus_2:0" type="pt_bus" depart="52.0" departLane="best" from="-1184091183#0" to="-476612031">
+    <trip id="6_bus_2:0" type="pt_bus" depart="52.0" departLane="best" from="-1184091183#0" to="-74096522#1">
         <stop busStop="-5179200122" duration="30"/>  <!-- Burrard Station Bay 4 -->
         <stop busStop="-3763312405" duration="30"/>  <!-- Burrard Station Bay 1 -->
         <stop busStop="-3789883974" duration="30"/>  <!-- Burrard St (SB) at Robson St -->
         <stop busStop="-3789883874" duration="30"/>  <!-- Burrard St (SB) at Smithe St -->
         <stop busStop="-3789883501" duration="30"/>  <!-- Burrard St (SB) at Nelson St -->
+        <stop busStop="-3764696422" duration="30"/>  <!-- Burrard Street (SB) at Davie Street -->
     </trip>
     <trip id="7_trolleybus_7:1" type="pt_trolleybus" depart="55.0" departLane="best" from="975327011#0" to="507948141">
         <stop busStop="3738439095" duration="30"/>  <!-- Granville St (NB) at Davie St -->
@@ -66,16 +69,16 @@
         <stop busStop="4230886302" duration="30"/>  <!-- Granville St (NB) at Dunsmuir St -->
         <stop busStop="4230888691" duration="30"/>  <!-- Granville St (NB) at West Pender St -->
         <stop busStop="4230853987" duration="30"/>  <!-- Waterfront Station Bay 4 -->
+        <stop busStop="4230854326" duration="30"/>  <!-- West Cordova St (EB) at Homer St -->
     </trip>
-    <trip id="8_trolleybus_19:0" type="pt_trolleybus" depart="58.0" departLane="best" from="-74214596#1" to="-1207914964#0">
-        <stop busStop="-4230853126" duration="30"/>  <!-- West Pender St (EB) at Bute St -->
+    <trip id="8_trolleybus_19:0" type="pt_trolleybus" depart="58.0" departLane="best" from="-74214596" to="-1207914964#1">
         <stop busStop="-4230855444" duration="30"/>  <!-- West Pender St (EB) at Thurlow St -->
         <stop busStop="-3789883969" duration="30"/>  <!-- West Pender St (EB) at Burrard St -->
         <stop busStop="-4164839464" duration="30"/>  <!-- West Pender St (EB) at Granville St -->
         <stop busStop="-5129095623" duration="30"/>  <!-- West Pender St (EB) at Seymour Street -->
         <stop busStop="4842227323" duration="30"/>  <!-- West Pender St (EB) at Hamilton St -->
     </trip>
-    <trip id="9_bus_R5:0" type="pt_bus" depart="60.0" departLane="best" from="74272800#1" to="70202020">
+    <trip id="9_bus_R5:0" type="pt_bus" depart="60.0" departLane="best" from="74272800#1" to="155893490#2">
         <stop busStop="3789851068" duration="30"/>  <!-- West Hastings St (EB) at Granville St -->
     </trip>
     <trip id="10_trolleybus_4:0" type="pt_trolleybus" depart="93.0" departLane="best" from="1207914964#0" to="-975327011#0">
@@ -95,27 +98,29 @@
         <stop busStop="-994915200" duration="30"/>  <!-- Granville St (SB) at Nelson St -->
         <stop busStop="-994916966" duration="30"/>  <!-- Granville St (SB) at Davie St -->
     </trip>
-    <trip id="12_bus_2:1" type="pt_bus" depart="102.0" departLane="best" from="476612031" to="475244364#0">
+    <trip id="12_bus_2:1" type="pt_bus" depart="102.0" departLane="best" from="74096522#0" to="475244364#0">
+        <stop busStop="3708509681" duration="30"/>  <!-- Burrard Street (NB) at Davie Street -->
         <stop busStop="3745030474" duration="30"/>  <!-- Burrard St (NB) at Comox St -->
         <stop busStop="4231136844" duration="30"/>  <!-- Burrard St (NB) at Robson St -->
         <stop busStop="3789883872" duration="30"/>  <!-- Burrard Station Bay 7 -->
     </trip>
-    <trip id="13_bus_22:0" type="pt_bus" depart="119.0" departLane="best" from="-1184091183#2" to="-1207914964#0">
+    <trip id="13_bus_22:0" type="pt_bus" depart="119.0" departLane="best" from="-1184091183#2" to="-1207914964#1">
         <stop busStop="-3789883969" duration="30"/>  <!-- West Pender St (EB) at Burrard St -->
         <stop busStop="-4164839464" duration="30"/>  <!-- West Pender St (EB) at Granville St -->
         <stop busStop="-5129095623" duration="30"/>  <!-- West Pender St (EB) at Seymour Street -->
         <stop busStop="4842227323" duration="30"/>  <!-- West Pender St (EB) at Hamilton St -->
     </trip>
-    <trip id="14_bus_R5:1" type="pt_bus" depart="125.0" departLane="best" from="-70202020" to="74272800#3">
+    <trip id="14_bus_R5:1" type="pt_bus" depart="125.0" departLane="best" from="-155893490#2" to="74272800#3">
         <stop busStop="-3739451261" duration="30"/>  <!-- West Hastings St (WB) at Granville St -->
         <stop busStop="5131257030" duration="30"/>  <!-- Burrard Station Bay 6 -->
     </trip>
-    <trip id="15_trolleybus_6:0" type="pt_trolleybus" depart="131.0" departLane="best" from="440764070#2" to="543458022#2">
+    <trip id="15_trolleybus_6:0" type="pt_trolleybus" depart="131.0" departLane="best" from="475827987#0" to="1294688836#3">
+        <stop busStop="3932734579" duration="30"/>  <!-- Davie Street (EB) at Burrard Street -->
         <stop busStop="3743637096" duration="30"/>  <!-- Davie St (EB) at Howe St -->
         <stop busStop="6663029944" duration="30"/>  <!-- Davie St (EB) at Granville St -->
-        <stop busStop="5109874222" duration="30"/>  <!-- Davie St (EB) at Richards St -->
     </trip>
-    <trip id="16_trolleybus_5:0" type="pt_trolleybus" depart="132.0" departLane="best" from="1445703632#0" to="-74252160#0">
+    <trip id="16_trolleybus_5:0" type="pt_trolleybus" depart="132.0" departLane="best" from="706831740#0" to="-74252160#0">
+        <stop busStop="5168267121" duration="30"/>  <!-- Robson St (EB) at Broughton St -->
         <stop busStop="4231136844" duration="30"/>  <!-- Burrard St (NB) at Robson St -->
         <stop busStop="3789883872" duration="30"/>  <!-- Burrard Station Bay 7 -->
         <stop busStop="-3789883969" duration="30"/>  <!-- West Pender St (EB) at Burrard St -->
@@ -126,7 +131,7 @@
         <stop busStop="12096148150" duration="30"/>  <!-- Robson St (EB) at Thurlow St -->
         <stop busStop="13086158736" duration="30"/>  <!-- Robson St (EB) at Bute St -->
     </trip>
-    <trip id="17_trolleybus_5:1" type="pt_trolleybus" depart="133.0" departLane="best" from="74252155#1" to="-1445703632#0">
+    <trip id="17_trolleybus_5:1" type="pt_trolleybus" depart="133.0" departLane="best" from="74252155#1" to="-706831740#0">
         <stop busStop="5341879526" duration="30"/>  <!-- Cambie St (NB) at Dunsmuir St -->
         <stop busStop="4269894834" duration="30"/>  <!-- West Pender St (WB) at Hamilton St -->
         <stop busStop="3789883481" duration="30"/>  <!-- West Pender Street (WB) at Seymour St -->
@@ -134,16 +139,16 @@
         <stop busStop="-3763312405" duration="30"/>  <!-- Burrard Station Bay 1 -->
         <stop busStop="-4634183190" duration="30"/>  <!-- Robson St (WB) at Burrard St -->
     </trip>
-    <trip id="18_trolleybus_6:1" type="pt_trolleybus" depart="136.0" departLane="best" from="-74252155#6" to="4518138#2">
+    <trip id="18_trolleybus_6:1" type="pt_trolleybus" depart="136.0" departLane="best" from="-74252155#6" to="-74268720#1">
         <stop busStop="-4225958021@1145439" duration="30"/>  <!-- Cambie St (SB) at Dunsmuir St -->
         <stop busStop="-3940288957" duration="30"/>  <!-- Cambie St (SB) at West Georgia St -->
         <stop busStop="-2985506428" duration="30"/>  <!-- Cambie St (SB) at Robson St -->
-        <stop busStop="5808314453" duration="30"/>  <!-- Cambie St (SB) at Nelson St -->
     </trip>
-    <trip id="19_trolleybus_8:0" type="pt_trolleybus" depart="139.0" departLane="best" from="29595920#1" to="507948141">
+    <trip id="19_trolleybus_8:0" type="pt_trolleybus" depart="139.0" departLane="best" from="1197239554" to="507948141">
         <stop busStop="4230853987" duration="30"/>  <!-- Waterfront Station Bay 4 -->
+        <stop busStop="4230854326" duration="30"/>  <!-- West Cordova St (EB) at Homer St -->
     </trip>
-    <trip id="20_trolleybus_8:1" type="pt_trolleybus" depart="160.0" departLane="best" from="-70202020" to="1197239554">
+    <trip id="20_trolleybus_8:1" type="pt_trolleybus" depart="160.0" departLane="best" from="-155893490#2" to="1197239554">
         <stop busStop="-3725343232" duration="30"/>  <!-- West Hastings St (WB) at Hamilton St -->
         <stop busStop="-5131257123" duration="30"/>  <!-- West Hastings St (WB) at Richards St -->
         <stop busStop="4230853987" duration="30"/>  <!-- Waterfront Station Bay 4 -->
@@ -163,7 +168,7 @@
         <stop busStop="4230888691" duration="30"/>  <!-- Granville St (NB) at West Pender St -->
         <stop busStop="4230886303" duration="30"/>  <!-- Granville St (NB) at West Hastings St -->
     </trip>
-    <trip id="23_trolleybus_16:0" type="pt_trolleybus" depart="173.0" departLane="best" from="975327011#0" to="70202020">
+    <trip id="23_trolleybus_16:0" type="pt_trolleybus" depart="173.0" departLane="best" from="975327011#0" to="155893490#2">
         <stop busStop="3738439095" duration="30"/>  <!-- Granville St (NB) at Davie St -->
         <stop busStop="4230886502" duration="30"/>  <!-- Granville St (NB) at Smithe St -->
         <stop busStop="1006238197" duration="30"/>  <!-- Granville St (NB) at West Georgia St -->
@@ -172,7 +177,7 @@
         <stop busStop="4368127197" duration="30"/>  <!-- West Hastings St (EB) at Seymour St -->
         <stop busStop="4314691889" duration="30"/>  <!-- West Hastings St (EB) at Homer St -->
     </trip>
-    <trip id="24_trolleybus_16:1" type="pt_trolleybus" depart="201.0" departLane="best" from="-70202020" to="-975327011#0">
+    <trip id="24_trolleybus_16:1" type="pt_trolleybus" depart="201.0" departLane="best" from="-155893490#2" to="-975327011#0">
         <stop busStop="-3725343232" duration="30"/>  <!-- West Hastings St (WB) at Hamilton St -->
         <stop busStop="-5131257123" duration="30"/>  <!-- West Hastings St (WB) at Richards St -->
         <stop busStop="-3763056611" duration="30"/>  <!-- Granville St (SB) at West Pender St -->
@@ -181,12 +186,12 @@
         <stop busStop="-994915200" duration="30"/>  <!-- Granville St (SB) at Nelson St -->
         <stop busStop="-994916966" duration="30"/>  <!-- Granville St (SB) at Davie St -->
     </trip>
-    <trip id="25_trolleybus_20:1" type="pt_trolleybus" depart="204.0" departLane="best" from="-70202020" to="1377233775#0">
+    <trip id="25_trolleybus_20:1" type="pt_trolleybus" depart="204.0" departLane="best" from="-155893490#2" to="1377233775#0">
         <stop busStop="-3725343232" duration="30"/>  <!-- West Hastings St (WB) at Hamilton St -->
         <stop busStop="4183935589" duration="30"/>  <!-- Richards St (SB) at West Hastings St -->
-        <stop busStop="4957764222" duration="30"/>  <!-- Richards St (SB) at Dunsmuir St -->
+        <stop busStop="4957764222@1148807" duration="30"/>  <!-- Richards St (SB) at Dunsmuir St -->
     </trip>
-    <trip id="26_trolleybus_20:2" type="pt_trolleybus" depart="218.0" departLane="best" from="507852558#2" to="70202020">
+    <trip id="26_trolleybus_20:2" type="pt_trolleybus" depart="218.0" departLane="best" from="24446046#2" to="155893490#2">
         <stop busStop="4957764222" duration="30"/>  <!-- Richards St (SB) at Dunsmuir St -->
         <stop busStop="-3786840508" duration="30"/>  <!-- Robson Street (WB) at Granville Street -->
         <stop busStop="1006238197" duration="30"/>  <!-- Granville St (NB) at West Georgia St -->
@@ -198,10 +203,10 @@
     <trip id="27_bus_N19:0" type="pt_bus" depart="222.0" departLane="best" from="1207914964#0" to="74226324#2">
         <stop busStop="4100887897" duration="30"/>  <!-- Howe Street (SB) NS Dunsmuir Street (Bay 3) -->
     </trip>
-    <trip id="28_bus_N19:1" type="pt_bus" depart="227.0" departLane="best" from="74226324#1" to="-1207914964#0">
+    <trip id="28_bus_N19:1" type="pt_bus" depart="227.0" departLane="best" from="74226324#1" to="-1207914964#1">
         <stop busStop="4100887897" duration="30"/>  <!-- Howe Street (SB) NS Dunsmuir Street (Bay 3) -->
     </trip>
-    <trip id="29_bus_N10:0" type="pt_bus" depart="227.0" departLane="best" from="36982443#1" to="1353575702">
+    <trip id="29_bus_N10:0" type="pt_bus" depart="227.0" departLane="best" from="36982443#1" to="1257346294#2">
         <stop busStop="7996333918" duration="30"/>  <!-- Seymour St (NB) at West Georgia St -->
         <stop busStop="4622768695" duration="30"/>  <!-- Seymour St (NB) at Dunsmuir St -->
         <stop busStop="4100887898" duration="30"/>  <!-- Howe St (SB) at West Georgia St -->
@@ -213,7 +218,7 @@
         <stop busStop="4084222893" duration="30"/>  <!-- Seymour St (NB) at Nelson St -->
         <stop busStop="7996333918" duration="30"/>  <!-- Seymour St (NB) at West Georgia St -->
     </trip>
-    <trip id="31_bus_N9:0" type="pt_bus" depart="303.0" departLane="best" from="36982443#1" to="1353575702">
+    <trip id="31_bus_N9:0" type="pt_bus" depart="303.0" departLane="best" from="36982443#1" to="1257346294#2">
         <stop busStop="7996333918" duration="30"/>  <!-- Seymour St (NB) at West Georgia St -->
         <stop busStop="4622768695" duration="30"/>  <!-- Seymour St (NB) at Dunsmuir St -->
         <stop busStop="4100887898" duration="30"/>  <!-- Howe St (SB) at West Georgia St -->
@@ -221,7 +226,7 @@
         <stop busStop="3947265000" duration="30"/>  <!-- Howe St (SB) at Nelson St -->
         <stop busStop="5135902322" duration="30"/>  <!-- Howe St (SB) at Davie St -->
     </trip>
-    <trip id="32_trolleybus_14:0" type="pt_trolleybus" depart="321.0" departLane="best" from="975327011#0" to="70202020">
+    <trip id="32_trolleybus_14:0" type="pt_trolleybus" depart="321.0" departLane="best" from="975327011#0" to="155893490#2">
         <stop busStop="3738439095" duration="30"/>  <!-- Granville St (NB) at Davie St -->
         <stop busStop="4230886502" duration="30"/>  <!-- Granville St (NB) at Smithe St -->
         <stop busStop="1006238197" duration="30"/>  <!-- Granville St (NB) at West Georgia St -->
@@ -230,7 +235,7 @@
         <stop busStop="4368127197" duration="30"/>  <!-- West Hastings St (EB) at Seymour St -->
         <stop busStop="4314691889" duration="30"/>  <!-- West Hastings St (EB) at Homer St -->
     </trip>
-    <trip id="33_trolleybus_14:1" type="pt_trolleybus" depart="326.0" departLane="best" from="-70202020" to="-975327011#0">
+    <trip id="33_trolleybus_14:1" type="pt_trolleybus" depart="326.0" departLane="best" from="-155893490#2" to="-975327011#0">
         <stop busStop="-3725343232" duration="30"/>  <!-- West Hastings St (WB) at Hamilton St -->
         <stop busStop="-5131257123" duration="30"/>  <!-- West Hastings St (WB) at Richards St -->
         <stop busStop="-3763056611" duration="30"/>  <!-- Granville St (SB) at West Pender St -->
@@ -239,32 +244,33 @@
         <stop busStop="-994915200" duration="30"/>  <!-- Granville St (SB) at Nelson St -->
         <stop busStop="-994916966" duration="30"/>  <!-- Granville St (SB) at Davie St -->
     </trip>
-    <trip id="34_bus_44:0" type="pt_bus" depart="331.0" departLane="best" from="476612031" to="29595922#3">
+    <trip id="34_bus_44:0" type="pt_bus" depart="331.0" departLane="best" from="74096522#0" to="29595922#3">
+        <stop busStop="3708509681" duration="30"/>  <!-- Burrard Street (NB) at Davie Street -->
         <stop busStop="3745030474" duration="30"/>  <!-- Burrard St (NB) at Comox St -->
         <stop busStop="4231136844" duration="30"/>  <!-- Burrard St (NB) at Robson St -->
         <stop busStop="-4164839464" duration="30"/>  <!-- West Pender St (EB) at Granville St -->
         <stop busStop="3476051315" duration="30"/>  <!-- Seymour St (NB) at West Hastings St -->
         <stop busStop="3789883872" duration="30"/>  <!-- Burrard Station Bay 7 -->
     </trip>
-    <trip id="35_bus_44:1" type="pt_bus" depart="346.0" departLane="best" from="1153403244" to="-476612031">
+    <trip id="35_bus_44:1" type="pt_bus" depart="346.0" departLane="best" from="1153403244" to="-476610618#1">
         <stop busStop="9389598620" duration="30"/>  <!-- Waterfront Station Bay 1 -->
         <stop busStop="-5340007413" duration="30"/>  <!-- Burrard Station Bay 5 -->
         <stop busStop="-9692495007" duration="30"/>  <!-- Burrard St (SB) At West Georgia St -->
         <stop busStop="-3789883501" duration="30"/>  <!-- Burrard St (SB) at Nelson St -->
     </trip>
-    <trip id="36_bus_N24:0" type="pt_bus" depart="353.0" departLane="best" from="-50843616#1" to="74226324#2">
+    <trip id="36_bus_N24:0" type="pt_bus" depart="353.0" departLane="best" from="-476569295" to="74226324#2">
         <stop busStop="-12138473172" duration="30"/>  <!-- West Georgia Street (EB) at Burrard Street -->
     </trip>
-    <trip id="37_bus_N22:0" type="pt_bus" depart="362.0" departLane="best" from="476612031" to="-470482469#2">
+    <trip id="37_bus_N22:0" type="pt_bus" depart="362.0" departLane="best" from="74096522#0" to="-470482469#2">
         <stop busStop="-12138473172" duration="30"/>  <!-- West Georgia Street (EB) at Burrard Street -->
     </trip>
-    <trip id="38_bus_250A:0" type="pt_bus" depart="365.0" departLane="best" from="-507337657#2" to="50843616#1">
+    <trip id="38_bus_250A:0" type="pt_bus" depart="365.0" departLane="best" from="-507337657#2" to="476569295">
         <stop busStop="9684523502" duration="30"/>  <!-- West Georgia St (WB) At Richards St -->
         <stop busStop="3738439885" duration="30"/>  <!-- West Georgia St (WB) at Granville St -->
         <stop busStop="12138473173" duration="30"/>  <!-- West Georgia Street (WB) at Burrard Street -->
         <stop busStop="1012595218" duration="30"/>  <!-- West Georgia St (WB) at Bute St -->
     </trip>
-    <trip id="39_bus_246:0" type="pt_bus" depart="371.0" departLane="best" from="-284143596#2" to="50843616#1">
+    <trip id="39_bus_246:0" type="pt_bus" depart="371.0" departLane="best" from="-284143596#2" to="476569295">
         <stop busStop="3743637009" duration="30"/>  <!-- West Georgia St (WB) at Homer St -->
         <stop busStop="4175141371" duration="30"/>  <!-- West Georgia St (WB) at Granville St -->
         <stop busStop="995628784" duration="30"/>  <!-- West Georgia St (WB) at Bute St -->
@@ -277,7 +283,7 @@
         <stop busStop="4164839463" duration="30"/>  <!-- West Pender St (WB) at Granville St -->
         <stop busStop="4230886498" duration="30"/>  <!-- Burrard Station Bay 3 -->
     </trip>
-    <trip id="41_trolleybus_19:1" type="pt_trolleybus" depart="383.0" departLane="best" from="1207914964#0" to="74214596#1">
+    <trip id="41_trolleybus_19:1" type="pt_trolleybus" depart="383.0" departLane="best" from="1207914964#0" to="74214596">
         <stop busStop="4269894834" duration="30"/>  <!-- West Pender St (WB) at Hamilton St -->
         <stop busStop="3789883481" duration="30"/>  <!-- West Pender Street (WB) at Seymour St -->
         <stop busStop="5862689186" duration="30"/>  <!-- West Pender Street (WB) FS Howe Street -->
@@ -291,6 +297,7 @@
         <stop busStop="4230888691" duration="30"/>  <!-- Granville St (NB) at West Pender St -->
         <stop busStop="4230886303" duration="30"/>  <!-- Granville St (NB) at West Hastings St -->
         <stop busStop="4230853987" duration="30"/>  <!-- Waterfront Station Bay 4 -->
+        <stop busStop="4230854326" duration="30"/>  <!-- West Cordova St (EB) at Homer St -->
     </trip>
     <trip id="43_bus_50:0" type="pt_bus" depart="388.0" departLane="best" from="-507948141" to="-975327011#0">
         <stop busStop="5297290321" duration="30"/>  <!-- Waterfront Station Bay 3 -->
@@ -300,7 +307,7 @@
         <stop busStop="-994915200" duration="30"/>  <!-- Granville St (SB) at Nelson St -->
         <stop busStop="-994916966" duration="30"/>  <!-- Granville St (SB) at Davie St -->
     </trip>
-    <trip id="44_trolleybus_17:1" type="pt_trolleybus" depart="389.0" departLane="best" from="-74269429#2" to="74268723#1">
+    <trip id="44_trolleybus_17:1" type="pt_trolleybus" depart="389.0" departLane="best" from="-74269429#2" to="-74268720#1">
         <stop busStop="-5201120622" duration="30"/>  <!-- Robson St (WB) at Hamilton St -->
         <stop busStop="-3786840508" duration="30"/>  <!-- Robson Street (WB) at Granville Street -->
         <stop busStop="1006238197" duration="30"/>  <!-- Granville St (NB) at West Georgia St -->
@@ -310,35 +317,35 @@
         <stop busStop="4842227323" duration="30"/>  <!-- West Pender St (EB) at Hamilton St -->
         <stop busStop="-3940288957" duration="30"/>  <!-- Cambie St (SB) at West Georgia St -->
         <stop busStop="-2985506428" duration="30"/>  <!-- Cambie St (SB) at Robson St -->
-        <stop busStop="4844898127" duration="30"/>  <!-- Nelson St (EB) at Cambie St -->
     </trip>
-    <trip id="45_trolleybus_17:2" type="pt_trolleybus" depart="406.0" departLane="best" from="456392469#1" to="-1053826278#3">
-        <stop busStop="6468342578" duration="30"/>  <!-- Smithe St (WB) at Expo Blvd -->
+    <trip id="45_trolleybus_17:2" type="pt_trolleybus" depart="406.0" departLane="best" from="1285856430#2" to="-1053826278#3">
         <stop busStop="-5201120622" duration="30"/>  <!-- Robson St (WB) at Hamilton St -->
     </trip>
-    <trip id="46_bus_50:1" type="pt_bus" depart="418.0" departLane="best" from="975327011#0" to="507948141">
+    <trip id="46_bus_50:1" type="pt_bus" depart="418.0" departLane="best" from="975327011#0" to="-1207914964#1">
         <stop busStop="3738439095" duration="30"/>  <!-- Granville St (NB) at Davie St -->
         <stop busStop="4230886502" duration="30"/>  <!-- Granville St (NB) at Smithe St -->
         <stop busStop="1006238197" duration="30"/>  <!-- Granville St (NB) at West Georgia St -->
         <stop busStop="4230886302" duration="30"/>  <!-- Granville St (NB) at Dunsmuir St -->
         <stop busStop="4230888691" duration="30"/>  <!-- Granville St (NB) at West Pender St -->
         <stop busStop="4230853987" duration="30"/>  <!-- Waterfront Station Bay 4 -->
+        <stop busStop="4230854326" duration="30"/>  <!-- West Cordova St (EB) at Homer St -->
+        <stop busStop="-5113511622" duration="30"/>  <!-- Cambie St (SB) at West Hastings St -->
     </trip>
-    <trip id="47_bus_250:0" type="pt_bus" depart="422.0" departLane="best" from="-284143596#2" to="50843616#1">
+    <trip id="47_bus_250:0" type="pt_bus" depart="422.0" departLane="best" from="-284143596#2" to="476569295">
         <stop busStop="9684523502" duration="30"/>  <!-- West Georgia St (WB) At Richards St -->
         <stop busStop="3738439885" duration="30"/>  <!-- West Georgia St (WB) at Granville St -->
         <stop busStop="1012595218" duration="30"/>  <!-- West Georgia St (WB) at Bute St -->
     </trip>
-    <trip id="48_bus_250:1" type="pt_bus" depart="437.0" departLane="best" from="-50843616#1" to="284143596#1">
+    <trip id="48_bus_250:1" type="pt_bus" depart="437.0" departLane="best" from="-476569295" to="284143596#1">
         <stop busStop="-1001095593" duration="30"/>  <!-- West Georgia St (EB) at Bute St -->
         <stop busStop="-1006238910" duration="30"/>  <!-- West Georgia St (EB) at Granville St -->
     </trip>
-    <trip id="49_bus_257:0" type="pt_bus" depart="437.0" departLane="best" from="-50843616#1" to="1382805024#1">
+    <trip id="49_bus_257:0" type="pt_bus" depart="437.0" departLane="best" from="-476569295" to="74252162#1">
         <stop busStop="-1006238910" duration="30"/>  <!-- West Georgia St (EB) at Granville St -->
         <stop busStop="5581881769" duration="30"/>  <!-- Dunsmuir St (NB) at Cambie St -->
         <stop busStop="-12138473172" duration="30"/>  <!-- West Georgia Street (EB) at Burrard Street -->
     </trip>
-    <trip id="50_bus_257:1" type="pt_bus" depart="441.0" departLane="best" from="74252162#0" to="50843616#1">
+    <trip id="50_bus_257:1" type="pt_bus" depart="441.0" departLane="best" from="74252162#0" to="476569295">
         <stop busStop="5581881769" duration="30"/>  <!-- Dunsmuir St (NB) at Cambie St -->
         <stop busStop="5839176971" duration="30"/>  <!-- West Georgia St (WB) at Seymour St -->
     </trip>
@@ -349,6 +356,7 @@
         <stop busStop="-4164839464" duration="30"/>  <!-- West Pender St (EB) at Granville St -->
         <stop busStop="-5129095623" duration="30"/>  <!-- West Pender St (EB) at Seymour Street -->
         <stop busStop="4816231222" duration="30"/>  <!-- Homer St (NB) at West Pender St -->
+        <stop busStop="4230854326" duration="30"/>  <!-- West Cordova St (EB) at Homer St -->
     </trip>
     <trip id="52_bus_210:1" type="pt_bus" depart="484.0" departLane="best" from="1207914964#0" to="37005661#1">
         <stop busStop="4269894834" duration="30"/>  <!-- West Pender St (WB) at Hamilton St -->
@@ -356,7 +364,7 @@
         <stop busStop="4100889699" duration="30"/>  <!-- Howe Street (SB) at West Pender Street (Unloading Only Stop) -->
         <stop busStop="4141243828" duration="30"/>  <!-- Burrard Station Bay 2 -->
     </trip>
-    <trip id="53_bus_247:0" type="pt_bus" depart="485.0" departLane="best" from="-50843616#1" to="284143596#1">
+    <trip id="53_bus_247:0" type="pt_bus" depart="485.0" departLane="best" from="-476569295" to="284143596#1">
         <stop busStop="-6844787262" duration="30"/>  <!-- West Georgia St (EB) at Homer St -->
     </trip>
     <trip id="54_bus_211:0" type="pt_bus" depart="497.0" departLane="best" from="1207914964#0" to="37005661#1">
@@ -372,19 +380,22 @@
         <stop busStop="-4164839464" duration="30"/>  <!-- West Pender St (EB) at Granville St -->
         <stop busStop="-5129095623" duration="30"/>  <!-- West Pender St (EB) at Seymour Street -->
         <stop busStop="4816231222" duration="30"/>  <!-- Homer St (NB) at West Pender St -->
+        <stop busStop="4230854326" duration="30"/>  <!-- West Cordova St (EB) at Homer St -->
     </trip>
-    <trip id="56_bus_241:0" type="pt_bus" depart="517.0" departLane="best" from="-50843616#1" to="284143596#1">
+    <trip id="56_bus_241:0" type="pt_bus" depart="517.0" departLane="best" from="-476569295" to="284143596#1">
         <stop busStop="-6844787262" duration="30"/>  <!-- West Georgia St (EB) at Homer St -->
         <stop busStop="-12138473172" duration="30"/>  <!-- West Georgia Street (EB) at Burrard Street -->
     </trip>
-    <trip id="57_bus_2:2" type="pt_bus" depart="535.0" departLane="best" from="-1184091183#0" to="-476612031">
+    <trip id="57_bus_2:2" type="pt_bus" depart="535.0" departLane="best" from="-1184091183#0" to="-74096522#1">
         <stop busStop="-5179200122" duration="30"/>  <!-- Burrard Station Bay 4 -->
         <stop busStop="-3763312405" duration="30"/>  <!-- Burrard Station Bay 1 -->
         <stop busStop="-3789883974" duration="30"/>  <!-- Burrard St (SB) at Robson St -->
         <stop busStop="-3789883874" duration="30"/>  <!-- Burrard St (SB) at Smithe St -->
         <stop busStop="-3789883501" duration="30"/>  <!-- Burrard St (SB) at Nelson St -->
+        <stop busStop="-3764696422" duration="30"/>  <!-- Burrard Street (SB) at Davie Street -->
     </trip>
-    <trip id="58_bus_2:3" type="pt_bus" depart="561.0" departLane="best" from="476612031" to="-29595922#2">
+    <trip id="58_bus_2:3" type="pt_bus" depart="561.0" departLane="best" from="74096522#0" to="-29595922#2">
+        <stop busStop="3708509681" duration="30"/>  <!-- Burrard Street (NB) at Davie Street -->
         <stop busStop="3745030474" duration="30"/>  <!-- Burrard St (NB) at Comox St -->
         <stop busStop="11511667038" duration="30"/>  <!-- Burrard St (NB) at Smithe St -->
         <stop busStop="4231136844" duration="30"/>  <!-- Burrard St (NB) at Robson St -->
@@ -392,15 +403,16 @@
         <stop busStop="-5179200122" duration="30"/>  <!-- Burrard Station Bay 4 -->
         <stop busStop="-3476035321" duration="30"/>  <!-- Waterfront Station Bay 2 -->
     </trip>
-    <trip id="59_trolleybus_3:0" type="pt_trolleybus" depart="574.0" departLane="best" from="-70202020" to="1197239554">
+    <trip id="59_trolleybus_3:0" type="pt_trolleybus" depart="574.0" departLane="best" from="-155893490#2" to="1197239554">
         <stop busStop="-3725343232" duration="30"/>  <!-- West Hastings St (WB) at Hamilton St -->
         <stop busStop="-5131257123" duration="30"/>  <!-- West Hastings St (WB) at Richards St -->
         <stop busStop="4230853987" duration="30"/>  <!-- Waterfront Station Bay 4 -->
     </trip>
     <trip id="60_trolleybus_3:1" type="pt_trolleybus" depart="583.0" departLane="best" from="340383381#1" to="507948141">
         <stop busStop="4230853987" duration="30"/>  <!-- Waterfront Station Bay 4 -->
+        <stop busStop="4230854326" duration="30"/>  <!-- West Cordova St (EB) at Homer St -->
     </trip>
-    <trip id="61_bus_246:1" type="pt_bus" depart="593.0" departLane="best" from="-50843616#1" to="284143596#1">
+    <trip id="61_bus_246:1" type="pt_bus" depart="593.0" departLane="best" from="-476569295" to="284143596#1">
         <stop busStop="-1001095593" duration="30"/>  <!-- West Georgia St (EB) at Bute St -->
         <stop busStop="-1006238910" duration="30"/>  <!-- West Georgia St (EB) at Granville St -->
         <stop busStop="-6844787262" duration="30"/>  <!-- West Georgia St (EB) at Homer St -->

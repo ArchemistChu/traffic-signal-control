@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-01-12T18:43:57.397989+08:00 by Eclipse SUMO netconvert 1.25.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <type-files value="${SUMO_HOME}\data\typemap\osmNetconvert.typ.xml,${SUMO_HOME}\data\typemap\osmNetconvertUrbanDe.typ.xml,${SUMO_HOME}\data\typemap\osmNetconvertPedestrians.typ.xml,${SUMO_HOME}\data\typemap\osmNetconvertAerialway.typ.xml"/>
+        <osm-files value="osm_bbox.osm.xml.gz"/>
+    </input>
+
+    <output>
+        <output-file value="osm.net.xml.gz"/>
+        <output.street-names value="true"/>
+        <output.original-names value="true"/>
+        <ptstop-output value="osm_stops.add.xml"/>
+        <ptline-output value="osm_ptlines.xml"/>
+        <ptline-clean-up value="true"/>
+    </output>
+
+    <projection>
+        <proj.utm value="true"/>
+    </projection>
+
+    <processing>
+        <geometry.remove value="true"/>
+    </processing>
+
+    <tls_building>
+        <tls.discard-simple value="true"/>
+        <tls.join value="true"/>
+        <tls.guess-signals value="true"/>
+        <tls.default-type value="actuated"/>
+    </tls_building>
+
+    <ramp_guessing>
+        <ramps.guess value="true"/>
+    </ramp_guessing>
+
+    <junctions>
+        <junctions.join value="true"/>
+    </junctions>
+
+    <pedestrian>
+        <crossings.guess value="true"/>
+    </pedestrian>
+
+    <railway>
+        <railway.topology.repair value="true"/>
+    </railway>
+
+    <formats>
+        <osm.sidewalks value="true"/>
+    </formats>
+
+</netconvertConfiguration>
+-->
+
+<additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
+    <busStop id="-1051671286" name="Mühlenbach" lane="-1424754437#1_1" startPos="15.88" endPos="30.88" friendlyPos="true" lines="978"/>
+    <busStop id="-7021491530" name="Friesenplatz" lane="-620340705_1" startPos="34.37" endPos="49.37" friendlyPos="true" lines="172 173"/>
+    <busStop id="1051457183" name="Breslauer Platz/Hbf" lane="37873578#2_0" startPos="8.15" endPos="23.15" friendlyPos="true" lines="978 SB40"/>
+    <busStop id="1051457186" name="Breslauer Platz/Hbf" lane="23561663_0" startPos="20.38" endPos="35.38" friendlyPos="true" lines="132"/>
+    <busStop id="1051671286" name="Mühlenbach" lane="1424754437#1_1" startPos="0.00" endPos="15.00" friendlyPos="true" lines="978"/>
+    <busStop id="1051792004" name="Heumarkt" lane="204177815#1_0" startPos="27.42" endPos="42.42" friendlyPos="true" lines="260 SB25 N26">
+        <access lane="-64025978#0_0" pos="27.31" length="8.33" friendlyPos="1"/>
+        <access lane="196328609#0_0" pos="0.00" length="55.66" friendlyPos="1"/>
+        <access lane="32308870#1_0" pos="0.00" length="48.18" friendlyPos="1"/>
+        <access lane="37873577_0" pos="42.17" length="31.46" friendlyPos="1"/>
+        <access lane="64025978#0_0" pos="33.75" length="11.33" friendlyPos="1"/>
+    </busStop>
+    <busStop id="1051792013" name="Heumarkt" lane="37873577_1" startPos="32.36" endPos="47.36" friendlyPos="true" lines="978 106 132"/>
+    <busStop id="1051841189" name="Rothgerberbach/Poststraße" lane="154502579_0" startPos="12.41" endPos="27.41" friendlyPos="true" lines="978">
+        <access lane="-1408924122#0_0" pos="0.00" length="34.34" friendlyPos="1"/>
+        <access lane="-1408924122#1_0" pos="0.20" length="34.05" friendlyPos="1"/>
+        <access lane="1408924122#1_0" pos="0.00" length="37.02" friendlyPos="1"/>
+        <access lane="1408924126_0" pos="31.04" length="11.87" friendlyPos="1"/>
+        <access lane="751168045#0_0" pos="19.41" length="10.22" friendlyPos="1"/>
+    </busStop>
+    <busStop id="11764700918" name="CityTour Haltestelle 1: Dom" lane="8672022#5_1" startPos="0.00" endPos="14.76" friendlyPos="true" lines="Kölner City Tour"/>
+    <busStop id="1854470184" name="Heumarkt" lane="403498462_0" startPos="9.57" endPos="24.57" friendlyPos="true" lines="133 978 106 132">
+        <access lane="174788942_0" pos="0.00" length="18.72" friendlyPos="1"/>
+        <access lane="202610360_0" pos="6.62" length="19.04" friendlyPos="1"/>
+        <access lane="553311689#1_0" pos="0.20" length="19.75" friendlyPos="1"/>
+        <access lane="553311690#1_0" pos="0.20" length="21.62" friendlyPos="1"/>
+        <access lane="553709765_0" pos="14.89" length="9.17" friendlyPos="1"/>
+    </busStop>
+    <busStop id="267477578" name="Breslauer Platz/Hbf" lane="1174540043#1_1" startPos="0.00" endPos="13.64" friendlyPos="true" lines="124"/>
+    <busStop id="28164199" name="CityTour Haltestelle 3: Gürzenich / Hard Rock Cafe" lane="6186582#0_1" startPos="0.00" endPos="0.20" friendlyPos="true" lines="Kölner City Tour"/>
+    <busStop id="320626322" name="Schokoladenmuseum" lane="37276382_0" startPos="0.00" endPos="12.50" friendlyPos="true" lines="133">
+        <access lane="-36785192_0" pos="0.00" length="24.43" friendlyPos="1"/>
+        <access lane="1366781991_0" pos="0.00" length="33.24" friendlyPos="1"/>
+        <access lane="1366781992_0" pos="11.38" length="32.11" friendlyPos="1"/>
+        <access lane="171952936#1_0" pos="9.39" length="27.35" friendlyPos="1"/>
+        <access lane="36785192_0" pos="1.65" length="27.21" friendlyPos="1"/>
+    </busStop>
+    <busStop id="3373248444" name="CityTour Haltestelle 2: Altstadt" lane="1391574495_0" startPos="0.00" endPos="0.38" friendlyPos="true" lines="Kölner City Tour">
+        <access lane="-303097009_0" pos="0.00" length="20.20" friendlyPos="1"/>
+        <access lane="-476617117#1_0" pos="0.00" length="11.53" friendlyPos="1"/>
+        <access lane="23479875#2_0" pos="11.91" length="17.34" friendlyPos="1"/>
+        <access lane="476617117#1_0" pos="24.70" length="8.68" friendlyPos="1"/>
+        <access lane="7974187_0" pos="0.20" length="9.84" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4072608219" name="Schokoladenmuseum" lane="171952936#1_1" startPos="6.15" endPos="21.15" friendlyPos="true" lines="133 106 132"/>
+    <busStop id="442698924" name="Breslauer Platz/Hbf" lane="465425611_0" startPos="7.96" endPos="22.96" friendlyPos="true" lines="171 SB25"/>
+    <busStop id="443844" name="Rothgerberbach/Poststraße" lane="1317567189_1" startPos="22.09" endPos="37.09" friendlyPos="true" lines="978 Kölner City Tour"/>
+    <busStop id="443863" name="CityTour Haltestelle 4: Neumarkt" lane="23493260#2_1" startPos="0.30" endPos="15.30" friendlyPos="true" lines="Kölner City Tour"/>
+    <busStop id="4603900824" name="Breslauer Platz/Hbf" lane="173514626_0" startPos="18.92" endPos="33.92" friendlyPos="true" lines="260 N26"/>
+    <busStop id="4603900825" name="Breslauer Platz/Hbf" lane="675775079_1" startPos="51.48" endPos="66.48" friendlyPos="true" lines="133"/>
+    <busStop id="59642214" name="Heumarkt" lane="204177818#1_0" startPos="20.02" endPos="35.02" friendlyPos="true" lines="SB25 260">
+        <access lane="-383317837_0" pos="0.00" length="19.02" friendlyPos="1"/>
+        <access lane="-7974221_0" pos="25.74" length="39.60" friendlyPos="1"/>
+        <access lane="1383050450_0" pos="50.51" length="15.31" friendlyPos="1"/>
+        <access lane="303096811_0" pos="8.76" length="42.87" friendlyPos="1"/>
+        <access lane="383317837_0" pos="2.79" length="19.49" friendlyPos="1"/>
+    </busStop>
+    <busStop id="7021491530" name="Friesenplatz" lane="147549213_1" startPos="0.00" endPos="15.00" friendlyPos="true" lines="172 173"/>
+    <busStop id="7021491531" name="Auf dem Berlich" lane="349603488#0_1" startPos="0.00" endPos="14.34" friendlyPos="true" lines="172 173"/>
+    <busStop id="7021491532" name="Auf dem Berlich" lane="1429473694#0_1" startPos="5.79" endPos="20.79" friendlyPos="true" lines="172 173"/>
+    <busStop id="7021491557" name="Dom/Hbf" lane="206149607#1_1" startPos="28.86" endPos="43.86" friendlyPos="true" lines="172 173"/>
+    <busStop id="7022495307" name="Blaubach" lane="169453895_0" startPos="25.32" endPos="40.32" friendlyPos="true" lines="171">
+        <access lane="381068417#1_0" pos="34.37" length="27.09" friendlyPos="1"/>
+        <access lane="381068417#2_0" pos="2.75" length="16.49" friendlyPos="1"/>
+        <access lane="381068417#3_0" pos="3.34" length="10.29" friendlyPos="1"/>
+        <access lane="665136326#1_0" pos="54.78" length="25.32" friendlyPos="1"/>
+        <access lane="665136339#1_0" pos="9.69" length="16.59" friendlyPos="1"/>
+    </busStop>
+    <busStop id="7022495308" name="Blaubach" lane="169453889#0_1" startPos="30.97" endPos="45.97" friendlyPos="true" lines="171"/>
+    <busStop id="7022495309" name="Unter Sachsenhausen" lane="135786926#0_1" startPos="13.43" endPos="28.43" friendlyPos="true" lines="172 171 173"/>
+    <busStop id="7022495310" name="Unter Sachsenhausen" lane="23571566#1_1" startPos="49.91" endPos="64.91" friendlyPos="true" lines="171"/>
+    <busStop id="7022495311" name="Offenbachplatz" lane="33444803#0_0" startPos="35.99" endPos="50.99" friendlyPos="true" lines="171">
+        <access lane="131886628_0" pos="0.20" length="22.09" friendlyPos="1"/>
+        <access lane="189054412_0" pos="30.71" length="31.90" friendlyPos="1"/>
+        <access lane="57725382#1_0" pos="0.00" length="48.79" friendlyPos="1"/>
+        <access lane="78417999#1_0" pos="0.00" length="50.39" friendlyPos="1"/>
+        <access lane="78417999#2_0" pos="0.00" length="52.53" friendlyPos="1"/>
+    </busStop>
+    <busStop id="7022495312" name="Offenbachplatz" lane="189054412_1" startPos="25.77" endPos="40.77" friendlyPos="true" lines="171"/>
+    <busStop id="7039911393" name="Waidmarkt" lane="315921077#0_1" startPos="2.42" endPos="17.42" friendlyPos="true" lines="106 132"/>
+    <busStop id="974769682" name="Kölner CityTour" lane="23493260#4_1" startPos="15.04" endPos="30.04" friendlyPos="true" lines="Kölner City Tour"/>
+</additional>

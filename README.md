@@ -110,7 +110,7 @@ traffic-signal-control/
 │   │   └── osm.sumocfg
 │   ├── Vancouver/                  # OSM Vancouver map
 │   │   └── osm.sumocfg
-│   └── Palo Alto/                  # OSM Palo Alto map
+│   └── Los Angeles/                # OSM Los Angeles map
 │       └── osm.sumocfg
 │
 ├──  Output Data Directory (output/) 
@@ -310,12 +310,12 @@ environmental_metrics = {
    python start.py
    ```
 2. Open your browser and navigate to: `http://localhost:5000`
-3. Select a dataset (Custom, Cologne, Vancouver, or Palo Alto)
+3. Select a dataset (Custom, Cologne, Vancouver, or Los Angeles)
 4. Choose a control strategy
 5. Click "Start Simulation" to begin
 
 ### Features
-- **Multiple Datasets**: Custom single intersection, OSM-based real-world maps (Cologne, Vancouver, Palo Alto)
+- **Multiple Datasets**: Custom single intersection, OSM-based real-world maps (Cologne, Vancouver, Los Angeles)
 - **Four Control Strategies**: Fixed-time, Adaptive, Max-Pressure, and DQN reinforcement learning
 - **Interactive Web Interface**: Easy-to-use Flask-based interface with real-time updates
 - **Academic Experiments**: Statistical analysis with multiple runs, confidence intervals, and significance testing

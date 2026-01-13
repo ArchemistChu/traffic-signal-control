@@ -11,7 +11,7 @@
                     <option value="custom" {% if current_dataset == 'custom' %}selected{% endif %}>Custom Single Intersection</option>
                     <option value="cologne" {% if current_dataset == 'cologne' %}selected{% endif %}>OSM Cologne</option>
                     <option value="vancouver" {% if current_dataset == 'vancouver' %}selected{% endif %}>OSM Vancouver</option>
-                    <option value="palo_alto" {% if current_dataset == 'palo_alto' %}selected{% endif %}>OSM Palo Alto</option>
+                    <option value="los_angeles" {% if current_dataset == 'los_angeles' %}selected{% endif %}>OSM Los Angeles</option>
                 </select>
                 <div class="alert alert-info mt-3 mb-0">
                     <strong>📍 Current Dataset:</strong> {{ dataset_description }}
@@ -47,17 +47,43 @@
                     {% endif %}
                 </div>
                 
-                <!-- Start Button -->
+                <!-- GUI Option (for large maps) -->
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="useGuiCheck" checked>
+                        <label class="form-check-label" for="useGuiCheck">
+                            🖥️ Use SUMO GUI (uncheck for faster execution on large maps)
+                        </label>
+                    </div>
+                    <small id="guiOptionHint" class="form-text text-muted">
+                        Small maps work well with GUI. Large maps (Cologne, Vancouver) run faster without GUI.
+                    </small>
+                </div>
+                
+                <!-- Simulation Duration -->
+                <div class="mb-3">
+                    <label for="durationInput" class="form-label">⏱️ Simulation Duration (seconds)</label>
+                    <input type="number" class="form-control" id="durationInput" value="600" min="60" max="7200" step="60">
+                    <small class="form-text text-muted">
+                        Recommended: 300-600s (testing), 1800-3600s (experiments). 
+                        <span id="durationHint">Current: 10 minutes</span>
+                    </small>
+                </div>
+                
+                <!-- Start Button and Restore Button -->
                 <div id="controlButtons">
                     {% if not simulation_running %}
-                    <button id="startBtn" class="btn btn-primary btn-lg w-100" onclick="startSimulation()">
+                    <button id="startBtn" class="btn btn-primary btn-lg w-100 mb-2" onclick="startSimulation()">
                         🚀 Start Simulation
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm w-100" onclick="restoreWebInterface()" title="Reset and restore the web interface">
+                        🔄 Restore Interface
                     </button>
                     {% else %}
                     <div class="status-running">
                         <p><strong>⏳ Simulation is running, please wait...</strong></p>
-                        <p>🖥️ SUMO GUI window is open; you can watch the traffic simulation</p>
-                        <p>⏱️ The simulation will run for 2 minutes; please wait</p>
+                        <p id="guiStatus">🖥️ SUMO GUI window is open; you can watch the traffic simulation</p>
+                        <p id="durationStatus">⏱️ The simulation will run for the specified duration; please wait</p>
                         <div class="mt-2">
                             <button class="btn btn-warning me-2" onclick="cancelSimulation()">⏹️ Cancel Simulation</button>
                             <button class="btn btn-secondary" onclick="resetSimulation()">🔄 Reset State</button>
@@ -79,7 +105,11 @@
             {% if simulation_running %}
             <div class="status-running">
                 <p><strong>🔄 Simulation is running...</strong></p>
+                {% if use_gui %}
                 <p>🖥️ SUMO GUI window is open; you can watch the traffic simulation</p>
+                {% else %}
+                <p>⚡ Running in headless mode (faster execution, no GUI window)</p>
+                {% endif %}
                 <p>⏱️ The simulation will run for 2 minutes; please wait</p>
                 <div class="mt-2">
                     <button class="btn btn-warning btn-sm me-2" onclick="cancelSimulation()">⏹️ Cancel</button>
@@ -307,14 +337,40 @@ $('#strategySelect').on('change', function() {
         'FIXED_TIME': '⏰ Switch signals at fixed intervals<br>Suitable for regular traffic patterns',
         'ADAPTIVE': '🧠 Adjust intelligently based on vehicle counts<br>Suitable for varying traffic flows',
         'MAX_PRESSURE': '⚖️ Serve the phase with the highest queued demand (MaxPressure)<br>Strong queue-based baseline for comparison',
-        'DQN': '🤖 AI learns optimal control strategies<br>Suitable for complex traffic conditions'
+        'DQN': '🤖 AI learns optimal control strategies<br>Suitable for complex traffic conditions',
+        'MARL_DQN': '🤝 Multi-Agent DQN (trained)<br>Controls multiple traffic lights at once using a trained shared policy'
     };
     $('#strategyDescription').html(descriptions[strategy] || '');
 });
 
+// Update GUI option based on dataset (large maps are faster without GUI)
+function updateGuiOptionForDataset() {
+    const dataset = $('#datasetSelect').val();
+    const largeMaps = ['cologne', 'vancouver', 'los_angeles'];
+    const useGuiCheck = $('#useGuiCheck');
+    
+    const hintText = $('#guiOptionHint');
+    if (largeMaps.includes(dataset)) {
+        // Large maps: suggest headless mode (unchecked)
+        useGuiCheck.prop('checked', false);
+        if (hintText.length) {
+            hintText.text('Large maps run much faster without GUI. Recommended: Keep unchecked for better performance.');
+        }
+    } else {
+        // Small maps: suggest GUI mode (checked)
+        useGuiCheck.prop('checked', true);
+        if (hintText.length) {
+            hintText.text('Small maps work well with GUI. Large maps (Cologne, Vancouver) run faster without GUI.');
+        }
+    }
+}
+
 // Dataset selection
 $('#datasetSelect').on('change', function() {
     const dataset = $(this).val();
+    // Update GUI option before changing dataset
+    updateGuiOptionForDataset();
+    
     $.ajax({
         url: '/set_dataset',
         method: 'POST',
@@ -339,6 +395,19 @@ $('#datasetSelect').on('change', function() {
 // Start simulation
 function startSimulation() {
     const strategy = $('#strategySelect').val();
+    const useGui = $('#useGuiCheck').is(':checked');
+    const duration = parseInt($('#durationInput').val()) || 600;
+
+    // Validate duration
+    if (duration < 60 || duration > 7200) {
+        alert('Duration must be between 60 and 7200 seconds (1 minute to 2 hours)');
+        return;
+    }
+
+    // Prevent double-clicking
+    if ($('#startBtn').prop('disabled')) {
+        return;  // Already starting
+    }
     
     // Show loading state
     $('#startBtn').prop('disabled', true).text('Starting...');
@@ -347,7 +416,7 @@ function startSimulation() {
         url: '/start_simulation',
         method: 'POST',
         contentType: 'application/json',
-        data: JSON.stringify({strategy: strategy}),
+        data: JSON.stringify({strategy: strategy, use_gui: useGui, duration: duration}),
         timeout: 10000,
         success: function(response) {
             if (response.status === 'success') {
@@ -410,6 +479,38 @@ function resetSimulation() {
     }
 }
 
+// Restore web interface - full reset
+function restoreWebInterface() {
+    if (confirm('Restore the web interface? This will:\n• Reset simulation state\n• Clear all temporary files\n• Reload the page\n\nContinue?')) {
+        // First reset simulation state
+        $.ajax({
+            url: '/reset_simulation',
+            method: 'POST',
+            timeout: 5000,
+            success: function(response) {
+                // Then clear history
+                $.ajax({
+                    url: '/clear_history',
+                    method: 'POST',
+                    timeout: 5000,
+                    success: function() {
+                        // Force reload the page
+                        window.location.href = window.location.pathname;
+                    },
+                    error: function() {
+                        // Reload anyway
+                        window.location.href = window.location.pathname;
+                    }
+                });
+            },
+            error: function() {
+                // Reload anyway
+                window.location.href = window.location.pathname;
+            }
+        });
+    }
+}
+
 // Clear history
 function clearHistory() {
     if (confirm('Are you sure you want to clear all simulation history?')) {
@@ -432,13 +533,17 @@ function checkSimulationStatus() {
         method: 'GET',
         timeout: 10000, // 10 second timeout
         success: function(response) {
+            console.log('Simulation status check:', response.status); // Debug log
             if (response.status === 'completed') {
+                console.log('Simulation completed! Reloading page...');
                 clearInterval(checkInterval);
+                checkInterval = null;
                 // Add a small delay before reload to ensure session is saved
                 setTimeout(function() {
                     window.location.href = window.location.pathname;
                 }, 500);
             } else if (response.status === 'error') {
+                console.log('Simulation error:', response.message);
                 clearInterval(checkInterval);
                 checkInterval = null;
                 alert('Simulation error: ' + response.message);
@@ -446,8 +551,16 @@ function checkSimulationStatus() {
                 setTimeout(function() {
                     window.location.href = window.location.pathname;
                 }, 1000);
+            } else if (response.status === 'idle') {
+                // Simulation not running - reset state
+                console.log('Simulation idle - resetting state');
+                clearInterval(checkInterval);
+                checkInterval = null;
+                setTimeout(function() {
+                    window.location.href = window.location.pathname;
+                }, 500);
             }
-            // If status is 'running' or 'idle', continue checking
+            // If status is 'running', continue checking
         },
         error: function(xhr, status, error) {
             console.error('Error checking simulation status:', error);
@@ -517,8 +630,44 @@ function loadComparisonCharts() {
     });
 }
 
+// Update duration hint text (shown under duration input)
+function updateDurationHint() {
+    const durationInput = document.getElementById('durationInput');
+    const hintEl = document.getElementById('durationHint');
+    if (!durationInput || !hintEl) return;
+
+    const duration = parseInt(durationInput.value, 10) || 600;
+    const minutes = Math.floor(duration / 60);
+    const seconds = duration % 60;
+
+    let text = `Current: ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+    if (seconds > 0) {
+        text += ` ${seconds} second${seconds !== 1 ? 's' : ''}`;
+    }
+    hintEl.textContent = text;
+
+    // If simulation is running, update the visible status line (control panel)
+    const durationStatus = document.getElementById('durationStatus');
+    if (durationStatus) {
+        durationStatus.textContent = `⏱️ The simulation will run for ${minutes} minute${minutes !== 1 ? 's' : ''}; please wait`;
+    }
+}
+
 // Initialize
 $(document).ready(function() {
+    // Update GUI option based on current dataset
+    updateGuiOptionForDataset();
+    
+    // Initialize duration hint
+    if (typeof updateDurationHint === 'function') {
+        updateDurationHint();
+    }
+    
+    // Update duration hint when input changes
+    if (typeof updateDurationHint === 'function') {
+        $('#durationInput').on('input', updateDurationHint);
+    }
+    
     // Start checking simulation status if running
     {% if simulation_running %}
     checkInterval = setInterval(checkSimulationStatus, 3000);

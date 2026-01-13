@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-01-09 21:56:40 by Eclipse SUMO netconvert Version 1.24.0
+<!-- generated on 2026-01-13T14:16:28.393744+08:00 by Eclipse SUMO netconvert 1.25.0
+-->
+
 <netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
 
     <input>
-        <type-files value="${SUMO_HOME}\data\typemap\osmNetconvert.typ.xml,${SUMO_HOME}\data\typemap\osmNetconvertUrbanDe.typ.xml,${SUMO_HOME}\data\typemap\osmNetconvertPedestrians.typ.xml,${SUMO_HOME}\data\typemap\osmNetconvertAerialway.typ.xml"/>
+        <type-files value="${SUMO_HOME}\data\typemap\osmNetconvert.typ.xml,${SUMO_HOME}\data\typemap\osmNetconvertUrbanDe.typ.xml,${SUMO_HOME}\data\typemap\osmNetconvertPedestrians.typ.xml"/>
         <osm-files value="osm_bbox.osm.xml.gz"/>
     </input>
 
@@ -12,18 +14,10 @@
         <output-file value="osm.net.xml.gz"/>
         <output.street-names value="true"/>
         <output.original-names value="true"/>
-        <ptstop-output value="osm_stops.add.xml"/>
-        <ptline-output value="osm_ptlines.xml"/>
-        <ptline-clean-up value="true"/>
     </output>
-
-    <projection>
-        <proj value="+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs"/>
-    </projection>
 
     <processing>
         <geometry.remove value="true"/>
-        <roundabouts.guess value="true"/>
     </processing>
 
     <tls_building>
@@ -39,23 +33,14 @@
 
     <junctions>
         <junctions.join value="true"/>
-        <junctions.corner-detail value="5"/>
     </junctions>
 
     <pedestrian>
         <crossings.guess value="true"/>
     </pedestrian>
 
-    <railway>
-        <railway.topology.repair value="true"/>
-    </railway>
-
     <formats>
         <osm.sidewalks value="true"/>
     </formats>
 
 </netconvertConfiguration>
--->
-
-<additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
-</additional>

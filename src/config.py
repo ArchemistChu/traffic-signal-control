@@ -9,8 +9,8 @@ import os
 class SimulationConfig:
     """Simulation configuration class"""
     
-    # Dataset selection: 'custom', 'cologne', 'vancouver', or 'palo_alto'
-    DATASET = 'custom'  # Options: 'custom' (single intersection), 'cologne', 'vancouver', 'palo_alto'
+    # Dataset selection: 'custom', 'cologne', 'vancouver', or 'los_angeles'
+    DATASET = 'custom'  # Options: 'custom' (single intersection), 'cologne', 'vancouver', 'los_angeles'
     
     # Base directory
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -59,7 +59,8 @@ class SimulationConfig:
             # For 'selected' mode, specify which traffic lights to control
             'selected_traffic_lights': None,  # None means control first max_controlled_lights
             # Max number of traffic lights to control (to limit computational load)
-            'max_controlled_lights': 10,
+            # Reduced for large networks to improve performance
+            'max_controlled_lights': 5,  # Reduced from 10 for better performance on large networks
             # State dimension for RL (will be calculated dynamically)
             'state_dim': None,  # Auto-calculate based on selected intersections
             'action_dim': None  # Auto-calculate based on phases
@@ -78,16 +79,17 @@ class SimulationConfig:
             # For 'selected' mode, specify which traffic lights to control
             'selected_traffic_lights': None,  # None means control first max_controlled_lights
             # Max number of traffic lights to control (to limit computational load)
-            'max_controlled_lights': 10,
+            # Reduced for large networks to improve performance
+            'max_controlled_lights': 5,  # Reduced from 10 for better performance on large networks
             # State dimension for RL (will be calculated dynamically)
             'state_dim': None,  # Auto-calculate based on selected intersections
             'action_dim': None  # Auto-calculate based on phases
         },
-        'palo_alto': {
-            'sumo_config': os.path.join(BASE_DIR, 'Palo Alto', 'osm.sumocfg'),
-            'network_file': os.path.join(BASE_DIR, 'Palo Alto', 'osm.net.xml.gz'),
+        'los_angeles': {
+            'sumo_config': os.path.join(BASE_DIR, 'Los Angeles', 'osm.sumocfg'),
+            'network_file': os.path.join(BASE_DIR, 'Los Angeles', 'osm.net.xml.gz'),
             'route_file': None,  # Multiple route files specified in sumocfg
-            'description': 'OSM Palo Alto - Real-world Palo Alto network from OpenStreetMap',
+            'description': 'OSM Los Angeles - Real-world Los Angeles network from OpenStreetMap',
             # Traffic lights will be detected dynamically
             'traffic_lights': None,  # Auto-detect
             'lanes': None,  # Auto-detect
@@ -97,7 +99,8 @@ class SimulationConfig:
             # For 'selected' mode, specify which traffic lights to control
             'selected_traffic_lights': None,  # None means control first max_controlled_lights
             # Max number of traffic lights to control (to limit computational load)
-            'max_controlled_lights': 10,
+            # Reduced for large networks to improve performance
+            'max_controlled_lights': 5,  # Reduced from 10 for better performance on large networks
             # State dimension for RL (will be calculated dynamically)
             'state_dim': None,  # Auto-calculate based on selected intersections
             'action_dim': None  # Auto-calculate based on phases
@@ -138,7 +141,7 @@ class SimulationConfig:
         Set active dataset
         
         Args:
-            dataset_name: 'custom', 'cologne', 'vancouver', or 'palo_alto'
+            dataset_name: 'custom', 'cologne', 'vancouver', or 'los_angeles'
         """
         if dataset_name not in cls.CONFIGS:
             raise ValueError(f"Unknown dataset: {dataset_name}. Choose from: {list(cls.CONFIGS.keys())}")

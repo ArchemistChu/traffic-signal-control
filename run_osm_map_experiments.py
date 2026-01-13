@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 OSM Map Experiment Runner
-Run experiments on OSM-based maps (Cologne, Vancouver, Palo Alto)
+Run experiments on OSM-based maps (Cologne, Vancouver, Los Angeles)
 """
 
 import sys
@@ -19,7 +19,7 @@ def run_single_experiment(map_name: str, strategy: str, duration: int = 600, use
 
            
     Args:
-        map_name: 'cologne', 'vancouver', or 'palo_alto'
+        map_name: 'cologne', 'vancouver', or 'los_angeles'
         strategy: 'FIXED_TIME', 'ADAPTIVE', 'MAX_PRESSURE', or 'DQN'
         duration: Simulation duration in seconds
         use_gui: Whether to use SUMO GUI
@@ -34,7 +34,7 @@ def run_single_experiment(map_name: str, strategy: str, duration: int = 600, use
         SimulationConfig.set_dataset(map_name)
     except ValueError as e:
         print(f"Error: {e}")
-        print(f"Available maps: cologne, vancouver, palo_alto")
+        print(f"Available maps: cologne, vancouver, los_angeles")
         return None
     
     # Create simulator
@@ -87,7 +87,7 @@ def get_map_info(map_name: str):
     Get information about a map (traffic lights, lanes, etc.)
     
     Args:
-        map_name: 'cologne', 'vancouver', or 'palo_alto'
+        map_name: 'cologne', 'vancouver', or 'los_angeles'
     """
     print("=" * 80)
     print(f"Map Information: {map_name.upper()}")
@@ -130,7 +130,7 @@ def run_comparison_experiment(maps: list, strategies: list, duration: int = 600)
     Run comparison experiments across multiple maps and strategies
     
     Args:
-        maps: List of map names ['cologne', 'vancouver', 'palo_alto']
+        maps: List of map names ['cologne', 'vancouver', 'los_angeles']
         strategies: List of strategies ['FIXED_TIME', 'ADAPTIVE', 'MAX_PRESSURE', 'DQN']
         duration: Simulation duration in seconds
     """
@@ -184,7 +184,7 @@ def main():
     print("\nAvailable maps:")
     print("  1. cologne")
     print("  2. vancouver")
-    print("  3. palo_alto")
+    print("  3. los_angeles")
     print("\nAvailable strategies:")
     print("  - FIXED_TIME")
     print("  - ADAPTIVE")
@@ -199,7 +199,7 @@ def main():
     choice = input("\nEnter choice (1-4) or 'q' to quit: ").strip()
     
     if choice == '1':
-        map_name = input("Enter map name (cologne/vancouver/palo_alto): ").strip().lower()
+        map_name = input("Enter map name (cologne/vancouver/los_angeles): ").strip().lower()
         strategy = input("Enter strategy (FIXED_TIME/ADAPTIVE/MAX_PRESSURE/DQN): ").strip().upper()
         duration_str = input("Enter duration in seconds (default 600): ").strip()
         duration = int(duration_str) if duration_str else 600
@@ -209,7 +209,7 @@ def main():
         run_single_experiment(map_name, strategy, duration, use_gui)
         
     elif choice == '2':
-        map_name = input("Enter map name (cologne/vancouver/palo_alto): ").strip().lower()
+        map_name = input("Enter map name (cologne/vancouver/los_angeles): ").strip().lower()
         get_map_info(map_name)
         
     elif choice == '3':
