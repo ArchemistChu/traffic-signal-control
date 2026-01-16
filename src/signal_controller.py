@@ -28,6 +28,7 @@ class ControlStrategy(Enum):
     ADAPTIVE = "adaptive"          # Rule-based adaptive control
     DQN = "dqn"                    # DQN reinforcement learning control
     MAX_PRESSURE = "max_pressure"  # MaxPressure queue-based control
+    SOTL = "sotl"                  # Self-Organizing Traffic Lights (threshold-based)
 
 class PhaseType(Enum):
     """Signal phase type"""
@@ -45,7 +46,7 @@ class PhaseConfig:
     min_duration: float  # Minimum green time
     max_duration: float  # Maximum green time
     yellow_time: float = 3.0   # Yellow time
-    red_clear_time: float = 2.0  # All-red clearance time
+    red_clear_time: float = 2.0  # All-red clearance time  
 
 @dataclass
 class TrafficState:
@@ -326,7 +327,8 @@ class DQNController(BaseController):
     
     def __init__(self, intersection_id: str = "intersection", model_path: str = None):
         super().__init__(intersection_id)
-        self.strategy_name = "DQN Reinforcement Learning Control"
+        # Important: this is a simplified heuristic/Q-table placeholder, not the trained MARL model.
+        self.strategy_name = "DQN-like Heuristic Baseline"
         self.model_path = model_path
         
         # DQN parameters
@@ -566,6 +568,77 @@ class DQNController(BaseController):
             print(f"Failed to load DQN model: {e}")
 
 
+class SOTLController(BaseController):
+    """
+    Self-Organizing Traffic Lights (SOTL).
+
+    Simple, strong baseline used in many TSC papers:
+    - Maintain current green for at least min_green.
+    - Compute demand on other phases; if demand exceeds threshold, switch.
+    - Also enforce a max_green cap to prevent starvation.
+
+    Note: For OSM maps, lane-phase mapping is handled in TrafficSimulator (per-TL),
+    so this controller is mainly meaningful for the custom single-intersection dataset.
+    """
+
+    def __init__(self, intersection_id: str = "intersection"):
+        super().__init__(intersection_id)
+        self.strategy_name = "SOTL (Self-Organizing Traffic Lights)"
+
+        # Typical SOTL parameters
+        self.min_green = 10.0
+        self.max_green = 60.0
+        self.switch_threshold = 6.0  # vehicles (weighted later by buses)
+
+    def decide_next_phase(self, traffic_state: TrafficState) -> Tuple[int, float]:
+        current_phase = traffic_state.current_phase
+
+        # If still plenty of time, keep current (do not preempt)
+        if traffic_state.phase_remaining_time > 1.0:
+            return current_phase, 0.0
+
+        # Determine lanes for each phase (custom mapping)
+        def phase_demand(phase_id: int) -> float:
+            lanes = self._get_phase_lanes(phase_id)
+            if not lanes and hasattr(traffic_state, 'lane_list') and traffic_state.lane_list:
+                lanes = traffic_state.lane_list
+            demand = 0.0
+            for lane in (lanes or []):
+                q = float(traffic_state.lane_queue_lengths.get(lane, 0))
+                bus_c = float((traffic_state.lane_bus_counts or {}).get(lane, 0))
+                bus_w = float((traffic_state.bus_waiting_time or {}).get(lane, 0.0))
+                demand += q + (2.0 * bus_c) + (0.2 * bus_w)
+            return demand
+
+        # Phase active time (approx): if we've been green too long, force switch
+        active_time = 0.0
+        try:
+            active_time = float(traffic_state.time) - float(self.phase_start_time)
+        except Exception:
+            active_time = 0.0
+
+        # Compute demand on other phases
+        other_phases = [p for p in self.phases.keys() if p != current_phase]
+        other_demands = {p: phase_demand(p) for p in other_phases}
+        best_phase = max(other_demands.keys(), key=lambda p: other_demands[p]) if other_demands else current_phase
+        best_demand = float(other_demands.get(best_phase, 0.0))
+
+        # Decide: if other demand exceeds threshold OR max green hit => switch to best
+        if best_demand >= self.switch_threshold or active_time >= self.max_green:
+            duration = float(self.phases[best_phase].duration)
+            reason = f"SOTL switch: other_demand={best_demand:.1f} threshold={self.switch_threshold:.1f}"
+            self.log_decision(traffic_state, (best_phase, duration), reason)
+            # update phase start time for this controller (logical time)
+            self.phase_start_time = float(traffic_state.time)
+            return best_phase, duration
+
+        # Otherwise keep current (small extension) to avoid oscillation
+        extension = min(15.0, max(0.0, self.min_green))
+        reason = f"SOTL hold: other_demand={best_demand:.1f} < threshold"
+        self.log_decision(traffic_state, (current_phase, extension), reason)
+        return current_phase, extension
+
+
 class MaxPressureController(BaseController):
     """
     MaxPressure controller (simplified queue-based implementation).
@@ -688,6 +761,8 @@ class SignalController:
             self.controller = DQNController(**kwargs)
         elif strategy == ControlStrategy.MAX_PRESSURE:
             self.controller = MaxPressureController(**kwargs)
+        elif strategy == ControlStrategy.SOTL:
+            self.controller = SOTLController(**kwargs)
         else:
             raise ValueError(f"Unsupported control strategy: {strategy}")
         

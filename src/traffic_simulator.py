@@ -71,6 +71,13 @@ class TrafficSimulator:
         self.simulation_time = 0
         self.step_count = 0
         self.requested_duration = None  # Store requested duration for fair comparison
+
+        # System-level counters (used for correct throughput)
+        self.total_departed = 0
+        self.total_arrived = 0
+
+        # GA tuning parameters (used only for GA baseline runs)
+        self._ga_params: Optional[Dict[str, float]] = None
         
         # Simulation data storage
         self.vehicle_data = []
@@ -526,6 +533,16 @@ class TrafficSimulator:
             traci.simulationStep()
             self.simulation_time = traci.simulation.getTime()
             self.step_count += 1
+
+            # Track departures/arrivals (cheap + correct throughput)
+            try:
+                self.total_departed += int(traci.simulation.getDepartedNumber())
+            except Exception:
+                pass
+            try:
+                self.total_arrived += int(traci.simulation.getArrivedNumber())
+            except Exception:
+                pass
             
             # Collect data
             self._collect_step_data()
@@ -562,6 +579,10 @@ class TrafficSimulator:
         """
         # Store requested duration for later use
         self.requested_duration = duration
+
+        # GA baseline: run a small genetic search to tune timing parameters, then run final simulation
+        if strategy == "GA":
+            return self._run_ga_optimized(duration=duration)
         
         if not self.start_simulation():
             return {}
@@ -578,6 +599,14 @@ class TrafficSimulator:
         ped_max_red: float = 90.0  # seconds (OSM maps)
         ped_min_green: float = 12.0  # seconds
 
+        # --- PressLight-inspired (pressure DQN) ---
+        presslight_enabled = (strategy == "PRESSLIGHT")
+        presslight_agent = None
+        presslight_tls_ids: List[str] = []
+        presslight_last_decision_t: float = 0.0
+        presslight_decision_interval: float = 10.0  # align with paper-style timestep
+        presslight_k: int = 8  # number of phase-pressure features (pad/truncate)
+
         if marl_enabled:
             try:
                 import torch  # local import to avoid making it a hard dependency for non-RL runs
@@ -585,6 +614,14 @@ class TrafficSimulator:
             except Exception as e:
                 print(f"Warning: MARL_DQN requested but RL imports failed: {e}")
                 marl_enabled = False
+
+        if presslight_enabled:
+            try:
+                import torch
+                from src.rl_agent import RLAgent, TrafficState as RLTState
+            except Exception as e:
+                print(f"Warning: PRESSLIGHT requested but RL imports failed: {e}")
+                presslight_enabled = False
 
         if marl_enabled:
             # Load trained checkpoint
@@ -628,17 +665,45 @@ class TrafficSimulator:
 
             print(f"MARL_DQN enabled: loaded {os.path.basename(model_path)}")
             print(f"MARL agents (traffic lights): {len(marl_tls_ids)} | lanes_per_tl={lanes_per_tl} | interval={marl_decision_interval}s")
+
+        if presslight_enabled:
+            model_path = os.path.join(SimulationConfig.MODEL_DIR, "presslight_shared_dqn.pt")
+            if not os.path.exists(model_path):
+                print(f"Warning: PressLight model not found at {model_path}. Falling back to MAX_PRESSURE.")
+                presslight_enabled = False
+                strategy = "MAX_PRESSURE"
+            else:
+                try:
+                    checkpoint = torch.load(model_path, map_location="cpu")
+                    ckpt_cfg = checkpoint.get("config", {})
+                    state_dim = int(ckpt_cfg.get("state_dim", 33))
+                    action_dim = int(ckpt_cfg.get("action_dim", presslight_k))
+                    presslight_agent = RLAgent(config={"state_dim": state_dim, "action_dim": action_dim})
+                    presslight_agent.load_model(model_path)
+                    presslight_agent.epsilon = 0.0
+                    # infer K from state_dim: TrafficState vector = 3*K + 8 + 1 (no detectors)
+                    try:
+                        presslight_k = max(1, int((state_dim - 9) // 3))
+                    except Exception:
+                        presslight_k = 8
+                    presslight_tls_ids = list(self.controlled_traffic_lights)
+                    print(f"PRESSLIGHT enabled: loaded {os.path.basename(model_path)} | K={presslight_k} | tls={len(presslight_tls_ids)}")
+                except Exception as e:
+                    print(f"Warning: failed to load PressLight model ({model_path}): {e}. Falling back to MAX_PRESSURE.")
+                    presslight_enabled = False
+                    strategy = "MAX_PRESSURE"
         
         # Initialize signal controller
         controller = None
-        if strategy is not None and not marl_enabled:
+        if strategy is not None and not marl_enabled and not presslight_enabled:
             try:
                 from src.signal_controller import SignalController, ControlStrategy, TrafficState
                 strategy_map = {
                     'FIXED_TIME': ControlStrategy.FIXED_TIME,
                     'ADAPTIVE': ControlStrategy.ADAPTIVE,
                     'DQN': ControlStrategy.DQN,
-                    'MAX_PRESSURE': ControlStrategy.MAX_PRESSURE
+                    'MAX_PRESSURE': ControlStrategy.MAX_PRESSURE,
+                    'SOTL': ControlStrategy.SOTL
                 }
                 control_strategy = strategy_map.get(strategy, ControlStrategy.FIXED_TIME)
                 controller = SignalController(control_strategy)
@@ -686,7 +751,78 @@ class TrafficSimulator:
                 
                 # Apply signal control strategy
                 # Check every step, but only make decisions when phase is about to end or controller requests change
-                if marl_enabled and marl_agent is not None:
+                if presslight_enabled and presslight_agent is not None:
+                    # Parameter-sharing DQN on pressure-state (PressLight-inspired)
+                    if (self.simulation_time - presslight_last_decision_t) >= presslight_decision_interval:
+                        presslight_last_decision_t = float(self.simulation_time)
+                        try:
+                            # Use current queues to compute pressure per phase (cached phase->lanes)
+                            state_dict = self.get_current_state()
+
+                            def _lane_weighted_queue(lane_id: str) -> float:
+                                q = float(state_dict.get("lane_queue_lengths", {}).get(lane_id, 0))
+                                bus_c = float(state_dict.get("lane_bus_counts", {}).get(lane_id, 0))
+                                bus_w = float(state_dict.get("bus_waiting_time", {}).get(lane_id, 0.0))
+                                return q + (2.5 * bus_c) + (0.3 * bus_w)
+
+                            for tl_id in presslight_tls_ids:
+                                try:
+                                    cur_phase = int(traci.trafficlight.getPhase(tl_id))
+                                    remaining = float(traci.trafficlight.getNextSwitch(tl_id) - self.simulation_time)
+                                except Exception:
+                                    continue
+
+                                phase_map = self._get_tl_phase_lane_map(tl_id)
+                                green_phases = phase_map.get("green_phases", []) or []
+                                nph = self._get_tl_phase_count(tl_id)
+                                if not green_phases:
+                                    green_phases = list(range(max(1, nph)))
+
+                                # Pedestrian fairness override
+                                try:
+                                    if phase_map.get("phase_has_ped_green", {}).get(cur_phase, False):
+                                        self._tl_last_ped_green_time[tl_id] = float(self.simulation_time)
+                                    ped_phases = phase_map.get("ped_green_phases", []) or []
+                                    last_ped = float(self._tl_last_ped_green_time.get(tl_id, 0.0))
+                                    if ped_phases and (float(self.simulation_time) - last_ped) >= ped_max_red:
+                                        traci.trafficlight.setPhase(tl_id, int(ped_phases[0]))
+                                        traci.trafficlight.setPhaseDuration(tl_id, ped_min_green)
+                                        self._tl_last_ped_green_time[tl_id] = float(self.simulation_time)
+                                        continue
+                                except Exception:
+                                    pass
+
+                                # Compute pressure per green phase and pad/truncate to K
+                                pressures = []
+                                for p in green_phases[:presslight_k]:
+                                    lanes = phase_map.get("phase_to_lanes", {}).get(int(p), []) or []
+                                    pressures.append(float(sum(_lane_weighted_queue(l) for l in lanes)))
+                                while len(pressures) < presslight_k:
+                                    pressures.append(0.0)
+
+                                fake_lanes = [f"p{i}" for i in range(presslight_k)]
+                                sumo_state = {
+                                    "time": float(self.simulation_time),
+                                    "lane_vehicle_counts": {fake_lanes[i]: pressures[i] for i in range(presslight_k)},
+                                    "lane_queue_lengths": {fake_lanes[i]: pressures[i] for i in range(presslight_k)},
+                                    "lane_mean_speeds": {fake_lanes[i]: 0.0 for i in range(presslight_k)},
+                                    "detector_occupancy": {},
+                                    "traffic_light_phase": int(cur_phase) % 8,
+                                    "traffic_light_remaining_time": max(0.0, remaining),
+                                }
+                                state_obj = RLTState(sumo_state, lane_list=fake_lanes)
+                                action = int(presslight_agent.select_action(state_obj, training=False))
+
+                                # Map action to a target green phase
+                                if green_phases:
+                                    target = int(green_phases[action % len(green_phases)])
+                                    if target != cur_phase and remaining <= 1.0:
+                                        traci.trafficlight.setPhase(tl_id, target)
+                                        traci.trafficlight.setPhaseDuration(tl_id, 30.0)
+                        except Exception as e:
+                            print(f"PRESSLIGHT control error: {e}")
+
+                elif marl_enabled and marl_agent is not None:
                     # Make one decision per TLS every marl_decision_interval seconds
                     if (self.simulation_time - marl_last_decision_t) >= marl_decision_interval:
                         marl_last_decision_t = float(self.simulation_time)
@@ -846,7 +982,21 @@ class TrafficSimulator:
                                 next_phase = cur_phase
                                 set_duration = 30.0
 
-                                if strategy == "FIXED_TIME":
+                                if strategy == "GA_INTERNAL":
+                                    # GA-tuned pressure-duration controller (baseline).
+                                    # Cycle through green phases, but set the next green duration as:
+                                    #   dur = clamp(10, 60, base_green + pressure_scale * pressure(next_phase))
+                                    base_green = float((self._ga_params or {}).get("base_green", 25.0))
+                                    pressure_scale = float((self._ga_params or {}).get("pressure_scale", 1.0))
+                                    try:
+                                        idx = green_phases.index(cur_phase)
+                                        next_phase = int(green_phases[(idx + 1) % len(green_phases)])
+                                    except ValueError:
+                                        next_phase = int(green_phases[0]) if green_phases else ((cur_phase + 1) % max(1, nph))
+                                    ph_p = float(_phase_pressure(tl_id, next_phase))
+                                    set_duration = float(min(60.0, max(10.0, base_green + pressure_scale * ph_p)))
+
+                                elif strategy == "FIXED_TIME":
                                     # Cycle through green phases (not all phases incl yellow/all-red)
                                     try:
                                         idx = green_phases.index(cur_phase)
@@ -923,6 +1073,34 @@ class TrafficSimulator:
 
                                     next_phase = int(best_phase)
                                     set_duration = float(min(60.0, max(15.0, 18.0 + best_pressure * 1.8)))
+
+                                elif strategy == "SOTL":
+                                    # SOTL (OSM): threshold-based switching to the best-demand green phase.
+                                    pressures = {p: _phase_pressure(tl_id, p) for p in green_phases}
+                                    best_phase = max(pressures.keys(), key=lambda p: pressures[p]) if pressures else cur_phase
+                                    best_pressure = float(pressures.get(best_phase, 0.0))
+                                    cur_pressure = float(pressures.get(cur_phase, _phase_pressure(tl_id, cur_phase)))
+
+                                    # If current phase still has demand, keep it (small extension).
+                                    if cur_pressure >= 1.0 and remaining > 3.0:
+                                        cap_remaining = max(0.0, max_green - active_time)
+                                        extension = min(12.0, 3.0 + cur_pressure * 0.8)
+                                        new_dur = min(cap_remaining, max(0.0, remaining) + extension)
+                                        if new_dur > 0.5:
+                                            traci.trafficlight.setPhaseDuration(tl_id, float(new_dur))
+                                        continue
+
+                                    # Otherwise, if best demand exceeds threshold, switch to it; else cycle.
+                                    if best_pressure >= 6.0:
+                                        next_phase = int(best_phase)
+                                        set_duration = float(min(60.0, max(15.0, 18.0 + best_pressure * 1.5)))
+                                    else:
+                                        try:
+                                            idx = green_phases.index(cur_phase)
+                                            next_phase = int(green_phases[(idx + 1) % len(green_phases)])
+                                        except ValueError:
+                                            next_phase = int(green_phases[0]) if green_phases else ((cur_phase + 1) % max(1, nph))
+                                        set_duration = 30.0
 
                                 # Max-green cap: force switch even if controller would keep
                                 if active_time >= max_green:
@@ -1117,6 +1295,102 @@ class TrafficSimulator:
             return {}
         finally:
             self.close_simulation()
+
+    def _run_ga_optimized(self, duration: Optional[int]) -> Dict:
+        """
+        Genetic Algorithm (GA) baseline.
+
+        We optimize two global parameters used to set green durations from pressure:
+        - base_green: base green time in seconds
+        - pressure_scale: how strongly pressure increases green time
+
+        This is a practical GA baseline for SUMO city networks that keeps the search space small
+        and computationally manageable, while still being a true optimization loop.
+        """
+        import random
+
+        eval_duration = int(min(600, duration or 600))  # short evaluation horizon per candidate
+        pop_size = 8
+        generations = 4
+        elite_k = 2
+        mutation_prob = 0.25
+
+        # Parameter bounds
+        base_range = (10.0, 40.0)
+        scale_range = (0.0, 4.0)
+
+        def clamp(x: float, lo: float, hi: float) -> float:
+            return float(max(lo, min(hi, x)))
+
+        def make_individual():
+            return {
+                "base_green": random.uniform(*base_range),
+                "pressure_scale": random.uniform(*scale_range),
+            }
+
+        def crossover(a, b):
+            return {
+                "base_green": a["base_green"] if random.random() < 0.5 else b["base_green"],
+                "pressure_scale": a["pressure_scale"] if random.random() < 0.5 else b["pressure_scale"],
+            }
+
+        def mutate(ind):
+            if random.random() < mutation_prob:
+                ind["base_green"] = clamp(ind["base_green"] + random.uniform(-5, 5), *base_range)
+            if random.random() < mutation_prob:
+                ind["pressure_scale"] = clamp(ind["pressure_scale"] + random.uniform(-0.8, 0.8), *scale_range)
+            return ind
+
+        def fitness(ind) -> float:
+            # Run a short headless simulation for this candidate using GA_INTERNAL strategy
+            sim = TrafficSimulator(
+                use_gui=False,
+                dataset=SimulationConfig.DATASET,
+                enable_sumo_emissions_output=False
+            )
+            sim._ga_params = dict(ind)
+            metrics = sim.run_simulation(duration=eval_duration, strategy="GA_INTERNAL")
+            # Fitness: lower waiting/queue is better; higher throughput is better
+            wt = float(metrics.get("avg_waiting_time", 1e9) or 1e9)
+            aql = float(metrics.get("avg_queue_length", 1e9) or 1e9)
+            thr = float(metrics.get("throughput_per_hour", 0) or 0)
+            # Combine (tuned weights)
+            return (-wt) - (0.2 * aql) + (0.001 * thr)
+
+        # Initialize population
+        population = [make_individual() for _ in range(pop_size)]
+        scored = []
+
+        print(f"GA baseline: optimizing on {SimulationConfig.DATASET} (eval_duration={eval_duration}s, pop={pop_size}, gens={generations})")
+
+        for gen in range(generations):
+            scored = [(fitness(ind), ind) for ind in population]
+            scored.sort(key=lambda x: x[0], reverse=True)
+            best_fit, best_ind = scored[0]
+            print(f"GA gen {gen+1}/{generations}: best_fitness={best_fit:.3f} params={best_ind}")
+
+            # Select elites
+            elites = [dict(scored[i][1]) for i in range(min(elite_k, len(scored)))]
+            # Breed next generation
+            next_pop = elites[:]
+            while len(next_pop) < pop_size:
+                p1 = random.choice(elites)
+                p2 = random.choice(population)
+                child = mutate(crossover(p1, p2))
+                next_pop.append(child)
+            population = next_pop
+
+        # Final best
+        if not scored:
+            scored = [(fitness(ind), ind) for ind in population]
+            scored.sort(key=lambda x: x[0], reverse=True)
+
+        best_params = dict(scored[0][1])
+        print(f"GA best params: {best_params}")
+
+        # Run final simulation using tuned params (keep current GUI preference)
+        self._ga_params = best_params
+        return self.run_simulation(duration=duration, strategy="GA_INTERNAL")
     
     def _collect_step_data(self):
         """Collect simulation data for current step - complete version"""
@@ -1242,16 +1516,28 @@ class TrafficSimulator:
             metrics['max_speed'] = df_vehicles['speed'].max()
         
         # 3. System throughput
-        unique_vehicles = df_vehicles['vehicle_id'].nunique()
-        metrics['throughput'] = unique_vehicles
+        # NOTE: "Throughput" should mean vehicles that completed their trips (arrived),
+        # not just vehicles that existed at any point in the simulation.
+        vehicles_seen = int(df_vehicles['vehicle_id'].nunique())
+        vehicles_arrived = int(getattr(self, "total_arrived", 0) or 0)
+        vehicles_departed = int(getattr(self, "total_departed", 0) or 0)
+
+        metrics['vehicles_seen'] = vehicles_seen
+        metrics['vehicles_departed'] = vehicles_departed
+        metrics['vehicles_arrived'] = vehicles_arrived
+
+        # Keep a legacy key, but make it "arrived vehicles" (true throughput)
+        metrics['throughput'] = vehicles_arrived
         
         # Calculate throughput per hour using ACTUAL simulation time
         # This gives realistic throughput values based on what actually happened
         # If simulation ended early, this will reflect that
         if self.simulation_time > 0:
-            metrics['throughput_per_hour'] = unique_vehicles * 3600 / self.simulation_time
+            metrics['throughput_per_hour'] = vehicles_arrived * 3600 / self.simulation_time
+            metrics['departed_per_hour'] = vehicles_departed * 3600 / self.simulation_time
         else:
             metrics['throughput_per_hour'] = 0
+            metrics['departed_per_hour'] = 0
         
         # 4. Congestion index (based on queue length)
         queue_lengths = []
@@ -1266,6 +1552,37 @@ class TrafficSimulator:
         if queue_lengths:
             metrics['congestion_index'] = np.mean(queue_lengths)
             metrics['max_queue_length'] = max(queue_lengths)
+
+        # --- DiffusionLight-style metrics ---
+        # AQL: Average Queue Length (vehicles) over time (approx from sampled vehicle_data)
+        # Pressure: weighted queued vehicles (buses weighted higher), averaged over time
+        try:
+            if {'time', 'waiting_time', 'lane_id'}.issubset(df_vehicles.columns):
+                dfq = df_vehicles.copy()
+                dfq['is_queued'] = dfq['waiting_time'] > 5.0
+                queued = dfq[dfq['is_queued']]
+
+                # Total queued vehicles per sampled time step
+                q_per_t = queued.groupby('time').size()
+                all_times = pd.Index(sorted(dfq['time'].unique()))
+                q_per_t = q_per_t.reindex(all_times, fill_value=0)
+                metrics['avg_queue_length'] = float(q_per_t.mean())
+                metrics['max_queue_length_vehicles'] = float(q_per_t.max())
+
+                # Pressure proxy: weight queued buses more heavily
+                if 'type_id' in queued.columns:
+                    def _w(t: str) -> float:
+                        s = str(t).lower()
+                        return 2.5 if ('bus' in s or 'pt_' in s) else 1.0
+                    queued['q_weight'] = queued['type_id'].map(_w)
+                    p_per_t = queued.groupby('time')['q_weight'].sum().reindex(all_times, fill_value=0.0)
+                else:
+                    p_per_t = q_per_t.astype(float)
+
+                metrics['avg_pressure'] = float(p_per_t.mean())
+                metrics['max_pressure'] = float(p_per_t.max())
+        except Exception:
+            pass
         
         # 5. Emission metrics
         # Option A: Prefer SUMO-native emissions output for OSM maps (faster, no per-vehicle TraCI calls)

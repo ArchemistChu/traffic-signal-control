@@ -78,8 +78,10 @@ def index():
         strategy_options = {
             'FIXED_TIME': '🕐 Fixed-time Control',
             'ADAPTIVE': '🧠 Adaptive Control', 
-            'DQN': '🤖 DQN Reinforcement Learning',
+            'GA': '🧬 Genetic Algorithm (GA) baseline',
+            'PRESSLIGHT': '📌 PressLight-inspired (pressure DQN)',
             'MAX_PRESSURE': '⚖️ MaxPressure Control',
+            'SOTL': '🚦 SOTL (Self-Organizing)',
             'MARL_DQN': '🤝 Multi-Agent DQN (trained)'
         }
         
@@ -323,8 +325,11 @@ def check_simulation():
                 strategy_names = {
                     'FIXED_TIME': '🕐 Fixed-time Control',
                     'ADAPTIVE': '🧠 Adaptive Control', 
-                    'DQN': '🤖 DQN Reinforcement Learning',
-                    'MAX_PRESSURE': '⚖️ MaxPressure Control'
+                    'GA': '🧬 Genetic Algorithm (GA) baseline',
+                    'PRESSLIGHT': '📌 PressLight-inspired (pressure DQN)',
+                    'MAX_PRESSURE': '⚖️ MaxPressure Control',
+                    'SOTL': '🚦 SOTL (Self-Organizing)',
+                    'MARL_DQN': '🤝 Multi-Agent DQN (trained)'
                 }
                 strategy_display_name = strategy_names.get(current_strategy, current_strategy)
                 
@@ -556,7 +561,11 @@ def get_comparison_charts():
         'Strategy': [],
         'Waiting Time': [],
         'Speed': [],
-        'Throughput': []
+        'Throughput': [],
+        'CO2_g': [],
+        'Fuel_L': [],
+        'AQL': [],
+        'Pressure': []
     }
     
     for strategy_key, strategy_data in all_results.items():
@@ -568,6 +577,13 @@ def get_comparison_charts():
         comparison_data['Waiting Time'].append(results_data.get('avg_waiting_time', 0))
         comparison_data['Speed'].append(results_data.get('avg_speed', 0))
         comparison_data['Throughput'].append(results_data.get('throughput_per_hour', 0))
+        # Emissions (totals are typically in mg and ml; convert for nicer plots)
+        total_co2_mg = float(results_data.get('total_co2', 0) or 0)
+        total_fuel_ml = float(results_data.get('total_fuel', 0) or 0)
+        comparison_data['CO2_g'].append(total_co2_mg / 1000.0)     # mg -> g
+        comparison_data['Fuel_L'].append(total_fuel_ml / 1000.0)   # ml -> L
+        comparison_data['AQL'].append(float(results_data.get('avg_queue_length', 0) or 0))
+        comparison_data['Pressure'].append(float(results_data.get('avg_pressure', 0) or 0))
     
     df_comparison = pd.DataFrame(comparison_data)
     
@@ -652,6 +668,100 @@ def get_comparison_charts():
     
     waiting_chart = json.dumps(fig_waiting, cls=plotly.utils.PlotlyJSONEncoder)
     throughput_chart = json.dumps(fig_throughput, cls=plotly.utils.PlotlyJSONEncoder)
+
+    # --- Emissions chart (CO2 + Fuel) ---
+    co2_g = df_comparison['CO2_g'].tolist()
+    fuel_l = df_comparison['Fuel_L'].tolist()
+
+    fig_emissions = go.Figure()
+    fig_emissions.add_trace(go.Bar(
+        x=strategies,
+        y=co2_g,
+        name='Total CO₂ (g)',
+        marker=dict(color='#2b6cb0'),
+        text=[f"{v:.1f}g" for v in co2_g],
+        textposition='outside'
+    ))
+    fig_emissions.add_trace(go.Bar(
+        x=strategies,
+        y=fuel_l,
+        name='Total Fuel (L)',
+        marker=dict(color='#c05621'),
+        text=[f"{v:.2f}L" for v in fuel_l],
+        textposition='outside',
+        yaxis='y2'
+    ))
+
+    max_co2 = max(co2_g) if co2_g else 1
+    max_fuel = max(fuel_l) if fuel_l else 1
+    fig_emissions.update_layout(
+        title="Emissions comparison (lower is better)",
+        xaxis_title="Strategy",
+        yaxis=dict(title="CO₂ (g)", range=[0, max_co2 * 1.2 if max_co2 > 0 else 1]),
+        yaxis2=dict(
+            title="Fuel (L)",
+            overlaying='y',
+            side='right',
+            range=[0, max_fuel * 1.2 if max_fuel > 0 else 1]
+        ),
+        barmode='group',
+        height=420,
+        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+        plot_bgcolor='white',
+        paper_bgcolor='white'
+    )
+
+    emissions_chart = json.dumps(fig_emissions, cls=plotly.utils.PlotlyJSONEncoder)
+
+    # --- AQL chart ---
+    aql_vals = df_comparison['AQL'].tolist()
+    fig_aql = go.Figure(data=[
+        go.Bar(
+            x=strategies,
+            y=aql_vals,
+            text=[f"{v:.2f}" for v in aql_vals],
+            textposition='outside',
+            marker=dict(color='#38a169'),
+            name='AQL'
+        )
+    ])
+    max_aql = max(aql_vals) if aql_vals else 1
+    fig_aql.update_layout(
+        title="Average queue length (AQL) comparison (lower is better)",
+        xaxis_title="Strategy",
+        yaxis_title="AQL (vehicles)",
+        yaxis=dict(range=[0, max_aql * 1.2 if max_aql > 0 else 1]),
+        showlegend=False,
+        height=400,
+        plot_bgcolor='white',
+        paper_bgcolor='white'
+    )
+    aql_chart = json.dumps(fig_aql, cls=plotly.utils.PlotlyJSONEncoder)
+
+    # --- Pressure chart ---
+    p_vals = df_comparison['Pressure'].tolist()
+    fig_pressure = go.Figure(data=[
+        go.Bar(
+            x=strategies,
+            y=p_vals,
+            text=[f"{v:.2f}" for v in p_vals],
+            textposition='outside',
+            marker=dict(color='#805ad5'),
+            name='Pressure'
+        )
+    ])
+    max_p = max(p_vals) if p_vals else 1
+    fig_pressure.update_layout(
+        title="Average pressure comparison (lower is better)",
+        xaxis_title="Strategy",
+        yaxis_title="Pressure (weighted queued vehicles)",
+        yaxis=dict(range=[0, max_p * 1.2 if max_p > 0 else 1]),
+        showlegend=False,
+        height=400,
+        plot_bgcolor='white',
+        paper_bgcolor='white'
+    )
+    pressure_chart = json.dumps(fig_pressure, cls=plotly.utils.PlotlyJSONEncoder)
     
     # Convert comparison_data to ensure JSON serializable format
     # Convert numpy types to native Python types
@@ -659,13 +769,20 @@ def get_comparison_charts():
         'Strategy': comparison_data['Strategy'],
         'Waiting Time': [float(x) for x in comparison_data['Waiting Time']],
         'Speed': [float(x) for x in comparison_data['Speed']],
-        'Throughput': [float(x) for x in comparison_data['Throughput']]
+        'Throughput': [float(x) for x in comparison_data['Throughput']],
+        'CO2_g': [float(x) for x in comparison_data['CO2_g']],
+        'Fuel_L': [float(x) for x in comparison_data['Fuel_L']],
+        'AQL': [float(x) for x in comparison_data['AQL']],
+        'Pressure': [float(x) for x in comparison_data['Pressure']]
     }
     
     return jsonify({
         'status': 'success',
         'waiting_chart': waiting_chart,
         'throughput_chart': throughput_chart,
+        'emissions_chart': emissions_chart,
+        'aql_chart': aql_chart,
+        'pressure_chart': pressure_chart,
         'comparison_data': serializable_data
     })
 

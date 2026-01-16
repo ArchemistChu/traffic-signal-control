@@ -40,8 +40,14 @@
                     ⏰ Switch signals at fixed intervals<br>Suitable for regular traffic patterns
                     {% elif selected_strategy == 'ADAPTIVE' %}
                     🧠 Adjust intelligently based on vehicle counts<br>Suitable for varying traffic flows
+                    {% elif selected_strategy == 'GA' %}
+                    🧬 Genetic Algorithm baseline<br>Optimizes signal timing parameters for the chosen map
+                    {% elif selected_strategy == 'PRESSLIGHT' %}
+                    📌 PressLight-inspired baseline<br>DQN trained on pressure-state (adapted to SUMO)
                     {% elif selected_strategy == 'MAX_PRESSURE' %}
                     ⚖️ Serve the phase with the highest queued demand (MaxPressure)<br>Strong queue-based baseline for comparison
+                    {% elif selected_strategy == 'SOTL' %}
+                    🚦 Threshold-based self-organizing control (SOTL)<br>Switch when queues exceed a threshold
                     {% else %}
                     🤖 AI learns optimal control strategies<br>Suitable for complex traffic conditions
                     {% endif %}
@@ -287,6 +293,21 @@
                     <div id="throughputChart" class="comparison-chart"></div>
                 </div>
             </div>
+
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div id="emissionsChart" class="comparison-chart"></div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div id="aqlChart" class="comparison-chart"></div>
+                </div>
+                <div class="col-md-6">
+                    <div id="pressureChart" class="comparison-chart"></div>
+                </div>
+            </div>
             
             <div id="comparisonTable" class="mt-4"></div>
             
@@ -336,8 +357,10 @@ $('#strategySelect').on('change', function() {
     const descriptions = {
         'FIXED_TIME': '⏰ Switch signals at fixed intervals<br>Suitable for regular traffic patterns',
         'ADAPTIVE': '🧠 Adjust intelligently based on vehicle counts<br>Suitable for varying traffic flows',
+        'GA': '🧬 Genetic Algorithm baseline<br>Optimizes signal timing parameters for the chosen map',
+        'PRESSLIGHT': '📌 PressLight-inspired baseline<br>DQN trained on pressure-state (adapted to SUMO)',
         'MAX_PRESSURE': '⚖️ Serve the phase with the highest queued demand (MaxPressure)<br>Strong queue-based baseline for comparison',
-        'DQN': '🤖 AI learns optimal control strategies<br>Suitable for complex traffic conditions',
+        'SOTL': '🚦 Threshold-based self-organizing control (SOTL)<br>Switch when queues exceed a threshold',
         'MARL_DQN': '🤝 Multi-Agent DQN (trained)<br>Controls multiple traffic lights at once using a trained shared policy'
     };
     $('#strategyDescription').html(descriptions[strategy] || '');
@@ -582,6 +605,9 @@ function loadComparisonCharts() {
                 try {
                     const waitingChart = JSON.parse(response.waiting_chart);
                     const throughputChart = JSON.parse(response.throughput_chart);
+                    const emissionsChart = response.emissions_chart ? JSON.parse(response.emissions_chart) : null;
+                    const aqlChart = response.aql_chart ? JSON.parse(response.aql_chart) : null;
+                    const pressureChart = response.pressure_chart ? JSON.parse(response.pressure_chart) : null;
                     
                     // Ensure we have the full figure structure
                     const waitingConfig = {
@@ -596,16 +622,32 @@ function loadComparisonCharts() {
                     // Plot charts with proper configuration
                     Plotly.newPlot('waitingTimeChart', waitingChart.data, waitingChart.layout, waitingConfig);
                     Plotly.newPlot('throughputChart', throughputChart.data, throughputChart.layout, throughputConfig);
+                    if (emissionsChart) {
+                        Plotly.newPlot('emissionsChart', emissionsChart.data, emissionsChart.layout, { displayModeBar: true, responsive: true });
+                    }
+                    if (aqlChart) {
+                        Plotly.newPlot('aqlChart', aqlChart.data, aqlChart.layout, { displayModeBar: true, responsive: true });
+                    }
+                    if (pressureChart) {
+                        Plotly.newPlot('pressureChart', pressureChart.data, pressureChart.layout, { displayModeBar: true, responsive: true });
+                    }
                 } catch (error) {
                     console.error('Error rendering charts:', error);
                     $('#waitingTimeChart').html('<div class="alert alert-danger">Error rendering waiting time chart</div>');
                     $('#throughputChart').html('<div class="alert alert-danger">Error rendering throughput chart</div>');
+                    $('#emissionsChart').html('<div class="alert alert-danger">Error rendering emissions chart</div>');
+                    $('#aqlChart').html('<div class="alert alert-danger">Error rendering AQL chart</div>');
+                    $('#pressureChart').html('<div class="alert alert-danger">Error rendering pressure chart</div>');
                 }
                 
                 // Create comparison table
-                let tableHTML = '<h6>📋 Detailed comparison data</h6><div class="table-responsive"><table class="table table-striped"><thead><tr><th>Strategy</th><th>Waiting time (s)</th><th>Average speed (m/s)</th><th>Throughput (veh/h)</th></tr></thead><tbody>';
+                let tableHTML = '<h6>📋 Detailed comparison data</h6><div class="table-responsive"><table class="table table-striped"><thead><tr><th>Strategy</th><th>Waiting time (s)</th><th>Average speed (m/s)</th><th>Throughput (veh/h)</th><th>CO₂ (g)</th><th>Fuel (L)</th><th>AQL (veh)</th><th>Pressure</th></tr></thead><tbody>';
                 response.comparison_data.Strategy.forEach((strategy, index) => {
-                    tableHTML += `<tr><td>${strategy}</td><td>${response.comparison_data['Waiting Time'][index].toFixed(2)}</td><td>${response.comparison_data.Speed[index].toFixed(2)}</td><td>${response.comparison_data.Throughput[index].toFixed(0)}</td></tr>`;
+                    const co2g = (response.comparison_data.CO2_g && response.comparison_data.CO2_g[index] != null) ? response.comparison_data.CO2_g[index] : 0;
+                    const fuelL = (response.comparison_data.Fuel_L && response.comparison_data.Fuel_L[index] != null) ? response.comparison_data.Fuel_L[index] : 0;
+                    const aql = (response.comparison_data.AQL && response.comparison_data.AQL[index] != null) ? response.comparison_data.AQL[index] : 0;
+                    const pressure = (response.comparison_data.Pressure && response.comparison_data.Pressure[index] != null) ? response.comparison_data.Pressure[index] : 0;
+                    tableHTML += `<tr><td>${strategy}</td><td>${response.comparison_data['Waiting Time'][index].toFixed(2)}</td><td>${response.comparison_data.Speed[index].toFixed(2)}</td><td>${response.comparison_data.Throughput[index].toFixed(0)}</td><td>${co2g.toFixed(1)}</td><td>${fuelL.toFixed(2)}</td><td>${aql.toFixed(2)}</td><td>${pressure.toFixed(2)}</td></tr>`;
                 });
                 tableHTML += '</tbody></table></div>';
                 $('#comparisonTable').html(tableHTML);
@@ -669,14 +711,16 @@ $(document).ready(function() {
     }
     
     // Start checking simulation status if running
-    {% if simulation_running %}
-    checkInterval = setInterval(checkSimulationStatus, 3000);
-    {% endif %}
-    
+    const isSimulationRunning = ("{{ 'true' if simulation_running else 'false' }}" === "true");
+    if (isSimulationRunning) {
+        checkInterval = setInterval(checkSimulationStatus, 3000);
+    }
+
     // Load comparison charts if results exist
-    {% if simulation_results and all_strategy_results|length >= 2 %}
-    loadComparisonCharts();
-    {% endif %}
+    const hasComparisonResults = ("{{ 'true' if simulation_results and all_strategy_results|length >= 2 else 'false' }}" === "true");
+    if (hasComparisonResults) {
+        loadComparisonCharts();
+    }
 });
 </script>
 {% endblock %}
