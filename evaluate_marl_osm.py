@@ -1,23 +1,13 @@
 #!/usr/bin/env python3
 """
-Multi-agent RL training on OSM Los Angeles (parameter-sharing DQN).
+Evaluate a trained MARL shared DQN on OSM maps (Los Angeles / Vancouver / Cologne).
 
-What this is:
-- Multi-agent: control N traffic lights at the same time.
-- Parameter sharing: all agents use ONE shared DQN (shared weights + shared replay).
-  This is the most practical MARL baseline for a final-year project.
-
-Key simplifications (intentional):
-- Local observation per traffic light (only lanes controlled by that TLS).
-- Fixed observation size via lane padding/truncation (lanes_per_tl).
-- Action space = 2:
-    0 = keep current phase
-    1 = switch to next SUMO phase (cycle)
-- Headless SUMO for speed; disable emission-output during training to avoid huge files.
-  (You can evaluate emissions later with your normal simulator runs.)
+This script reuses the same local observation and 2-action policy used in
+train_marl_los_angeles.py, but runs in evaluation mode (no training).
 """
 
 import argparse
+import json
 import os
 import time
 from typing import Dict, List, Tuple
@@ -61,14 +51,13 @@ def get_controlled_lanes_for_tl(tl_id: str) -> List[str]:
         except Exception:
             pass
 
-    # Fallback: parse controlled links
     lanes = set()
     try:
         controlled_links = traci.trafficlight.getControlledLinks(tl_id)
         for link_list in controlled_links:
             for link in link_list:
                 if link and len(link) > 0:
-                    lanes.add(link[0])  # incoming lane
+                    lanes.add(link[0])
     except Exception:
         pass
     return sorted(lanes)
@@ -84,7 +73,6 @@ def build_local_state(tl_id: str, lane_ids_fixed: List[str]) -> Dict:
 
     for lane_id in lane_ids_fixed:
         if not lane_id:
-            # padding lane
             lane_vehicle_counts[lane_id] = 0
             lane_queue_lengths[lane_id] = 0
             lane_mean_speeds[lane_id] = 0.0
@@ -155,73 +143,110 @@ def build_region_map(tls_ids: List[str], grid_size: float) -> Dict[str, Tuple[in
     return region_map
 
 
+def _to_json_safe(obj):
+    """Recursively convert objects (including dict keys) to JSON-safe types."""
+    try:
+        import numpy as _np
+        if isinstance(obj, (_np.integer,)):
+            return int(obj)
+        if isinstance(obj, (_np.floating,)):
+            return float(obj)
+        if isinstance(obj, (_np.bool_,)):
+            return bool(obj)
+    except Exception:
+        pass
+
+    if isinstance(obj, dict):
+        safe = {}
+        for k, v in obj.items():
+            safe_key = str(k)
+            safe[safe_key] = _to_json_safe(v)
+        return safe
+    if isinstance(obj, (list, tuple)):
+        return [_to_json_safe(v) for v in obj]
+    return obj
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, default="los_angeles", choices=["cologne", "vancouver", "los_angeles"])
-    parser.add_argument("--episodes", type=int, default=120)
-    parser.add_argument("--duration", type=int, default=1200, help="Seconds per episode")
-    parser.add_argument("--decision-interval", type=int, default=5, help="Seconds between actions per TLS")
-    parser.add_argument("--max-controlled-lights", type=int, default=3, help="How many TLS agents to train simultaneously")
+    parser.add_argument("--model", type=str, default="", help="Path to trained model (.pt)")
+    parser.add_argument("--episodes", type=int, default=5)
+    parser.add_argument("--duration", type=int, default=1200)
+    parser.add_argument("--decision-interval", type=int, default=5)
+    parser.add_argument("--max-controlled-lights", type=int, default=3)
     parser.add_argument(
         "--controlled-lights-ratio",
         type=float,
         default=0.0,
         help="If >0, use this ratio of total TLS (overrides --max-controlled-lights). Example: 0.2 for 20%",
     )
+    parser.add_argument("--lanes-per-tl", type=int, default=8)
     parser.add_argument(
         "--regional-reward-weight",
         type=float,
-        default=0.01,
+        default=0.0,
+        help="If >0, add a regional congestion penalty to the reward (weight on avg queue in region)",
+    )
+    parser.add_argument("--region-grid-size", type=float, default=500.0)
+    parser.add_argument(
+        "--collect-emissions",
+        action="store_true",
+        help="Enable TraCI emission collection (slower, higher memory).",
+    )
+    parser.add_argument(
+        "--sumo-emissions-output",
+        action="store_true",
         help=(
-            "Region-aware reward shaping. If >0, add a regional congestion penalty to each agent reward: "
-            "reward += -weight * (avg queued vehicles in the agent's region). "
-            "Typical values: 0.005–0.05 (start small). Set 0 to disable."
+            "Enable SUMO native --emission-output during evaluation (recommended for OSM maps). "
+            "This allows total CO2/fuel/NOx/PMx to be parsed efficiently after the run."
         ),
     )
     parser.add_argument(
-        "--region-grid-size",
-        type=float,
-        default=500.0,
-        help="Grid size in meters for regional congestion (default: 500)",
+        "--keep-emissions-xml",
+        action="store_true",
+        help="Keep generated emissions_*.xml files (default: delete after parsing to save disk space).",
     )
-    parser.add_argument("--lanes-per-tl", type=int, default=8, help="Fixed lanes per TLS in observation (pad/truncate)")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--save-every", type=int, default=10)
-    parser.add_argument("--out", type=str, default="", help="Model output path")
+    parser.add_argument(
+        "--run-id",
+        type=int,
+        default=0,
+        help=(
+            "Optional run identifier to decorrelate SUMO seeds across repeated invocations. "
+            "Effective SUMO seed used per episode is: seed + run_id*10000 + episode."
+        ),
+    )
+    parser.add_argument("--out", type=str, default="", help="Optional JSON output for eval summary")
+    parser.add_argument("--calc-metrics", action="store_true", help="Compute performance metrics (slower)")
     args = parser.parse_args()
 
     if traci is None:
         raise RuntimeError("traci is not installed. Please install SUMO tools: pip install traci sumolib")
 
-    np.random.seed(args.seed)
-
     if args.controlled_lights_ratio < 0.0 or args.controlled_lights_ratio > 1.0:
         raise ValueError("--controlled-lights-ratio must be in [0.0, 1.0]")
 
+    np.random.seed(args.seed)
+
     SimulationConfig.set_dataset(args.dataset)
     if args.controlled_lights_ratio and args.controlled_lights_ratio > 0.0:
-        # Use a large cap so we can compute ratio from full TLS list.
         SimulationConfig.CONFIGS[args.dataset]["max_controlled_lights"] = 10**9
     else:
         SimulationConfig.CONFIGS[args.dataset]["max_controlled_lights"] = int(args.max_controlled_lights)
     SimulationConfig.create_output_dirs()
 
-    # Default output model path:
-    # - keep backward-compatible name when regional_reward_weight==0
-    # - otherwise, avoid overwriting the non-region-aware model by adding a suffix
-    suffix = ""
-    try:
-        if float(args.regional_reward_weight or 0.0) > 0.0:
-            suffix = "_regionaware"
-    except Exception:
-        suffix = ""
-    default_out = os.path.join(SimulationConfig.MODEL_DIR, f"marl_{args.dataset}_shared_dqn{suffix}.pt")
-    out_path = args.out.strip() or default_out
+    default_model = os.path.join(SimulationConfig.MODEL_DIR, f"marl_{args.dataset}_shared_dqn.pt")
+    model_path = args.model.strip() or default_model
+    model_path = os.path.abspath(model_path)
+    if not os.path.isfile(model_path):
+        raise FileNotFoundError(f"Model not found: {model_path} (cwd={os.getcwd()})")
 
+    results = []
     agent: RLAgent | None = None
 
     print("=" * 78)
-    print(f"MARL training: {args.dataset} | parameter-sharing DQN")
+    print(f"MARL evaluation: {args.dataset} | model={model_path}")
     print(f"Episodes={args.episodes} duration={args.duration}s interval={args.decision_interval}s")
     if args.controlled_lights_ratio and args.controlled_lights_ratio > 0.0:
         print(f"Agents(TLS)=ratio {args.controlled_lights_ratio:.2f} lanes_per_tl={args.lanes_per_tl}")
@@ -229,15 +254,22 @@ def main():
         print(f"Agents(TLS)={args.max_controlled_lights} lanes_per_tl={args.lanes_per_tl}")
     if args.regional_reward_weight and args.regional_reward_weight > 0.0:
         print(f"Regional reward: weight={args.regional_reward_weight} grid={args.region_grid_size}m")
-    print(f"Output: {out_path}")
     print("=" * 78)
 
     for ep in range(1, args.episodes + 1):
+        # Make evaluation statistically meaningful:
+        # vary SUMO random seed across episodes and across repeated invocations (run-id).
+        sumo_seed = int(args.seed) + int(args.run_id) * 10000 + int(ep)
         simulator = TrafficSimulator(
             use_gui=False,
             dataset=args.dataset,
-            enable_sumo_emissions_output=False,
+            enable_sumo_emissions_output=bool(args.sumo_emissions_output),
+            sumo_seed=sumo_seed,
         )
+        if args.collect_emissions:
+            simulator.collect_emissions = True
+            simulator.data_collection_interval = 1
+        simulator.requested_duration = int(args.duration)
         ok = simulator.start_simulation()
         if not ok or not simulator.controlled_traffic_lights:
             simulator.close_simulation()
@@ -252,7 +284,7 @@ def main():
                 print(f"Computed TLS count: {desired}/{total_tls} ({args.controlled_lights_ratio:.2f})")
         else:
             tls_ids = simulator.controlled_traffic_lights[: int(args.max_controlled_lights)]
-        # per TLS: fixed lane list
+
         tl_lanes: Dict[str, List[str]] = {}
         tl_phase_counts: Dict[str, int] = {}
         for tl_id in tls_ids:
@@ -279,19 +311,13 @@ def main():
                 "dueling": True,
                 "double_dqn": True,
                 "n_step": 3,
-                # --- metadata for reproducibility (not used by RLAgent logic) ---
-                "dataset": args.dataset,
-                "lanes_per_tl": int(args.lanes_per_tl),
-                "decision_interval": int(args.decision_interval),
-                "max_controlled_lights": int(args.max_controlled_lights),
-                "controlled_lights_ratio": float(args.controlled_lights_ratio),
-                "regional_reward_weight": float(args.regional_reward_weight),
-                "region_grid_size": float(args.region_grid_size),
             })
+            agent.load_model(model_path)
 
-        # Episode loop
         start_wall = time.time()
         last_decision_t = 0.0
+        ep_reward = 0.0
+        decisions = 0
 
         prev_state_dict: Dict[str, Dict] = {
             tl_id: build_local_state(tl_id, tl_lanes[tl_id]) for tl_id in tls_ids
@@ -300,22 +326,19 @@ def main():
             tl_id: RLTState(prev_state_dict[tl_id], lane_list=tl_lanes[tl_id]) for tl_id in tls_ids
         }
 
-        losses: List[float] = []
-
         while True:
-            traci.simulationStep()
-            sim_t = float(traci.simulation.getTime())
+            if not simulator.simulation_step():
+                break
+            sim_t = float(simulator.simulation_time)
             done = sim_t >= float(args.duration)
 
             if done or (sim_t - last_decision_t) >= float(args.decision_interval):
                 last_decision_t = sim_t
 
-                # Act for each TLS (multi-agent)
                 actions: Dict[str, int] = {}
                 for tl_id in tls_ids:
-                    actions[tl_id] = agent.select_action(prev_state_obj[tl_id], training=True)
+                    actions[tl_id] = agent.select_action(prev_state_obj[tl_id], training=False)
 
-                # Apply actions
                 for tl_id, action in actions.items():
                     if action != 1:
                         continue
@@ -326,7 +349,6 @@ def main():
                     except Exception:
                         pass
 
-                # Observe next for all TLS
                 curr_state_dict: Dict[str, Dict] = {}
                 curr_state_obj: Dict[str, RLTState] = {}
                 for tl_id in tls_ids:
@@ -334,7 +356,6 @@ def main():
                     curr_state_dict[tl_id] = curr_dict
                     curr_state_obj[tl_id] = RLTState(curr_dict, lane_list=tl_lanes[tl_id])
 
-                # Regional congestion (avg queue per region)
                 region_sum: Dict[Tuple[int, int], float] = {}
                 region_cnt: Dict[Tuple[int, int], int] = {}
                 if tl_regions:
@@ -344,7 +365,6 @@ def main():
                         region_sum[region] = region_sum.get(region, 0.0) + q
                         region_cnt[region] = region_cnt.get(region, 0) + 1
 
-                # Store experience per agent
                 for tl_id in tls_ids:
                     r = local_reward(prev_state_dict[tl_id], curr_state_dict[tl_id], actions[tl_id])
                     if tl_regions:
@@ -352,11 +372,8 @@ def main():
                         denom = max(1, region_cnt.get(region, 1))
                         region_avg_q = region_sum.get(region, 0.0) / float(denom)
                         r += -float(args.regional_reward_weight) * region_avg_q
-
-                    agent.store_experience(prev_state_obj[tl_id], actions[tl_id], r, curr_state_obj[tl_id], done)
-                    loss = agent.train_step()
-                    if loss is not None:
-                        losses.append(float(loss))
+                    ep_reward += float(r)
+                    decisions += 1
 
                     prev_state_dict[tl_id] = curr_state_dict[tl_id]
                     prev_state_obj[tl_id] = curr_state_obj[tl_id]
@@ -364,21 +381,66 @@ def main():
             if done:
                 break
 
-        agent.end_episode()
+        # Important for emissions correctness:
+        # SUMO writes emission-output XML incrementally; ensure SUMO is closed before parsing,
+        # otherwise the XML can be incomplete and iterparse may stop early.
         simulator.close_simulation()
 
+        metrics = {}
+        if args.calc_metrics:
+            try:
+                # Give the OS a brief moment to flush file buffers after SUMO exits.
+                if args.sumo_emissions_output:
+                    try:
+                        time.sleep(0.25)
+                    except Exception:
+                        pass
+
+                metrics = simulator._calculate_performance_metrics()
+
+                # If we enabled SUMO native emissions output, delete the huge XML after parsing
+                # (unless user asked to keep it).
+                try:
+                    if args.sumo_emissions_output and (not args.keep_emissions_xml):
+                        ef = getattr(simulator, "emissions_output_file", None)
+                        if ef and os.path.exists(ef):
+                            os.remove(ef)
+                except Exception:
+                    pass
+            except Exception:
+                metrics = {}
         wall = time.time() - start_wall
-        avg_loss = float(np.mean(losses)) if losses else float("nan")
-        ep_reward = agent.training_history["episode_rewards"][-1] if agent.training_history["episode_rewards"] else 0.0
-        print(f"Episode {ep:04d}/{args.episodes} | wall={wall:.2f}s | reward(sum)={ep_reward:.2f} | avg_loss={avg_loss:.4f} | epsilon={agent.epsilon:.3f} | tls={len(tls_ids)}")
+        avg_r = ep_reward / float(max(1, decisions))
+        print(f"Episode {ep:04d}/{args.episodes} | wall={wall:.2f}s | reward(sum)={ep_reward:.2f} | avg_r={avg_r:.4f} | decisions={decisions}")
+        results.append({
+            "episode": ep,
+            "sumo_seed": int(sumo_seed),
+            "wall_seconds": float(wall),
+            "reward_sum": float(ep_reward),
+            "avg_reward": float(avg_r),
+            "decisions": int(decisions),
+            "metrics": metrics,
+        })
 
-        if ep % int(args.save_every) == 0:
-            agent.save_model(out_path)
-
-    agent.save_model(out_path)
-    print(f"\nDone. MARL model saved to: {out_path}")
+    if args.out:
+        with open(args.out, "w", encoding="utf-8") as f:
+            json.dump(_to_json_safe({
+                "dataset": args.dataset,
+                "model": model_path,
+                "episodes": args.episodes,
+                "duration": args.duration,
+                "decision_interval": args.decision_interval,
+                "lanes_per_tl": args.lanes_per_tl,
+                "controlled_lights_ratio": args.controlled_lights_ratio,
+                "max_controlled_lights": args.max_controlled_lights,
+                "regional_reward_weight": args.regional_reward_weight,
+                "region_grid_size": args.region_grid_size,
+                "seed": int(args.seed),
+                "run_id": int(args.run_id),
+                "results": results,
+            }), f, indent=2)
+        print(f"Saved eval summary: {args.out}")
 
 
 if __name__ == "__main__":
     main()
-

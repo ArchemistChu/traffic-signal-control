@@ -28,6 +28,22 @@ except ImportError:
     traci = None
 
 
+def build_region_map(tls_ids: List[str], grid_size: float) -> Dict[str, tuple[int, int]]:
+    """Assign each TLS to a spatial grid cell for regional congestion shaping."""
+    region_map: Dict[str, tuple[int, int]] = {}
+    if grid_size <= 0.0:
+        grid_size = 500.0
+    for tl_id in tls_ids:
+        try:
+            x, y = traci.trafficlight.getPosition(tl_id)
+            rx = int(float(x) // grid_size)
+            ry = int(float(y) // grid_size)
+            region_map[tl_id] = (rx, ry)
+        except Exception:
+            region_map[tl_id] = (0, 0)
+    return region_map
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, default="los_angeles", choices=["cologne", "vancouver", "los_angeles"])
@@ -35,6 +51,24 @@ def main():
     parser.add_argument("--duration", type=int, default=3600)
     parser.add_argument("--decision-interval", type=int, default=10)
     parser.add_argument("--max-controlled-lights", type=int, default=5)
+    parser.add_argument(
+        "--controlled-lights-ratio",
+        type=float,
+        default=0.0,
+        help="If >0, use this ratio of total TLS (overrides --max-controlled-lights). Example: 0.2 for 20%",
+    )
+    parser.add_argument(
+        "--regional-reward-weight",
+        type=float,
+        default=0.0,
+        help="If >0, add a regional congestion penalty to the reward (weight on avg pressure in region)",
+    )
+    parser.add_argument(
+        "--region-grid-size",
+        type=float,
+        default=500.0,
+        help="Grid size in meters for regional congestion (default: 500)",
+    )
     parser.add_argument("--k", type=int, default=8, help="Pad/truncate number of phase-pressure features")
     parser.add_argument("--save-every", type=int, default=25)
     parser.add_argument("--seed", type=int, default=42)
@@ -44,10 +78,17 @@ def main():
     if traci is None:
         raise RuntimeError("traci is not installed. Please install SUMO tools: pip install traci sumolib")
 
+    if args.controlled_lights_ratio < 0.0 or args.controlled_lights_ratio > 1.0:
+        raise ValueError("--controlled-lights-ratio must be in [0.0, 1.0]")
+
     np.random.seed(args.seed)
 
     SimulationConfig.set_dataset(args.dataset)
-    SimulationConfig.CONFIGS[args.dataset]["max_controlled_lights"] = int(args.max_controlled_lights)
+    if args.controlled_lights_ratio and args.controlled_lights_ratio > 0.0:
+        # Use a large cap so we can compute ratio from full TLS list.
+        SimulationConfig.CONFIGS[args.dataset]["max_controlled_lights"] = 10**9
+    else:
+        SimulationConfig.CONFIGS[args.dataset]["max_controlled_lights"] = int(args.max_controlled_lights)
     SimulationConfig.create_output_dirs()
 
     out_path = args.out.strip() or os.path.join(SimulationConfig.MODEL_DIR, "presslight_shared_dqn.pt")
@@ -72,7 +113,12 @@ def main():
     print("=" * 78)
     print("PressLight-inspired training (SUMO-adapted)")
     print(f"dataset={args.dataset} episodes={args.episodes} duration={args.duration}s interval={args.decision_interval}s")
-    print(f"tls={args.max_controlled_lights} K={args.k} out={out_path}")
+    if args.controlled_lights_ratio and args.controlled_lights_ratio > 0.0:
+        print(f"tls=ratio {args.controlled_lights_ratio:.2f} K={args.k} out={out_path}")
+    else:
+        print(f"tls={args.max_controlled_lights} K={args.k} out={out_path}")
+    if args.regional_reward_weight and args.regional_reward_weight > 0.0:
+        print(f"Regional reward: weight={args.regional_reward_weight} grid={args.region_grid_size}m")
     print("=" * 78)
 
     fake_lanes = [f"p{i}" for i in range(int(args.k))]
@@ -84,8 +130,20 @@ def main():
             sim.close_simulation()
             raise RuntimeError("Failed to start SUMO or no traffic lights detected.")
 
-        tls_ids = sim.controlled_traffic_lights[: int(args.max_controlled_lights)]
+        if args.controlled_lights_ratio and args.controlled_lights_ratio > 0.0:
+            total_tls = len(sim.traffic_lights) if sim.traffic_lights else len(sim.controlled_traffic_lights)
+            desired = int(round(total_tls * float(args.controlled_lights_ratio)))
+            desired = max(1, min(total_tls, desired))
+            tls_ids = (sim.traffic_lights or sim.controlled_traffic_lights)[:desired]
+            if ep == 1:
+                print(f"Computed TLS count: {desired}/{total_tls} ({args.controlled_lights_ratio:.2f})")
+        else:
+            tls_ids = sim.controlled_traffic_lights[: int(args.max_controlled_lights)]
         last_decision_t = 0.0
+
+        tl_regions: Dict[str, tuple[int, int]] = {}
+        if args.regional_reward_weight and args.regional_reward_weight > 0.0:
+            tl_regions = build_region_map(tls_ids, float(args.region_grid_size))
 
         # init previous states
         prev_state_obj: Dict[str, RLTState] = {}
@@ -131,6 +189,8 @@ def main():
             prev_state_obj[tl_id] = RLTState(sumo_state, lane_list=fake_lanes)
 
         losses = []
+        last_progress_t = -1.0
+        progress_every = 100.0  # sim-seconds
         while True:
             traci.simulationStep()
             sim.simulation_time = traci.simulation.getTime()
@@ -143,9 +203,15 @@ def main():
                 last_decision_t = float(sim.simulation_time)
                 state = sim.get_current_state()
 
+                curr_state_obj: Dict[str, RLTState] = {}
+                curr_pressures: Dict[str, List[float]] = {}
+                curr_sums: Dict[str, float] = {}
+                actions: Dict[str, int] = {}
+
                 for tl_id in tls_ids:
                     # Build state
                     prs = compute_pressures(tl_id, state)
+                    curr_pressures[tl_id] = prs
                     sumo_state = {
                         "time": float(sim.simulation_time),
                         "lane_vehicle_counts": {fake_lanes[i]: prs[i] for i in range(int(args.k))},
@@ -155,13 +221,17 @@ def main():
                         "traffic_light_phase": int(traci.trafficlight.getPhase(tl_id)) % 8,
                         "traffic_light_remaining_time": float(max(0.0, traci.trafficlight.getNextSwitch(tl_id) - sim.simulation_time)),
                     }
-                    curr_state_obj = RLTState(sumo_state, lane_list=fake_lanes)
+                    curr_state_obj[tl_id] = RLTState(sumo_state, lane_list=fake_lanes)
+                    curr_sums[tl_id] = float(sum(prs))
 
                     # Action = choose index in green phases list
-                    action = int(agent.select_action(prev_state_obj[tl_id], training=True))
+                    actions[tl_id] = int(agent.select_action(prev_state_obj[tl_id], training=True))
 
+                # Apply actions
+                for tl_id in tls_ids:
                     greens = tl_green_phases(tl_id)
                     if greens:
+                        action = actions[tl_id]
                         target_phase = int(greens[action % len(greens)])
                         try:
                             cur_p = int(traci.trafficlight.getPhase(tl_id))
@@ -171,21 +241,41 @@ def main():
                         except Exception:
                             pass
 
-                    # Reward: reduce total pressure
-                    prev_sum = float(sum(prev_pressures[tl_id]))
-                    curr_sum = float(sum(prs))
-                    reward = -(curr_sum) + 0.3 * (prev_sum - curr_sum)
+                # Regional congestion (avg pressure per region)
+                region_sum: Dict[tuple[int, int], float] = {}
+                region_cnt: Dict[tuple[int, int], int] = {}
+                if tl_regions:
+                    for tl_id in tls_ids:
+                        region = tl_regions.get(tl_id, (0, 0))
+                        region_sum[region] = region_sum.get(region, 0.0) + float(curr_sums.get(tl_id, 0.0))
+                        region_cnt[region] = region_cnt.get(region, 0) + 1
 
-                    agent.store_experience(prev_state_obj[tl_id], action, reward, curr_state_obj, done)
+                # Reward + training
+                for tl_id in tls_ids:
+                    prev_sum = float(sum(prev_pressures[tl_id]))
+                    curr_sum = float(curr_sums[tl_id])
+                    reward = -(curr_sum) + 0.3 * (prev_sum - curr_sum)
+                    if tl_regions:
+                        region = tl_regions.get(tl_id, (0, 0))
+                        denom = max(1, region_cnt.get(region, 1))
+                        region_avg = region_sum.get(region, 0.0) / float(denom)
+                        reward += -float(args.regional_reward_weight) * region_avg
+
+                    agent.store_experience(prev_state_obj[tl_id], actions[tl_id], reward, curr_state_obj[tl_id], done)
                     loss = agent.train_step()
                     if loss is not None:
                         losses.append(float(loss))
 
-                    prev_state_obj[tl_id] = curr_state_obj
-                    prev_pressures[tl_id] = prs
+                    prev_state_obj[tl_id] = curr_state_obj[tl_id]
+                    prev_pressures[tl_id] = curr_pressures[tl_id]
 
             if done:
                 break
+
+            # Lightweight progress log (avoid noisy per-step prints)
+            if float(sim.simulation_time) - last_progress_t >= progress_every:
+                last_progress_t = float(sim.simulation_time)
+                print(f"  sim_t={last_progress_t:.0f}s / {args.duration}s")
 
         agent.end_episode()
         sim.close_simulation()

@@ -41,7 +41,8 @@ class TrafficSimulator:
     def __init__(self, config_file: str = None, 
                  use_gui: bool = False, port: int = 8813, dataset: str = None,
                  gui_delay: float = 0.0,
-                 enable_sumo_emissions_output: bool = True):
+                 enable_sumo_emissions_output: bool = True,
+                 sumo_seed: Optional[int] = None):
         """
         Initialize traffic simulator
         
@@ -53,6 +54,8 @@ class TrafficSimulator:
             gui_delay: delay per step in GUI mode in seconds (0.0 = no delay, fastest)
             enable_sumo_emissions_output: for OSM maps, enable SUMO --emission-output (Option A).
                 Set False for RL training loops to avoid generating huge XML each episode.
+            sumo_seed: optional SUMO RNG seed. If not set, repeated runs can become identical,
+                which makes statistical evaluation (std/CI) meaningless.
         """
         # Set dataset if specified
         if dataset:
@@ -66,6 +69,7 @@ class TrafficSimulator:
         self.use_gui = use_gui
         self.gui_delay = gui_delay  # Delay per step in GUI mode (0 = no delay, fastest)
         self.enable_sumo_emissions_output = enable_sumo_emissions_output
+        self.sumo_seed = sumo_seed
         self.port = port
         self.is_connected = False
         self.simulation_time = 0
@@ -104,6 +108,8 @@ class TrafficSimulator:
         self.controlled_traffic_lights = []  # Subset to control
         self.lanes = []
         self.detectors = []
+        # Cache TraCI ID lists for performance (large OSM maps can have hundreds of detectors)
+        self._inductionloop_id_set = set()
         
         # Legacy intersection ID (for backward compatibility)
         self.intersection_id = "intersection"
@@ -249,6 +255,12 @@ class TrafficSimulator:
             except:
                 self.detectors = []
                 print("No induction loop detectors found")
+
+        # Cache induction-loop IDs once (calling getIDList() inside per-step loops is extremely slow)
+        try:
+            self._inductionloop_id_set = set(traci.inductionloop.getIDList())
+        except Exception:
+            self._inductionloop_id_set = set(self.detectors or [])
 
     def _get_tl_phase_count(self, tl_id: str) -> int:
         """
@@ -423,6 +435,13 @@ class TrafficSimulator:
             return False
             
         try:
+            # If a previous run crashed, TraCI may still think the default connection is active.
+            # Best-effort cleanup before starting a new SUMO instance.
+            try:
+                traci.close()
+            except Exception:
+                pass
+
             # Find SUMO executable file
             sumo_binary = self._find_sumo_binary()
             if not sumo_binary:
@@ -444,6 +463,15 @@ class TrafficSimulator:
                 "--no-warnings",  # Suppress warnings
                 "--end", "999999",  # Set a very large end time to prevent early termination
             ]
+
+            # Ensure stochasticity/reproducibility across repeated runs.
+            # Without an explicit seed, SUMO often behaves deterministically, producing identical results
+            # across episodes and breaking statistical evaluation.
+            if self.sumo_seed is not None:
+                try:
+                    sumo_cmd.extend(["--seed", str(int(self.sumo_seed))])
+                except Exception:
+                    pass
 
             # Option A: For OSM maps, enable SUMO-native emissions output (faster than per-vehicle TraCI calls)
             # Keep file in output/ so it doesn't clutter map folders.
@@ -490,38 +518,46 @@ class TrafficSimulator:
     
     def close_simulation(self):
         """Close SUMO simulation"""
-        if self.is_connected:
-            try:
-                traci.close()
-                self.is_connected = False
-                print("SUMO simulation closed")
-                
-                # Force-close SUMO GUI to avoid dialog prompts
-                # This prevents the "Do you want to close all open files and views?" dialog
-                if self.use_gui:
-                    time.sleep(0.5)  # Give TraCI time to close connection
-                    try:
-                        if sys.platform == 'win32':
-                            # Windows: Kill all sumo-gui.exe processes
-                            subprocess.run(['taskkill', '/F', '/IM', 'sumo-gui.exe'], 
-                                         capture_output=True, timeout=3)
-                        else:
-                            # Linux/Mac: Kill sumo-gui processes
-                            subprocess.run(['pkill', '-f', 'sumo-gui'], 
-                                         capture_output=True, timeout=3)
-                    except Exception as e:
-                        # Ignore errors - GUI might already be closed
-                        pass
-            except Exception as e:
-                print(f"Error closing simulation: {e}")
-            finally:
-                # Restore original working directory
-                if hasattr(self, 'original_cwd'):
-                    try:
-                        os.chdir(self.original_cwd)
-                        print(f"Restored working directory: {self.original_cwd}")
-                    except Exception as e:
-                        print(f"Warning: Could not restore working directory: {e}")
+        # Always attempt to close TraCI, even if self.is_connected is already False.
+        # (SUMO may have terminated unexpectedly, leaving the default TraCI connection 'active'.)
+        try:
+            if traci is not None:
+                try:
+                    traci.close()
+                except Exception:
+                    pass
+        finally:
+            self.is_connected = False
+
+        try:
+            print("SUMO simulation closed")
+
+            # Force-close SUMO GUI to avoid dialog prompts
+            # This prevents the "Do you want to close all open files and views?" dialog
+            if self.use_gui:
+                time.sleep(0.5)  # Give TraCI time to close connection
+                try:
+                    if sys.platform == 'win32':
+                        # Windows: Kill all sumo-gui.exe processes
+                        subprocess.run(['taskkill', '/F', '/IM', 'sumo-gui.exe'],
+                                       capture_output=True, timeout=3)
+                    else:
+                        # Linux/Mac: Kill sumo-gui processes
+                        subprocess.run(['pkill', '-f', 'sumo-gui'],
+                                       capture_output=True, timeout=3)
+                except Exception:
+                    # Ignore errors - GUI might already be closed
+                    pass
+        except Exception as e:
+            print(f"Error during simulation cleanup: {e}")
+        finally:
+            # Restore original working directory
+            if hasattr(self, 'original_cwd'):
+                try:
+                    os.chdir(self.original_cwd)
+                    print(f"Restored working directory: {self.original_cwd}")
+                except Exception as e:
+                    print(f"Warning: Could not restore working directory: {e}")
     
     def simulation_step(self) -> bool:
         """Execute one simulation step"""
@@ -1470,7 +1506,7 @@ class TrafficSimulator:
             # Collect detector data
             for det_id in self.detectors:
                 try:
-                    if det_id in traci.inductionloop.getIDList():
+                    if det_id in self._inductionloop_id_set:
                         det_data = {
                             'time': self.simulation_time,
                             'detector_id': det_id,
@@ -1574,7 +1610,9 @@ class TrafficSimulator:
                     def _w(t: str) -> float:
                         s = str(t).lower()
                         return 2.5 if ('bus' in s or 'pt_' in s) else 1.0
-                    queued['q_weight'] = queued['type_id'].map(_w)
+                    # Avoid pandas SettingWithCopyWarning (queued may be a view)
+                    queued = queued.copy()
+                    queued.loc[:, 'q_weight'] = queued['type_id'].map(_w)
                     p_per_t = queued.groupby('time')['q_weight'].sum().reindex(all_times, fill_value=0.0)
                 else:
                     p_per_t = q_per_t.astype(float)
@@ -1889,7 +1927,7 @@ class TrafficSimulator:
             # Detector occupancy
             for det_id in self.detectors:
                 try:
-                    if det_id in traci.inductionloop.getIDList():
+                    if det_id in self._inductionloop_id_set:
                         state['detector_occupancy'][det_id] = traci.inductionloop.getLastStepOccupancy(det_id)
                 except:
                     state['detector_occupancy'][det_id] = 0

@@ -1,0 +1,83 @@
+% Results chapter starter (Overleaf/LaTeX).
+% Paste into your main report and adjust labels/citations to match your bibliography keys.
+
+\chapter{Results and Discussion}
+\label{ch:results}
+
+This chapter reports the experimental results of the proposed traffic signal control system on OSM Web Wizard city networks. Following common practice in recent deep reinforcement learning traffic-signal-control literature, results are presented as a structured comparison against strong non-learning baselines using multiple complementary metrics (delay/waiting time, queue length, throughput, and environmental impact), together with a stability and robustness discussion \cite{yu2025diffusionlight,bouktif2021hybrid}.
+
+In particular, prior work highlights that the credibility of learning-based traffic signal control depends on \emph{(i)} comparisons to multiple baselines under the same demand, \emph{(ii)} reporting both efficiency and robustness (e.g., stability under demand variation or perturbations), and \emph{(iii)} analyzing the role of the reward design and action formulation \cite{yu2025diffusionlight}. Therefore, rather than reporting a single metric, the evaluation in this project emphasizes a multi-metric view of network performance and explicitly relates each metric to the intended control objective (reducing congestion while avoiding unstable switching).
+
+Experiments are conducted on the OSM Web Wizard city maps (e.g., Cologne, Vancouver, Los Angeles) with customized synthetic traffic demand. For each run, the simulator logs per-vehicle and per-signal trajectories and computes aggregated performance indicators. The primary objective metric is the average waiting time (average delay proxy), as widely used in DQN-based traffic signal control studies due to its direct relationship to congestion and user-perceived performance \cite{bouzi2025enhanced}. We additionally report throughput (arrived vehicles per hour) to ensure that reductions in delay do not come from artificially restricting flow, and we report queue-based measures (average queue length and a pressure proxy) to capture how effectively each controller dissipates standing queues.
+
+Beyond traffic efficiency, recent works increasingly motivate the inclusion of sustainability and side-effects in the evaluation (e.g., fuel consumption and emissions) when a microscopic simulator is available \cite{bouktif2021hybrid}. For this reason, the results section includes total \(CO_2\) emissions and fuel consumption computed from SUMO’s emission model. These environmental metrics are interpreted together with delay and throughput to evaluate whether improvements in mobility also translate to reduced idling and acceleration-related emissions.
+
+Finally, the literature also stresses that reinforcement learning controllers should be assessed not only for average performance but also for \emph{stability} (e.g., sensitivity to scenario changes, reward choice, and stochasticity of simulation runs) \cite{yu2025diffusionlight}. Accordingly, where multiple runs are available, we summarize results with mean and variability and discuss qualitative stability indicators such as reduced oscillatory phase switching and consistent performance across maps. The remainder of this chapter is organized as follows: Section~\ref{sec:results_setup} summarizes the evaluation protocol and baselines; Section~\ref{sec:results_main} presents the main comparative results; Section~\ref{sec:results_env} reports environmental outcomes; and Section~\ref{sec:results_discussion} discusses limitations and implications.
+
+\section{Evaluation Setup}
+\label{sec:results_setup}
+Table~\ref{tab:results_setup} summarizes the concrete evaluation configuration used to produce the reported generalization results. This level of detail is necessary for reproducibility and for fair comparison with baselines, consistent with the reporting discipline in recent traffic-signal-control literature.
+
+\begin{table}[h]
+    \centering
+    \caption{Evaluation setup (generalization: Vancouver-trained model evaluated on Cologne).}
+    \label{tab:results_setup}
+    \begin{tabular}{p{4.0cm} p{10.4cm}}
+        \hline
+        \textbf{Item} & \textbf{Setting} \\
+        \hline
+        SUMO version & v1.25.0 (headless) \\
+        Map & Cologne (OSM Web Wizard) \\
+        Policy & MARL\_DQN (parameter-sharing, region-aware), trained on Vancouver \\
+        Episodes & \(n=120\) independent episodes (distinct SUMO seeds) \\
+        Horizon & \(T_{\mathrm{sim}}=1200\) s per episode \\
+        Decision interval & \(\Delta t=5\) s \\
+        Controlled traffic lights & ratio \(=0.2\) (observed \(16/79\) on Cologne) \\
+        Lane padding & \(K=8\) lanes per traffic light \\
+        Action space & \(|\mathcal{A}|=2\): keep phase / switch to next phase \\
+        Reward shaping & region-aware penalty weight \(\lambda=0.01\), grid size \(500\) m \\
+        Emissions & SUMO \texttt{--emission-output} parsed into totals (CO\(_2\), fuel) \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\section{Main Results: Generalization (Vancouver $\rightarrow$ Cologne)}
+\label{sec:results_main}
+Table~\ref{tab:gen_stats} reports the generalization performance of the Vancouver-trained region-aware MARL\_DQN controller on the Cologne map over 120 independent episodes. Following the reporting style in the reference literature, we present mean \(\pm\) standard deviation and the 95\% confidence interval.
+
+\begin{table}[h]
+    \centering
+    \caption{Generalization results on Cologne over \(n=120\) seeded episodes (mean \(\pm\) std, with 95\% CI).}
+    \label{tab:gen_stats}
+    \begin{tabular}{l c c}
+        \hline
+        \textbf{Metric} & \textbf{Mean \(\pm\) Std} & \textbf{95\% CI} \\
+        \hline
+        Avg. waiting time (s) & \(103.78 \pm 1.03\) & \([103.60,\;103.97]\) \\
+        Avg. queue length (veh) & \(3008.97 \pm 10.94\) & \([3007.01,\;3010.92]\) \\
+        Throughput (veh/h) & \(511.98 \pm 33.24\) & \([506.03,\;517.92]\) \\
+        Congestion index (-) & \(0.7568 \pm 0.0089\) & \([0.7552,\;0.7584]\) \\
+        \hline
+        Total CO\(_2\) (mg) & \(7.84\times 10^{9} \pm 2.76\times 10^{7}\) & \([7.8346,\;7.8445]\(\times 10^{9}\) \\
+        Total fuel (ml) & \(2.53\times 10^{9} \pm 8.90\times 10^{6}\) & \([2.53195,\;2.53514]\(\times 10^{9}\) \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\textbf{Interpretation.} The controller achieves an average waiting time of \(103.78\) seconds with low variance across seeds, indicating stable performance under stochastic demand realizations. The throughput variability (\(\pm 33\) veh/h) suggests sensitivity to episode-level randomness (e.g., departures, teleports, and routing), which is expected in large OSM networks. Importantly, emissions totals remain within a narrow band (approximately \(\approx 1.8\%\) range across episodes), supporting the claim that the evaluation is consistent and not dominated by rare outlier runs.
+
+\section{Statistical Tests and Baseline Comparisons}
+\label{sec:results_tests}
+To move from ``showing'' to ``arguing'' results, the full comparison should report: (i) baseline means with the same seeds, (ii) pairwise tests (t-test and/or Mann--Whitney U), and (iii) effect direction (e.g., seconds saved per vehicle). Once baseline runs (FTC, Adaptive, MaxPressure, SOTL, GA, PressLight) are produced under the same evaluation setup, significance tests can be computed using the same metric samples used to generate Table~\ref{tab:gen_stats}.
+
+\section{Ablation Studies (Recommended)}
+\label{sec:results_ablation}
+To align with the evaluation patterns in the reference papers, an ablation study should isolate the contribution of key design choices:
+\begin{itemize}
+    \item \textbf{Region-aware reward shaping}: compare \(\lambda=0\) vs \(\lambda=0.01\).
+    \item \textbf{Lane padding \(K\)}: evaluate \(K\in\{4,8,12\}\) (state compression vs fidelity).
+    \item \textbf{Controlled traffic lights \(N_{\mathrm{TL}}\)}: vary controlled ratio (e.g., 0.1, 0.2, 0.3) to study scalability.
+    \item \textbf{Switching penalty}: vary the switch penalty coefficient to quantify stability vs responsiveness.
+\end{itemize}
+Each ablation should report mean \(\pm\) std and 95\% CI, and include a 1--3 sentence takeaway after each table/figure.
+

@@ -103,6 +103,57 @@
     </div>
 </div>
 
+<!-- MARL Evaluation -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">🧪 MARL Evaluation (Batch)</h5>
+        <p class="text-muted mb-3">Run evaluation with a trained MARL model and save metrics to JSON.</p>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Model Path (.pt)</label>
+                <input type="text" class="form-control" id="marlModelPath" placeholder="models/marl_vancouver_shared_dqn.pt">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Episodes</label>
+                <input type="number" class="form-control" id="marlEpisodes" value="5" min="1" max="200">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Duration (s)</label>
+                <input type="number" class="form-control" id="marlDuration" value="600" min="60" max="7200" step="60">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Decision Int (s)</label>
+                <input type="number" class="form-control" id="marlDecisionInterval" value="5" min="1" max="60">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">TLS Ratio</label>
+                <input type="number" class="form-control" id="marlTlsRatio" value="0.2" min="0.01" max="1.0" step="0.01">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Lanes/TL</label>
+                <input type="number" class="form-control" id="marlLanesPerTl" value="8" min="1" max="32">
+            </div>
+            <div class="col-md-4 d-flex align-items-center">
+                <div class="form-check form-switch me-4">
+                    <input class="form-check-input" type="checkbox" id="marlCalcMetrics" checked>
+                    <label class="form-check-label" for="marlCalcMetrics">Compute metrics</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="marlCollectEmissions">
+                    <label class="form-check-label" for="marlCollectEmissions">Collect emissions (slow)</label>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <button class="btn btn-outline-primary w-100" id="marlEvalBtn" onclick="startMarlEvaluation()">
+                    ▶️ Start MARL Evaluation
+                </button>
+            </div>
+        </div>
+        <div id="marlEvalStatus" class="mt-3 alert alert-light">Status: idle</div>
+        <div id="marlEvalSummary" class="mt-2"></div>
+    </div>
+</div>
+
 <!-- Simulation Status -->
 <div id="simulationStatus" class="card">
     <div class="card-body">
@@ -350,6 +401,7 @@
 {% block scripts %}
 <script>
 let checkInterval = null;
+let marlEvalInterval = null;
 
 // Update strategy description when selection changes
 $('#strategySelect').on('change', function() {
@@ -456,6 +508,118 @@ function startSimulation() {
             console.error('Error starting simulation:', error);
             alert('Failed to start simulation: ' + error);
             $('#startBtn').prop('disabled', false).text('🚀 Start Simulation');
+        }
+    });
+}
+
+function startMarlEvaluation() {
+    const dataset = $('#datasetSelect').val();
+    const payload = {
+        dataset: dataset,
+        model_path: $('#marlModelPath').val().trim(),
+        episodes: parseInt($('#marlEpisodes').val()) || 5,
+        duration: parseInt($('#marlDuration').val()) || 600,
+        decision_interval: parseInt($('#marlDecisionInterval').val()) || 5,
+        controlled_lights_ratio: parseFloat($('#marlTlsRatio').val()) || 0.2,
+        lanes_per_tl: parseInt($('#marlLanesPerTl').val()) || 8,
+        collect_emissions: $('#marlCollectEmissions').is(':checked'),
+        calc_metrics: $('#marlCalcMetrics').is(':checked')
+    };
+
+    $('#marlEvalBtn').prop('disabled', true).text('Starting...');
+    $('#marlEvalStatus').removeClass('alert-danger alert-success').addClass('alert-light')
+        .text('Status: starting...');
+
+    $.ajax({
+        url: '/start_marl_evaluation',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(payload),
+        timeout: 10000,
+        success: function(resp) {
+            if (resp.status === 'success') {
+                $('#marlEvalStatus').text('Status: running...');
+                if (marlEvalInterval) clearInterval(marlEvalInterval);
+                marlEvalInterval = setInterval(checkMarlEvaluationStatus, 3000);
+            } else {
+                $('#marlEvalStatus').addClass('alert-danger').text('Error: ' + resp.message);
+                $('#marlEvalBtn').prop('disabled', false).text('▶️ Start MARL Evaluation');
+            }
+        },
+        error: function(xhr, status, error) {
+            $('#marlEvalStatus').addClass('alert-danger').text('Error: ' + error);
+            $('#marlEvalBtn').prop('disabled', false).text('▶️ Start MARL Evaluation');
+        }
+    });
+}
+
+function checkMarlEvaluationStatus() {
+    $.ajax({
+        url: '/check_marl_evaluation',
+        method: 'GET',
+        timeout: 5000,
+        success: function(resp) {
+            if (resp.status === 'running') {
+                $('#marlEvalStatus').text('Status: running...');
+            } else if (resp.status === 'completed') {
+                clearInterval(marlEvalInterval);
+                $('#marlEvalStatus').removeClass('alert-light alert-danger').addClass('alert-success')
+                    .text('Status: completed. Loading summary...');
+                $('#marlEvalBtn').prop('disabled', false).text('▶️ Start MARL Evaluation');
+                loadMarlEvalSummary();
+            } else if (resp.status === 'error') {
+                clearInterval(marlEvalInterval);
+                $('#marlEvalStatus').removeClass('alert-light').addClass('alert-danger')
+                    .text('Error: ' + resp.message);
+                $('#marlEvalBtn').prop('disabled', false).text('▶️ Start MARL Evaluation');
+            }
+        },
+        error: function() {
+            // keep silent to avoid noisy alerts
+        }
+    });
+}
+
+function loadMarlEvalSummary() {
+    $.ajax({
+        url: '/get_marl_evaluation_results',
+        method: 'GET',
+        timeout: 5000,
+        success: function(resp) {
+            if (resp.status !== 'success') {
+                $('#marlEvalSummary').html('<div class="text-danger">Failed to load results.</div>');
+                return;
+            }
+            const data = resp.data || {};
+            const results = data.results || [];
+            const keys = ['avg_waiting_time', 'avg_queue_length', 'throughput_per_hour', 'congestion_index'];
+            const sums = {};
+            const counts = {};
+            keys.forEach(k => { sums[k] = 0; counts[k] = 0; });
+
+            results.forEach(r => {
+                const m = r.metrics || {};
+                keys.forEach(k => {
+                    if (m[k] !== undefined && m[k] !== null) {
+                        sums[k] += parseFloat(m[k]);
+                        counts[k] += 1;
+                    }
+                });
+            });
+
+            let html = '<div class="alert alert-info"><strong>Summary (mean over episodes)</strong><br>';
+            keys.forEach(k => {
+                if (counts[k] > 0) {
+                    html += `${k}: ${(sums[k] / counts[k]).toFixed(4)}<br>`;
+                } else {
+                    html += `${k}: n/a<br>`;
+                }
+            });
+            html += '</div>';
+            $('#marlEvalSummary').html(html);
+        },
+        error: function() {
+            $('#marlEvalSummary').html('<div class="text-danger">Failed to load results.</div>');
         }
     });
 }

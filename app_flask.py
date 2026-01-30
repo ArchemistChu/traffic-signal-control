@@ -67,6 +67,12 @@ def init_session():
         session['academic_experiment_results'] = None
     if 'academic_experiment_progress' not in session:
         session['academic_experiment_progress'] = {}
+    if 'marl_eval_running' not in session:
+        session['marl_eval_running'] = False
+    if 'marl_eval_results_path' not in session:
+        session['marl_eval_results_path'] = None
+    if 'marl_eval_status_path' not in session:
+        session['marl_eval_status_path'] = None
 
 @app.route('/')
 def index():
@@ -949,6 +955,103 @@ def check_academic_experiment():
         'status': 'running',
         'progress': {'message': 'Experiment in progress...'}
     })
+
+
+@app.route('/start_marl_evaluation', methods=['POST'])
+def start_marl_evaluation():
+    """Start MARL evaluation in background."""
+    init_session()
+    data = request.get_json() or {}
+
+    if session.get('marl_eval_running', False):
+        return jsonify({'status': 'error', 'message': 'MARL evaluation already running'})
+
+    dataset = data.get('dataset', SimulationConfig.DATASET)
+    model_path = data.get('model_path', '')
+    episodes = int(data.get('episodes', 5))
+    duration = int(data.get('duration', 600))
+    decision_interval = int(data.get('decision_interval', 5))
+    ratio = float(data.get('controlled_lights_ratio', 0.2))
+    lanes_per_tl = int(data.get('lanes_per_tl', 8))
+    collect_emissions = bool(data.get('collect_emissions', False))
+    calc_metrics = bool(data.get('calc_metrics', True))
+
+    _ensure_dir(WEB_RESULTS_DIR)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    results_path = os.path.join(WEB_RESULTS_DIR, f"marl_eval_{dataset}_{ts}.json")
+    status_path = os.path.join(WEB_RESULTS_DIR, f"marl_eval_{dataset}_{ts}.status.json")
+
+    def run_eval():
+        try:
+            cmd = [
+                sys.executable,
+                "evaluate_marl_osm.py",
+                "--dataset", dataset,
+                "--episodes", str(episodes),
+                "--duration", str(duration),
+                "--decision-interval", str(decision_interval),
+                "--controlled-lights-ratio", str(ratio),
+                "--lanes-per-tl", str(lanes_per_tl),
+                "--out", results_path,
+            ]
+            if model_path:
+                cmd.extend(["--model", model_path])
+            if collect_emissions:
+                cmd.append("--collect-emissions")
+            if calc_metrics:
+                cmd.append("--calc-metrics")
+
+            with open(status_path, "w", encoding="utf-8") as f:
+                json.dump({"status": "running", "cmd": " ".join(cmd)}, f, indent=2)
+
+            subprocess.run(cmd, check=True)
+            with open(status_path, "w", encoding="utf-8") as f:
+                json.dump({"status": "completed", "results_path": results_path}, f, indent=2)
+        except Exception as e:
+            with open(status_path, "w", encoding="utf-8") as f:
+                json.dump({"status": "error", "message": str(e)}, f, indent=2)
+        finally:
+            session['marl_eval_running'] = False
+            session.modified = True
+
+    session['marl_eval_running'] = True
+    session['marl_eval_results_path'] = results_path
+    session['marl_eval_status_path'] = status_path
+    session.modified = True
+
+    thread = threading.Thread(target=run_eval, daemon=True)
+    thread.start()
+
+    return jsonify({'status': 'success', 'message': 'MARL evaluation started', 'status_path': status_path})
+
+
+@app.route('/check_marl_evaluation', methods=['GET'])
+def check_marl_evaluation():
+    """Check MARL evaluation status."""
+    init_session()
+    status_path = session.get('marl_eval_status_path')
+    if not status_path or not os.path.exists(status_path):
+        return jsonify({'status': 'idle'})
+
+    try:
+        with open(status_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+
+@app.route('/get_marl_evaluation_results', methods=['GET'])
+def get_marl_evaluation_results():
+    """Fetch MARL evaluation JSON results."""
+    init_session()
+    path = request.args.get('path') or session.get('marl_eval_results_path')
+    if not path or not os.path.exists(path):
+        return jsonify({'status': 'error', 'message': 'Results file not found'})
+    data = _safe_json_load(path)
+    if data is None:
+        return jsonify({'status': 'error', 'message': 'Failed to load results'})
+    return jsonify({'status': 'success', 'data': data})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

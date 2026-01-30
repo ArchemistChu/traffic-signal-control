@@ -1,0 +1,342 @@
+% replace all text with your own text.
+% in this template few examples are mention
+\chapter{Methodology}
+\label{ch:method}
+
+This chapter describes the design, implementation, and evaluation methodology used to develop the proposed intelligent traffic signal control system. The methodology follows a closed-loop control paradigm: the simulator provides a state observation, the controller selects an action (signal decision), SUMO executes the action, and the system measures the resulting traffic performance.
+
+\section{System Architecture and Simulation Environment}
+The implementation is built around a SUMO--TraCI closed loop:
+\[
+s_t \xrightarrow{\pi} a_t \xrightarrow{\text{TraCI}} \text{SUMO step} \rightarrow s_{t+1},\; r_t
+\]
+where \(s_t\) is the observed traffic state at time \(t\), \(a_t\) is the selected control action, \(\pi\) is the control policy (baseline rule or learned policy), and \(r_t\) is the reward signal used during reinforcement learning.
+
+The overall architecture (Figure~\ref{System diagram}) contains four functional blocks:
+\begin{itemize}
+    \item \textbf{SUMO Environment}: microscopic traffic dynamics, routing, and vehicle interactions.
+    \item \textbf{Control Module}: baseline controllers and learning-based controllers that decide signal actions.
+    \item \textbf{Replay Buffer}: stores experience transitions for off-policy learning.
+    \item \textbf{DQN Networks}: online Q-network and a lagged target network for stable training.
+\end{itemize}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1.2\linewidth]{figures/Blank diagram.pdf}
+    \caption{System diagram}
+    \label{System diagram}
+\end{figure}
+
+\section{SUMO: Microscopic Traffic Simulation}
+The simulation environment uses SUMO (Simulation of Urban Mobility), an open-source microscopic traffic simulator. SUMO was selected because it:
+\begin{itemize}
+    \item provides vehicle-level motion and interaction models (car-following and lane-changing),
+    \item supports emission and fuel-consumption estimation from motion profiles,
+    \item can be controlled externally through TraCI, enabling closed-loop RL experiments.
+\end{itemize}
+
+\section{TraCI: Real-Time Control Interface}
+TraCI enables real-time communication between Python and SUMO. In each step, the controller can:
+\begin{itemize}
+    \item \textbf{Observe}: retrieve lane-level measurements (vehicle counts, halting/queue counts, mean speeds), and signal phase information.
+    \item \textbf{Act}: set traffic light phases and phase durations for controlled intersections.
+\end{itemize}
+
+\section{Datasets and Map Construction (OSM Web Wizard)}
+\label{sec:datasets}
+\textbf{Map generation.} All city-scale maps used in this project were created using the \textbf{SUMO OSM Web Wizard}, which imports the road network from OpenStreetMap and generates a runnable SUMO scenario (network, routes, and configuration files).
+
+\textbf{Traffic demand.} The traffic demand is \textbf{customized synthetic traffic} generated and tuned through the OSM Web Wizard parameters (e.g., cars/hour, trucks/hour, through-traffic factor). While some public transport route files (bus lines) are present in the generated scenarios, they are \textbf{Wizard-generated placeholders} and are not treated as real-world ground truth. They are used only as an additional simulated vehicle type and do not affect the interpretation of results as real-world public transport performance.
+
+\textbf{Excluding the single-intersection dataset.} Although the repository contains a custom single-intersection scenario for debugging and rapid prototyping, the final evaluation in this report focuses on the OSM Web Wizard city networks; therefore, the single-intersection map is excluded from the experimental protocol and discussion.
+
+\textbf{Controlled traffic lights.} City networks can contain many signalized intersections. For computational feasibility, only a subset of traffic lights is controlled during each run (configurable cap \(N_{\mathrm{TL}}\), e.g., the first \(5\) detected traffic lights). All other traffic lights continue under SUMO’s default programs.
+
+\section{Baseline Signal Control Strategies}
+\label{sec:baselines}
+This section defines the baseline controllers used to benchmark the learning-based controllers.
+
+\subsection{Fixed-Time Controller (FTC)}
+The Fixed-Time Controller is a non-adaptive benchmark with a predefined phase sequence and fixed green durations. Let \(p_t\) denote the current phase index in a sequence of length \(P\). The next phase is:
+\[
+p_{t+1} = (p_t + 1)\bmod P
+\]
+and each phase uses a fixed green time \(g_p\). This controller is stable and predictable but cannot adapt to fluctuating demand.
+
+\textbf{Inputs/Outputs/Assumptions/Cost.}
+\begin{itemize}
+    \item \textbf{Inputs}: current phase index \(p_t\); fixed timing plan \(\{g_p\}\).
+    \item \textbf{Outputs}: next phase \(p_{t+1}\) and (fixed) phase duration \(g_{p_{t+1}}\).
+    \item \textbf{Assumptions}: valid phase sequence exists for the controlled traffic light program.
+    \item \textbf{Computational cost}: \(O(1)\) per decision.
+\end{itemize}
+
+\subsection{Rule-Based Adaptive Controller (Queue Extension)}
+The Adaptive baseline uses queue measurements and applies two decisions: \emph{extend} the current phase when demand persists, or \emph{switch} to the next phase in sequence when the current demand is low. Let \(\mathcal{L}(p)\) be the set of lanes served by phase \(p\). A weighted queue demand is:
+\[
+Q_p = \sum_{\ell\in \mathcal{L}(p)} \left(q_\ell + \alpha\, b_\ell\right)
+\]
+where \(q_\ell\) is the queue length (halting vehicles) on lane \(\ell\), \(b_\ell\) is the number of buses on \(\ell\), and \(\alpha>0\) assigns transit priority (buses contribute more to demand).
+
+\textbf{Phase extension.} If the current phase has non-trivial demand, the controller extends it by:
+\[
+\Delta g = \min\left(\Delta g_{\max},\; 2Q_{p_t} + \Delta g_{\text{bus}}\right)
+\]
+where \(\Delta g_{\text{bus}}\) adds extra green time when buses are detected (based on bus count and bus waiting).
+
+\textbf{Switching.} Otherwise, the controller advances to the next phase in sequence and sets the green time as a bounded function of the next-phase queue (increase time for high queues, decrease time for low demand) while respecting minimum and maximum green constraints.
+
+\textbf{Inputs/Outputs/Assumptions/Cost.}
+\begin{itemize}
+    \item \textbf{Inputs}: lane queue lengths \(\{q_\ell\}\), bus counts \(\{b_\ell\}\), bus waiting times \(\{w^{(bus)}_\ell\}\), current phase \(p_t\), remaining time.
+    \item \textbf{Outputs}: either extend the current phase by \(\Delta g\) or switch to the next phase and set a new duration.
+    \item \textbf{Assumptions}: lane-to-phase mapping \(\mathcal{L}(p)\) is available (custom mapping or derived from controlled links on OSM maps).
+    \item \textbf{Computational cost}: \(O(|\mathcal{L}(p)|)\) per decision.
+\end{itemize}
+
+\subsection{MaxPressure Controller}
+MaxPressure is a strong queue-based baseline. For each candidate phase \(p\), a pressure score (queue proxy) is computed as:
+\[
+P_p = \sum_{\ell\in \mathcal{L}(p)} \left(q_\ell + \beta\,b_\ell + \eta\,w^{(bus)}_\ell\right)
+\]
+where \(w^{(bus)}_\ell\) is mean bus waiting time on lane \(\ell\), and \(\beta,\eta>0\) are bus-priority weights. The controller selects:
+\[
+p^\star = \arg\max_p P_p
+\]
+If \(p^\star=p_t\), it extends the current green; otherwise it switches to \(p^\star\) and sets a duration by normalizing \(P_{p^\star}\) into \([g_{\min}, g_{\max}]\). This baseline is reactive to congestion and often effective on heterogeneous flows.
+
+\textbf{Inputs/Outputs/Assumptions/Cost.}
+\begin{itemize}
+    \item \textbf{Inputs}: lane queue lengths, (optional) bus counts and bus waiting times, candidate phases \(p\in\mathcal{P}\).
+    \item \textbf{Outputs}: selected phase \(p^\star\) and corresponding green duration.
+    \item \textbf{Assumptions}: phase set \(\mathcal{P}\) and lane mapping \(\mathcal{L}(p)\) are defined.
+    \item \textbf{Computational cost}: \(O\!\left(\sum_{p\in\mathcal{P}}|\mathcal{L}(p)|\right)\) per decision.
+\end{itemize}
+
+\subsection{SOTL (Self-Organizing Traffic Lights)}
+SOTL is a threshold-based baseline. It continues the current green unless a competing phase demand exceeds a threshold or a maximum-green cap is reached (to prevent starvation). With demand \(D_p\) defined similarly to queue-weighted pressure, switching occurs if:
+\[
+\max_{p\neq p_t} D_p \ge \theta \quad \text{or} \quad \text{green\_time}(p_t) \ge g_{\max}
+\]
+
+\textbf{Inputs/Outputs/Assumptions/Cost.}
+\begin{itemize}
+    \item \textbf{Inputs}: queue-based demands \(\{D_p\}\), thresholds \(\theta\), min/max green constraints.
+    \item \textbf{Outputs}: keep/extend current phase or switch to the best competing phase.
+    \item \textbf{Assumptions}: demand is a meaningful proxy for urgency; max-green prevents starvation.
+    \item \textbf{Computational cost}: similar to MaxPressure (phase-wise demand computation).
+\end{itemize}
+
+\subsection{Genetic Algorithm (GA) Baseline}
+A lightweight Genetic Algorithm tunes two global parameters used by a pressure-driven timing rule:
+\[
+g = \text{base\_green} + \text{pressure\_scale}\cdot \text{pressure}
+\]
+The GA searches \(\text{base\_green}\in[10,40]\) and \(\text{pressure\_scale}\in[0,4]\) using a small population and short evaluation episodes. Each candidate is scored by:
+\[
+F = -\overline{W} - 0.2\,\overline{Q} + 0.001\,\text{Throughput}_{/h}
+\]
+where \(\overline{W}\) is average waiting time and \(\overline{Q}\) is average queue length.
+
+\textbf{Inputs/Outputs/Assumptions/Cost.}
+\begin{itemize}
+    \item \textbf{Inputs}: candidate parameter vector \((\text{base\_green},\text{pressure\_scale})\); evaluation horizon and metrics.
+    \item \textbf{Outputs}: tuned parameters maximizing fitness \(F\), then a final rollout using the tuned parameters.
+    \item \textbf{Assumptions}: small search space is sufficient for meaningful baseline; short rollout approximates long-horizon quality.
+    \item \textbf{Computational cost}: \(O(\text{population}\times\text{generations}\times T_{\text{eval}})\) simulation steps.
+\end{itemize}
+
+\section{Reinforcement Learning Controllers}
+\label{sec:rl}
+To overcome the limitations of fixed-time and hand-tuned rules, this project implements Deep Q-Learning. The goal is to learn an approximation \(Q_\theta(s,a)\) of the optimal action-value function \(Q^\star(s,a)\), which satisfies:
+\[
+Q^\star(s,a)=\mathbb{E}\left[r_t+\gamma\max_{a'} Q^\star(s_{t+1},a')\right]
+\]
+
+\subsection{Parameter-Sharing Multi-Agent DQN on OSM Networks (MARL\_DQN)}
+In a city network, multiple traffic lights must be controlled. The adopted approach is \textbf{parameter sharing}: all controlled traffic lights share one DQN (shared weights and shared replay buffer). Each traffic light \(i\) has its own local state \(s_t^{(i)}\) and chooses an action \(a_t^{(i)}\), but all experiences update the same network.
+
+\textbf{Inputs/Outputs/Assumptions/Cost.}
+\begin{itemize}
+    \item \textbf{Inputs}: per-traffic-light local state vector \(s_t^{(i)}\in\mathbb{R}^d\) (lane counts/queues/speeds + phase + remaining time), decision interval \(\Delta t\), controlled-TL set size \(N_{\mathrm{TL}}\), lane padding \(K\).
+    \item \textbf{Outputs}: per-traffic-light discrete action \(a_t^{(i)}\in\{0,1\}\) (keep vs next phase), applied via TraCI.
+    \item \textbf{Assumptions}: local observation is sufficient (partial observability); fixed lane padding \(K\) adequately represents each intersection; the 2-action abstraction generalizes across heterogeneous OSM phase programs.
+    \item \textbf{Computational cost}: inference cost scales as \(O(N_{\mathrm{TL}}\cdot f_{\theta})\) per decision, where \(f_{\theta}\) is one forward-pass through the shared network. Training adds minibatch updates (replay sampling + backprop) per decision step.
+\end{itemize}
+
+\subsubsection{Local State Representation}
+For each controlled traffic light \(i\), the simulator retrieves the set of controlled incoming lanes and enforces a fixed input size by padding/truncating to \(K\) lanes (default \(K=8\)). For each lane \(\ell\), three features are used: vehicle count \(n_\ell\), queue length \(q_\ell\), and mean speed \(v_\ell\). These are normalized and concatenated with a one-hot encoding of the current phase \(\phi_t\) (up to 8 bins) and the normalized remaining time \(\tau_t\):
+\[
+s_t^{(i)}=
+\Big[
+\tilde{n}_{1:K},\;
+\tilde{q}_{1:K},\;
+\tilde{v}_{1:K},\;
+\text{onehot}(\phi_t),\;
+\tilde{\tau}_t
+\Big]
+\]
+Hence, the OSM observation dimension is:
+\[
+d = 3K + 8 + 1
+\]
+
+\subsubsection{Action Space}
+To remain compatible with different phase programs across intersections, the MARL controller uses a robust 2-action space:
+\[
+a_t^{(i)}\in\{0,1\}
+\]
+where \(a=0\) keeps the current phase and \(a=1\) switches to the next SUMO phase (cyclic). This simplification improves robustness across heterogeneous intersections, but reduces expressiveness because the policy cannot jump directly to an arbitrary phase.
+
+\subsubsection{Reward Function (Queue Reduction + Switching Penalty)}
+The local reward is designed to minimize queueing while discouraging unnecessary switching:
+\[
+r_t^{(i)} = -0.1\,Q_t^{(i)} + 0.05\,(Q_{t-1}^{(i)}-Q_t^{(i)}) - 0.02\cdot \mathbb{I}[a_t^{(i)}=1]
+\]
+where \(Q_t^{(i)}=\sum_{\ell\in\mathcal{L}_i} q_{\ell,t}\) is the total queue on controlled lanes of traffic light \(i\).
+
+\textbf{Region-aware shaping (optional).} A region-level penalty can be added using a spatial grid over the city:
+\[
+r_t^{(i)} \leftarrow r_t^{(i)} - \lambda \cdot \overline{Q}_{\mathrm{region}(i)}
+\]
+where \(\overline{Q}_{\mathrm{region}(i)}\) is the average queued vehicles in the grid cell containing traffic light \(i\).
+
+\subsection{Dueling Double DQN with \(n\)-step Returns}
+To improve stability and sample efficiency, the implemented DQN includes:
+
+\textbf{Dueling architecture.} The Q-value is decomposed into value and advantage streams:
+\[
+Q_\theta(s,a)=V_\theta(s)+\left(A_\theta(s,a)-\frac{1}{|\mathcal{A}|}\sum_{a'}A_\theta(s,a')\right)
+\]
+
+\textbf{Double DQN target.} To reduce overestimation bias, the next action is selected by the online network but evaluated by the target network:
+\[
+y_t=r_t+\gamma\,Q_{\theta^-}\!\left(s_{t+1},\arg\max_{a'}Q_\theta(s_{t+1},a')\right)
+\]
+The objective minimized is the mean-squared TD error:
+\[
+\mathcal{L}(\theta)=\mathbb{E}\left[(y_t-Q_\theta(s_t,a_t))^2\right]
+\]
+
+\textbf{\(n\)-step returns.} Experience can be stored as an \(n\)-step return to improve credit assignment:
+\[
+R_t^{(n)}=\sum_{k=0}^{n-1}\gamma^k r_{t+k}
+\]
+and the learning update uses \(R_t^{(n)}\) with the \(n\)-step successor state.
+
+\textbf{Replay buffer and target update.} Transitions are sampled uniformly from a replay buffer. The target network \(\theta^-\) is synchronized with the online network \(\theta\) every \(C\) updates.
+
+\textbf{Exploration.} Training uses an \(\epsilon\)-greedy policy:
+\[
+a_t=
+\begin{cases}
+\text{Uniform}(\mathcal{A}) & \text{with probability }\epsilon\\
+\arg\max_a Q_\theta(s_t,a) & \text{with probability }1-\epsilon
+\end{cases}
+\]
+with \(\epsilon\) decayed from \(\epsilon_{\text{start}}\) to \(\epsilon_{\min}\).
+
+\textbf{Key hyperparameters (to report).} Learning rate \(\alpha\), discount \(\gamma\), replay size \(N\), batch size \(B\), target update period \(C\), \(n\)-step horizon \(n\), and network width/depth should be explicitly stated (Table~\ref{tab:exp_setup}) to ensure fair comparison and reproducibility.
+
+\begin{algorithm}
+\caption{Shared Multi-Agent Dueling Double DQN Training (OSM networks)}
+\label{alg:marl_dqn}
+\begin{algorithmic}[1]
+    \State Initialize shared replay buffer \(D\), online network \(Q_\theta\), target network \(Q_{\theta^-}\leftarrow Q_\theta\)
+    \For{episode \(=1\) to \(M\)}
+        \State Reset SUMO; select controlled traffic lights \(\{1,\dots,N_{\mathrm{TL}}\}\)
+        \For{decision step \(t\)}
+            \For{each traffic light \(i\)}
+                \State Observe local state \(s_t^{(i)}\); select \(a_t^{(i)}\) by \(\epsilon\)-greedy on \(Q_\theta\)
+                \State Apply action via TraCI (keep phase or switch to next phase)
+            \EndFor
+            \For{each traffic light \(i\)}
+                \State Observe \(s_{t+1}^{(i)}\), compute \(r_t^{(i)}\), store \((s_t^{(i)},a_t^{(i)},r_t^{(i)},s_{t+1}^{(i)})\) in \(D\)
+            \EndFor
+            \State Sample mini-batch from \(D\); compute Double DQN targets \(y_t\); update \(\theta\) by minimizing \(\mathcal{L}(\theta)\)
+            \If{update step \(\bmod C=0\)} \State \(\theta^- \leftarrow \theta\) \EndIf
+        \EndFor
+    \EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{PressLight-inspired Pressure DQN (PRESSLIGHT)}
+As an additional RL baseline, a PressLight-inspired controller is implemented. For each traffic light, the state is a fixed-size vector of \(K\) \emph{phase pressures} (queue demand for each candidate green phase), padded to length \(K\). The action selects the index of the green phase to serve next (mapped to a valid SUMO green phase). A pressure-reduction reward is used:
+\[
+r_t = -\sum_{k=1}^{K} P_k(t) + 0.3\left(\sum_{k=1}^{K} P_k(t-1)-\sum_{k=1}^{K} P_k(t)\right)
+\]
+
+\section{Experimental Protocol and Performance Metrics}
+\label{sec:metrics}
+Experiments are run by executing each controller on an OSM city map for a fixed simulation horizon \(T_{\text{sim}}\). To support fair comparison and reproducibility, all strategies share the same simulation horizon, decision interval, controlled-traffic-light selection rule, and measurement pipeline. To match research practice, stochasticity is controlled using explicit SUMO random seeds, enabling repeated independent episodes and statistical reporting.
+
+\subsection{Experiment Setup and Reproducibility (Compact Summary)}
+\label{sec:reproducibility}
+Table~\ref{tab:exp_setup} summarizes the key experimental settings required to reproduce the reported results. Parameters that depend on the OSM Web Wizard traffic configuration (e.g., demand rates) should be reported in the table for completeness.
+
+\begin{table}[h]
+    \centering
+    \caption{Experiment setup and reproducibility details (key settings).}
+    \label{tab:exp_setup}
+    \begin{tabular}{p{4.2cm} p{10.2cm}}
+        \hline
+        \textbf{Item} & \textbf{Setting} \\
+        \hline
+        SUMO version & SUMO v1.25.0 (TraCI control) \\
+        Map construction & SUMO OSM Web Wizard (OpenStreetMap import) \\
+        Evaluated maps & Vancouver (training), Cologne (generalization evaluation); \emph{single-intersection excluded} \\
+        Demand (traffic parameters) & Customized synthetic demand from Web Wizard route files (passenger/truck/bus/pedestrian trip files). \emph{Report: cars/h, trucks/h, through-traffic factor, and any manual tuning.} \\
+        Simulation horizon & \(T_{\text{sim}}=1200\) s per episode (evaluation); same order used during training \\
+        Decision interval & \(\Delta t=5\) s between control decisions \\
+        Controlled intersections & Ratio \(=0.2\) of detected traffic lights (e.g., \(16/79\) on Cologne in the logged run); lane padding \(K=8\) lanes per traffic light \\
+        Phase safety / fairness constraints & Max-green cap \(=120\) s (OSM maps) to prevent starvation; pedestrian max-red \(\le 90\) s with enforced ped-green \(12\) s where applicable \\
+        Random seeds & SUMO seed set per episode: \(\texttt{seed} + 10000\cdot \texttt{run\_id} + \texttt{episode}\) (enables independent episodes); base \(\texttt{seed}=42\) \\
+        Emissions collection & SUMO native \texttt{--emission-output} enabled; totals parsed after each episode (CO\(_2\), fuel, NO\(_x\), PM\(_x\)) \\
+        Hardware/software & Python + PyTorch; GPU acceleration used when available (CUDA); headless SUMO for batch runs \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\subsection{Traffic Efficiency Metrics}
+The simulator logs per-vehicle trajectories and computes:
+\begin{enumerate}
+    \item \textbf{Average and maximum waiting time (s)}:
+    \[
+    \overline{W}=\frac{1}{|\mathcal{V}|}\sum_{v\in\mathcal{V}} W_v,
+    \qquad
+    W_{\max}=\max_{v\in\mathcal{V}} W_v
+    \]
+    \item \textbf{Average speed (m/s)}:
+    \[
+    \overline{V}=\frac{1}{|\mathcal{S}|}\sum_{(v,t)\in\mathcal{S}} V_{v,t}
+    \]
+    \item \textbf{Throughput (arrived vehicles)} and \textbf{throughput per hour}:
+    \[
+    \text{Throughput}_{/h}=\frac{N_{\text{arrived}}\cdot 3600}{T_{\text{sim}}}
+    \]
+    \item \textbf{Congestion index}: proportion of lane-time samples with queueing, using \(W_{v,t}>5s\) as a queueing indicator.
+    \item \textbf{Average Queue Length (AQL)} and \textbf{pressure proxy}: computed from queued-vehicle counts over time, including bus-weighting when vehicles are labeled as buses.
+\end{enumerate}
+
+\subsection{Environmental and Infrastructure Metrics}
+\begin{enumerate}
+    \item \textbf{Emissions and fuel}: SUMO emission outputs provide total \(CO_2\), \(NO_x\), \(PM_x\), and fuel consumption. For OSM maps, emissions are collected using SUMO’s native emission-output (to avoid expensive per-vehicle TraCI emission calls).
+    \item \textbf{Lane occupancy}: if induction-loop detectors are present, mean occupancy and its dispersion are computed to characterize road utilization.
+\end{enumerate}
+
+\subsection{Statistical Analysis (Academic Experiments)}
+For multiple independent runs, summary statistics are reported using mean, standard deviation, and a 95\% confidence interval (t-distribution):
+\[
+\mathrm{CI}_{95\%}=\bar{x}\pm t_{0.975,\,n-1}\cdot\frac{s}{\sqrt{n}}
+\]
+and pairwise comparisons are assessed using both an independent t-test and a Mann--Whitney U test. In addition to reporting statistical significance, the results section interprets effect direction and practical relevance (e.g., absolute seconds saved per vehicle, throughput change, and emission reductions).
+
+\section{Visualization Dashboard}
+The system provides a Flask-based web dashboard for configuring experiments and reviewing results. The dashboard workflow is:
+\begin{itemize}
+    \item The user selects dataset, strategy, and simulation duration.
+    \item A SUMO-backed simulation run is launched (GUI or headless).
+    \item After completion, raw logs (CSV) and aggregated metrics (JSON) are stored.
+    \item The interface displays KPI summaries and comparison plots (e.g., waiting time, throughput, congestion), and supports multi-run academic experiments for statistical summaries.
+\end{itemize}
+
