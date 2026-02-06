@@ -1,0 +1,24 @@
+{
+  "dataset": "cologne",
+  "strategy": "FIXED_TIME",
+  "episodes": 120,
+  "duration": 1200,
+  "decision_interval": 5,
+  "controlled_lights_ratio": 0.2,
+  "seed": 42,
+  "run_id": 1,
+  "sumo_emissions_output": true,
+  "results": [
+    {
+      "episode": 1,
+      "sumo_seed": 10043,
+      "wall_seconds": 363.05377888679504,
+      "reward_sum": null,
+      "avg_reward": null,
+      "decisions": null,
+      "metrics": {
+        "avg_waiting_time": 103.35226524584384,
+        "max_waiting_time": 689.0,
+        "total_waiting_time": 86183697.0,
+        "avg_max_waiting_time_per_vehicle": 252.39833438089252,
+        "vehicles_with_waiting": 

@@ -42,7 +42,8 @@ class TrafficSimulator:
                  use_gui: bool = False, port: int = 8813, dataset: str = None,
                  gui_delay: float = 0.0,
                  enable_sumo_emissions_output: bool = True,
-                 sumo_seed: Optional[int] = None):
+                 sumo_seed: Optional[int] = None,
+                 controlled_lights_ratio: Optional[float] = None):
         """
         Initialize traffic simulator
         
@@ -56,6 +57,9 @@ class TrafficSimulator:
                 Set False for RL training loops to avoid generating huge XML each episode.
             sumo_seed: optional SUMO RNG seed. If not set, repeated runs can become identical,
                 which makes statistical evaluation (std/CI) meaningless.
+            controlled_lights_ratio: optional ratio in (0,1] of traffic lights to control on OSM maps.
+                If set, this overrides max_controlled_lights selection so baselines and RL runs can
+                be compared under the same controlled-intersection budget.
         """
         # Set dataset if specified
         if dataset:
@@ -70,6 +74,7 @@ class TrafficSimulator:
         self.gui_delay = gui_delay  # Delay per step in GUI mode (0 = no delay, fastest)
         self.enable_sumo_emissions_output = enable_sumo_emissions_output
         self.sumo_seed = sumo_seed
+        self.controlled_lights_ratio = controlled_lights_ratio
         self.port = port
         self.is_connected = False
         self.simulation_time = 0
@@ -196,6 +201,19 @@ class TrafficSimulator:
                 # Limit to max_controlled_lights
                 max_lights = config.get('max_controlled_lights', 10)
                 self.controlled_traffic_lights = self.traffic_lights[:max_lights]
+
+            # Optional: override controlled TL count by ratio (for fair baseline/RL comparisons)
+            if self.controlled_lights_ratio is not None:
+                try:
+                    ratio = float(self.controlled_lights_ratio)
+                    if ratio > 0.0 and ratio <= 1.0 and self.traffic_lights:
+                        total = len(self.traffic_lights)
+                        desired = int(round(total * ratio))
+                        desired = max(1, min(total, desired))
+                        self.controlled_traffic_lights = self.traffic_lights[:desired]
+                        print(f"Computed TLS count: {desired}/{total} ({ratio:.2f})")
+                except Exception:
+                    pass
             
             print(f"Controlling {len(self.controlled_traffic_lights)} traffic lights: {self.controlled_traffic_lights[:5]}...")
 

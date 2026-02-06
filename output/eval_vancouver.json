@@ -1,0 +1,379 @@
+{
+  "dataset": "vancouver",
+  "model": "D:\\Final Year Project\\traffic-signal-control\\models\\marl_vancouver_shared_dqn.pt",
+  "episodes": 5,
+  "duration": 600,
+  "decision_interval": 5,
+  "lanes_per_tl": 8,
+  "controlled_lights_ratio": 0.2,
+  "max_controlled_lights": 3,
+  "regional_reward_weight": 0.0,
+  "region_grid_size": 500.0,
+  "results": [
+    {
+      "episode": 1,
+      "wall_seconds": 186.34195494651794,
+      "reward_sum": -381.7699999999995,
+      "avg_reward": -0.13832246376811577,
+      "decisions": 2760,
+      "metrics": {
+        "avg_waiting_time": 25.151640102352253,
+        "max_waiting_time": 300.0,
+        "total_waiting_time": 3263375.0,
+        "avg_max_waiting_time_per_vehicle": 72.0816167897396,
+        "vehicles_with_waiting": 2511,
+        "vehicles_total": 2573,
+        "percentage_vehicles_waited": 97.59036144578313,
+        "avg_speed": 2.487356277811751,
+        "max_speed": 17.906019704743812,
+        "vehicles_seen": 2573,
+        "vehicles_departed": 2573,
+        "vehicles_arrived": 675,
+        "throughput": 675,
+        "throughput_per_hour": 4050.0,
+        "departed_per_hour": 15438.0,
+        "congestion_index": 0.4555917532460492,
+        "max_queue_length": 1.0,
+        "avg_queue_length": 553.7916666666666,
+        "max_queue_length_vehicles": 1356.0,
+        "avg_pressure": 708.4541666666667,
+        "max_pressure": 1734.0,
+        "total_co2": 0.0,
+        "avg_co2_per_vehicle": 0.0,
+        "co2_per_km": 0.0,
+        "total_fuel": 0.0,
+        "avg_fuel_per_vehicle": 0.0,
+        "total_nox": 0.0,
+        "total_pmx": 0.0,
+        "avg_lane_occupancy": 7.591829213057306,
+        "lane_occupancy_std": 12.337914811685282,
+        "max_lane_occupancy": 69.34703995829926,
+        "avg_acceleration": 0.005946264856461894,
+        "acceleration_std": 1.1253012892918943,
+        "harsh_braking_events": 5462,
+        "vehicle_type_stats": {
+          "('waiting_time', 'mean')": {
+            "bus_bus": 27.15,
+            "pt_bus": 9.51,
+            "pt_trolleybus": 17.47,
+            "truck_truck": 23.53,
+            "veh_passenger": 25.29
+          },
+          "('waiting_time', 'sum')": {
+            "bus_bus": 580343.0,
+            "pt_bus": 14965.0,
+            "pt_trolleybus": 31426.0,
+            "truck_truck": 250203.0,
+            "veh_passenger": 2386438.0
+          },
+          "('speed', 'mean')": {
+            "bus_bus": 2.23,
+            "pt_bus": 2.42,
+            "pt_trolleybus": 2.23,
+            "truck_truck": 2.38,
+            "veh_passenger": 2.56
+          },
+          "('co2_emission', 'sum')": {
+            "bus_bus": 0.0,
+            "pt_bus": 0.0,
+            "pt_trolleybus": 0.0,
+            "truck_truck": 0.0,
+            "veh_passenger": 0.0
+          }
+        }
+      }
+    },
+    {
+      "episode": 2,
+      "wall_seconds": 186.53232979774475,
+      "reward_sum": -381.7699999999995,
+      "avg_reward": -0.13832246376811577,
+      "decisions": 2760,
+      "metrics": {
+        "avg_waiting_time": 25.151640102352253,
+        "max_waiting_time": 300.0,
+        "total_waiting_time": 3263375.0,
+        "avg_max_waiting_time_per_vehicle": 72.0816167897396,
+        "vehicles_with_waiting": 2511,
+        "vehicles_total": 2573,
+        "percentage_vehicles_waited": 97.59036144578313,
+        "avg_speed": 2.487356277811751,
+        "max_speed": 17.906019704743812,
+        "vehicles_seen": 2573,
+        "vehicles_departed": 2573,
+        "vehicles_arrived": 675,
+        "throughput": 675,
+        "throughput_per_hour": 4050.0,
+        "departed_per_hour": 15438.0,
+        "congestion_index": 0.4555917532460492,
+        "max_queue_length": 1.0,
+        "avg_queue_length": 553.7916666666666,
+        "max_queue_length_vehicles": 1356.0,
+        "avg_pressure": 708.4541666666667,
+        "max_pressure": 1734.0,
+        "total_co2": 0.0,
+        "avg_co2_per_vehicle": 0.0,
+        "co2_per_km": 0.0,
+        "total_fuel": 0.0,
+        "avg_fuel_per_vehicle": 0.0,
+        "total_nox": 0.0,
+        "total_pmx": 0.0,
+        "avg_lane_occupancy": 7.591829213057306,
+        "lane_occupancy_std": 12.337914811685282,
+        "max_lane_occupancy": 69.34703995829926,
+        "avg_acceleration": 0.005946264856461894,
+        "acceleration_std": 1.1253012892918943,
+        "harsh_braking_events": 5462,
+        "vehicle_type_stats": {
+          "('waiting_time', 'mean')": {
+            "bus_bus": 27.15,
+            "pt_bus": 9.51,
+            "pt_trolleybus": 17.47,
+            "truck_truck": 23.53,
+            "veh_passenger": 25.29
+          },
+          "('waiting_time', 'sum')": {
+            "bus_bus": 580343.0,
+            "pt_bus": 14965.0,
+            "pt_trolleybus": 31426.0,
+            "truck_truck": 250203.0,
+            "veh_passenger": 2386438.0
+          },
+          "('speed', 'mean')": {
+            "bus_bus": 2.23,
+            "pt_bus": 2.42,
+            "pt_trolleybus": 2.23,
+            "truck_truck": 2.38,
+            "veh_passenger": 2.56
+          },
+          "('co2_emission', 'sum')": {
+            "bus_bus": 0.0,
+            "pt_bus": 0.0,
+            "pt_trolleybus": 0.0,
+            "truck_truck": 0.0,
+            "veh_passenger": 0.0
+          }
+        }
+      }
+    },
+    {
+      "episode": 3,
+      "wall_seconds": 187.1707375049591,
+      "reward_sum": -381.7699999999995,
+      "avg_reward": -0.13832246376811577,
+      "decisions": 2760,
+      "metrics": {
+        "avg_waiting_time": 25.151640102352253,
+        "max_waiting_time": 300.0,
+        "total_waiting_time": 3263375.0,
+        "avg_max_waiting_time_per_vehicle": 72.0816167897396,
+        "vehicles_with_waiting": 2511,
+        "vehicles_total": 2573,
+        "percentage_vehicles_waited": 97.59036144578313,
+        "avg_speed": 2.487356277811751,
+        "max_speed": 17.906019704743812,
+        "vehicles_seen": 2573,
+        "vehicles_departed": 2573,
+        "vehicles_arrived": 675,
+        "throughput": 675,
+        "throughput_per_hour": 4050.0,
+        "departed_per_hour": 15438.0,
+        "congestion_index": 0.4555917532460492,
+        "max_queue_length": 1.0,
+        "avg_queue_length": 553.7916666666666,
+        "max_queue_length_vehicles": 1356.0,
+        "avg_pressure": 708.4541666666667,
+        "max_pressure": 1734.0,
+        "total_co2": 0.0,
+        "avg_co2_per_vehicle": 0.0,
+        "co2_per_km": 0.0,
+        "total_fuel": 0.0,
+        "avg_fuel_per_vehicle": 0.0,
+        "total_nox": 0.0,
+        "total_pmx": 0.0,
+        "avg_lane_occupancy": 7.591829213057306,
+        "lane_occupancy_std": 12.337914811685282,
+        "max_lane_occupancy": 69.34703995829926,
+        "avg_acceleration": 0.005946264856461894,
+        "acceleration_std": 1.1253012892918943,
+        "harsh_braking_events": 5462,
+        "vehicle_type_stats": {
+          "('waiting_time', 'mean')": {
+            "bus_bus": 27.15,
+            "pt_bus": 9.51,
+            "pt_trolleybus": 17.47,
+            "truck_truck": 23.53,
+            "veh_passenger": 25.29
+          },
+          "('waiting_time', 'sum')": {
+            "bus_bus": 580343.0,
+            "pt_bus": 14965.0,
+            "pt_trolleybus": 31426.0,
+            "truck_truck": 250203.0,
+            "veh_passenger": 2386438.0
+          },
+          "('speed', 'mean')": {
+            "bus_bus": 2.23,
+            "pt_bus": 2.42,
+            "pt_trolleybus": 2.23,
+            "truck_truck": 2.38,
+            "veh_passenger": 2.56
+          },
+          "('co2_emission', 'sum')": {
+            "bus_bus": 0.0,
+            "pt_bus": 0.0,
+            "pt_trolleybus": 0.0,
+            "truck_truck": 0.0,
+            "veh_passenger": 0.0
+          }
+        }
+      }
+    },
+    {
+      "episode": 4,
+      "wall_seconds": 188.61037707328796,
+      "reward_sum": -381.7699999999995,
+      "avg_reward": -0.13832246376811577,
+      "decisions": 2760,
+      "metrics": {
+        "avg_waiting_time": 25.151640102352253,
+        "max_waiting_time": 300.0,
+        "total_waiting_time": 3263375.0,
+        "avg_max_waiting_time_per_vehicle": 72.0816167897396,
+        "vehicles_with_waiting": 2511,
+        "vehicles_total": 2573,
+        "percentage_vehicles_waited": 97.59036144578313,
+        "avg_speed": 2.487356277811751,
+        "max_speed": 17.906019704743812,
+        "vehicles_seen": 2573,
+        "vehicles_departed": 2573,
+        "vehicles_arrived": 675,
+        "throughput": 675,
+        "throughput_per_hour": 4050.0,
+        "departed_per_hour": 15438.0,
+        "congestion_index": 0.4555917532460492,
+        "max_queue_length": 1.0,
+        "avg_queue_length": 553.7916666666666,
+        "max_queue_length_vehicles": 1356.0,
+        "avg_pressure": 708.4541666666667,
+        "max_pressure": 1734.0,
+        "total_co2": 0.0,
+        "avg_co2_per_vehicle": 0.0,
+        "co2_per_km": 0.0,
+        "total_fuel": 0.0,
+        "avg_fuel_per_vehicle": 0.0,
+        "total_nox": 0.0,
+        "total_pmx": 0.0,
+        "avg_lane_occupancy": 7.591829213057306,
+        "lane_occupancy_std": 12.337914811685282,
+        "max_lane_occupancy": 69.34703995829926,
+        "avg_acceleration": 0.005946264856461894,
+        "acceleration_std": 1.1253012892918943,
+        "harsh_braking_events": 5462,
+        "vehicle_type_stats": {
+          "('waiting_time', 'mean')": {
+            "bus_bus": 27.15,
+            "pt_bus": 9.51,
+            "pt_trolleybus": 17.47,
+            "truck_truck": 23.53,
+            "veh_passenger": 25.29
+          },
+          "('waiting_time', 'sum')": {
+            "bus_bus": 580343.0,
+            "pt_bus": 14965.0,
+            "pt_trolleybus": 31426.0,
+            "truck_truck": 250203.0,
+            "veh_passenger": 2386438.0
+          },
+          "('speed', 'mean')": {
+            "bus_bus": 2.23,
+            "pt_bus": 2.42,
+            "pt_trolleybus": 2.23,
+            "truck_truck": 2.38,
+            "veh_passenger": 2.56
+          },
+          "('co2_emission', 'sum')": {
+            "bus_bus": 0.0,
+            "pt_bus": 0.0,
+            "pt_trolleybus": 0.0,
+            "truck_truck": 0.0,
+            "veh_passenger": 0.0
+          }
+        }
+      }
+    },
+    {
+      "episode": 5,
+      "wall_seconds": 187.95113015174866,
+      "reward_sum": -381.7699999999995,
+      "avg_reward": -0.13832246376811577,
+      "decisions": 2760,
+      "metrics": {
+        "avg_waiting_time": 25.151640102352253,
+        "max_waiting_time": 300.0,
+        "total_waiting_time": 3263375.0,
+        "avg_max_waiting_time_per_vehicle": 72.0816167897396,
+        "vehicles_with_waiting": 2511,
+        "vehicles_total": 2573,
+        "percentage_vehicles_waited": 97.59036144578313,
+        "avg_speed": 2.487356277811751,
+        "max_speed": 17.906019704743812,
+        "vehicles_seen": 2573,
+        "vehicles_departed": 2573,
+        "vehicles_arrived": 675,
+        "throughput": 675,
+        "throughput_per_hour": 4050.0,
+        "departed_per_hour": 15438.0,
+        "congestion_index": 0.4555917532460492,
+        "max_queue_length": 1.0,
+        "avg_queue_length": 553.7916666666666,
+        "max_queue_length_vehicles": 1356.0,
+        "avg_pressure": 708.4541666666667,
+        "max_pressure": 1734.0,
+        "total_co2": 0.0,
+        "avg_co2_per_vehicle": 0.0,
+        "co2_per_km": 0.0,
+        "total_fuel": 0.0,
+        "avg_fuel_per_vehicle": 0.0,
+        "total_nox": 0.0,
+        "total_pmx": 0.0,
+        "avg_lane_occupancy": 7.591829213057306,
+        "lane_occupancy_std": 12.337914811685282,
+        "max_lane_occupancy": 69.34703995829926,
+        "avg_acceleration": 0.005946264856461894,
+        "acceleration_std": 1.1253012892918943,
+        "harsh_braking_events": 5462,
+        "vehicle_type_stats": {
+          "('waiting_time', 'mean')": {
+            "bus_bus": 27.15,
+            "pt_bus": 9.51,
+            "pt_trolleybus": 17.47,
+            "truck_truck": 23.53,
+            "veh_passenger": 25.29
+          },
+          "('waiting_time', 'sum')": {
+            "bus_bus": 580343.0,
+            "pt_bus": 14965.0,
+            "pt_trolleybus": 31426.0,
+            "truck_truck": 250203.0,
+            "veh_passenger": 2386438.0
+          },
+          "('speed', 'mean')": {
+            "bus_bus": 2.23,
+            "pt_bus": 2.42,
+            "pt_trolleybus": 2.23,
+            "truck_truck": 2.38,
+            "veh_passenger": 2.56
+          },
+          "('co2_emission', 'sum')": {
+            "bus_bus": 0.0,
+            "pt_bus": 0.0,
+            "pt_trolleybus": 0.0,
+            "truck_truck": 0.0,
+            "veh_passenger": 0.0
+          }
+        }
+      }
+    }
+  ]
+}

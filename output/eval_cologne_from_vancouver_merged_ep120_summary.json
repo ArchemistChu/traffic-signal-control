@@ -1,0 +1,102 @@
+{
+  "input": "output/eval_cologne_from_vancouver_merged_ep120.json",
+  "dataset": "cologne",
+  "model": "D:\\Final Year Project\\traffic-signal-control\\models\\marl_vancouver_shared_dqn_regionaware.pt",
+  "episodes": 120,
+  "group_size": 10,
+  "n_runs": 12,
+  "run_stats": {
+    "avg_waiting_time": {
+      "n_runs": 12,
+      "mean": 102.57347877237483,
+      "std": 1.4842753667696044e-14,
+      "ci95_low": 102.57347877237481,
+      "ci95_high": 102.57347877237484,
+      "min": 102.57347877237484,
+      "max": 102.57347877237484
+    },
+    "avg_queue_length": {
+      "n_runs": 12,
+      "mean": 3016.3000000000006,
+      "std": 4.749681173662734e-13,
+      "ci95_low": 3016.3,
+      "ci95_high": 3016.300000000001,
+      "min": 3016.3,
+      "max": 3016.3
+    },
+    "throughput_per_hour": {
+      "n_runs": 12,
+      "mean": 495.0,
+      "std": 0.0,
+      "ci95_low": 495.0,
+      "ci95_high": 495.0,
+      "min": 495.0,
+      "max": 495.0
+    },
+    "congestion_index": {
+      "n_runs": 12,
+      "mean": 0.7633625503066778,
+      "std": 0.0,
+      "ci95_low": 0.7633625503066778,
+      "ci95_high": 0.7633625503066778,
+      "min": 0.7633625503066778,
+      "max": 0.7633625503066778
+    },
+    "avg_speed": {
+      "n_runs": 12,
+      "mean": 0.45896534483599655,
+      "std": 5.797950651443767e-17,
+      "ci95_low": 0.4589653448359965,
+      "ci95_high": 0.4589653448359966,
+      "min": 0.4589653448359966,
+      "max": 0.4589653448359966
+    },
+    "vehicles_arrived": {
+      "n_runs": 12,
+      "mean": 165.0,
+      "std": 0.0,
+      "ci95_low": 165.0,
+      "ci95_high": 165.0,
+      "min": 165.0,
+      "max": 165.0
+    },
+    "avg_pressure": {
+      "n_runs": 12,
+      "mean": 3697.5,
+      "std": 0.0,
+      "ci95_low": 3697.5,
+      "ci95_high": 3697.5,
+      "min": 3697.5,
+      "max": 3697.5
+    },
+    "total_co2": {
+      "n_runs": 12,
+      "mean": 0.0,
+      "std": 0.0,
+      "ci95_low": 0.0,
+      "ci95_high": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "total_fuel": {
+      "n_runs": 12,
+      "mean": 0.0,
+      "std": 0.0,
+      "ci95_low": 0.0,
+      "ci95_high": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    }
+  },
+  "warnings": [
+    "Metric 'avg_waiting_time' has no variation across runs (unique=1). This usually means SUMO was deterministic (missing --seed) or demand is fixed.",
+    "Metric 'avg_queue_length' has no variation across runs (unique=1). This usually means SUMO was deterministic (missing --seed) or demand is fixed.",
+    "Metric 'throughput_per_hour' has no variation across runs (unique=1). This usually means SUMO was deterministic (missing --seed) or demand is fixed.",
+    "Metric 'congestion_index' has no variation across runs (unique=1). This usually means SUMO was deterministic (missing --seed) or demand is fixed.",
+    "Metric 'avg_speed' has no variation across runs (unique=1). This usually means SUMO was deterministic (missing --seed) or demand is fixed.",
+    "Metric 'vehicles_arrived' has no variation across runs (unique=1). This usually means SUMO was deterministic (missing --seed) or demand is fixed.",
+    "Metric 'avg_pressure' has no variation across runs (unique=1). This usually means SUMO was deterministic (missing --seed) or demand is fixed.",
+    "Metric 'total_co2' has no variation across runs (unique=1). This usually means SUMO was deterministic (missing --seed) or demand is fixed.",
+    "Metric 'total_fuel' has no variation across runs (unique=1). This usually means SUMO was deterministic (missing --seed) or demand is fixed."
+  ]
+}

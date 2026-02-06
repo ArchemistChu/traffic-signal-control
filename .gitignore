@@ -41,12 +41,12 @@ venv.bak/
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# PyTorch models and checkpoints
+# PyTorch models and checkpoints (allow models folder)
 *.pth
 *.pt
 *.ckpt
-models/*.pth
-models/*.pt
+!models/*.pt
+!models/*.pth
 *.h5
 
 # SUMO output files
@@ -78,16 +78,23 @@ models/*.pt
 **/view.settings.xml
 **/gui-settings.xml
 
-# Output directories
-output/
-**/output/*.csv
-**/output/*.json
-**/output/*.txt
-**/output/*.md
+# Output directories (allow output folder structure, but ignore large runtime XML files)
+# output/  # Commented out to allow tracking output folder
+**/output/emissions*.xml
+**/output/detectors.xml
+**/output/fcd_output.xml
+**/output/queue.xml
+**/output/summary.xml
+# Allow CSV, JSON, TXT, MD files in output
+# **/output/*.csv  # Commented out
+# **/output/*.json  # Commented out
+# **/output/*.txt  # Commented out
+# **/output/*.md  # Commented out
 output/academic/
 *.json
 !package.json
 !requirements.txt
+!**/output/*.json
 
 # Temporary files
 temp_*.py
