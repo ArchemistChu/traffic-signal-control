@@ -138,3 +138,6 @@ Thumbs.db
 ~$*.xlsx
 ~$*.pptx
 
+# Exclude papers and Report folders
+papers/
+Report/
