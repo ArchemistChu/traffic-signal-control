@@ -976,20 +976,9 @@ class TrafficSimulator:
                         # arbitrary phase programs; restricting decisions to [0,4] often means the controller NEVER runs.
                         # Here we implement per-TL control using each TLS's own green phases and served lanes.
                         if not SimulationConfig.is_custom_dataset():
-                            state_dict = self.get_current_state()
-
-                            def _lane_weighted_queue(lane_id: str) -> float:
-                                q = float(state_dict.get("lane_queue_lengths", {}).get(lane_id, 0))
-                                bus_c = float(state_dict.get("lane_bus_counts", {}).get(lane_id, 0))
-                                bus_w = float(state_dict.get("bus_waiting_time", {}).get(lane_id, 0.0))
-                                # buses count more (transit priority)
-                                return q + (2.5 * bus_c) + (0.3 * bus_w)
-
-                            def _phase_pressure(tl_id: str, phase_idx: int) -> float:
-                                phase_map = self._get_tl_phase_lane_map(tl_id)
-                                lanes = phase_map.get("phase_to_lanes", {}).get(int(phase_idx), []) or []
-                                return float(sum(_lane_weighted_queue(l) for l in lanes))
-
+                            # Performance optimization for OSM maps:
+                            # build lane queue snapshots lazily only for TLS that actually need a decision now.
+                            tl_ctxs = []
                             for tl_id in self.controlled_traffic_lights:
                                 try:
                                     cur_phase = int(traci.trafficlight.getPhase(tl_id))
@@ -1017,6 +1006,52 @@ class TrafficSimulator:
                                 nph = self._get_tl_phase_count(tl_id)
                                 if not green_phases:
                                     green_phases = list(range(max(1, nph)))
+
+                                tl_ctxs.append({
+                                    "tl_id": tl_id,
+                                    "cur_phase": cur_phase,
+                                    "remaining": remaining,
+                                    "active_time": active_time,
+                                    "max_green": max_green,
+                                    "phase_map": phase_map,
+                                    "green_phases": green_phases,
+                                    "nph": nph,
+                                })
+
+                            if not tl_ctxs:
+                                continue
+
+                            lanes_needed = set()
+                            for ctx in tl_ctxs:
+                                phase_to_lanes = ctx["phase_map"].get("phase_to_lanes", {}) or {}
+                                for lanes in phase_to_lanes.values():
+                                    if lanes:
+                                        lanes_needed.update(lanes)
+
+                            lane_queue: Dict[str, float] = {}
+                            for lane_id in lanes_needed:
+                                try:
+                                    lane_queue[lane_id] = float(traci.lane.getLastStepHaltingNumber(lane_id))
+                                except Exception:
+                                    lane_queue[lane_id] = 0.0
+
+                            def _lane_weighted_queue(lane_id: str) -> float:
+                                # Keep pressure definition lightweight and stable on large OSM maps.
+                                return float(lane_queue.get(lane_id, 0.0))
+
+                            def _phase_pressure(ctx: Dict, phase_idx: int) -> float:
+                                lanes = ctx["phase_map"].get("phase_to_lanes", {}).get(int(phase_idx), []) or []
+                                return float(sum(_lane_weighted_queue(l) for l in lanes))
+
+                            for ctx in tl_ctxs:
+                                tl_id = str(ctx["tl_id"])
+                                cur_phase = int(ctx["cur_phase"])
+                                remaining = float(ctx["remaining"])
+                                active_time = float(ctx["active_time"])
+                                max_green = float(ctx["max_green"])
+                                phase_map = ctx["phase_map"]
+                                green_phases = ctx["green_phases"]
+                                nph = int(ctx["nph"])
 
                                 # Cheap pedestrian fairness override (max-red), per TL
                                 try:
@@ -1047,7 +1082,7 @@ class TrafficSimulator:
                                         next_phase = int(green_phases[(idx + 1) % len(green_phases)])
                                     except ValueError:
                                         next_phase = int(green_phases[0]) if green_phases else ((cur_phase + 1) % max(1, nph))
-                                    ph_p = float(_phase_pressure(tl_id, next_phase))
+                                    ph_p = float(_phase_pressure(ctx, next_phase))
                                     set_duration = float(min(60.0, max(10.0, base_green + pressure_scale * ph_p)))
 
                                 elif strategy == "FIXED_TIME":
@@ -1061,7 +1096,7 @@ class TrafficSimulator:
 
                                 elif strategy == "MAX_PRESSURE":
                                     # MaxPressure: always serve the phase with maximum pressure.
-                                    pressures = {p: _phase_pressure(tl_id, p) for p in green_phases}
+                                    pressures = {p: _phase_pressure(ctx, p) for p in green_phases}
                                     best_phase = max(pressures.keys(), key=lambda p: pressures[p]) if pressures else cur_phase
                                     best_pressure = float(pressures.get(best_phase, 0.0))
 
@@ -1079,8 +1114,8 @@ class TrafficSimulator:
 
                                 elif strategy == "ADAPTIVE":
                                     # Adaptive (OSM): keep cyclic order, but extend/skips based on demand.
-                                    pressures = {p: _phase_pressure(tl_id, p) for p in green_phases}
-                                    cur_pressure = float(pressures.get(cur_phase, _phase_pressure(tl_id, cur_phase)))
+                                    pressures = {p: _phase_pressure(ctx, p) for p in green_phases}
+                                    cur_pressure = float(pressures.get(cur_phase, _phase_pressure(ctx, cur_phase)))
                                     best_phase = max(pressures.keys(), key=lambda p: pressures[p]) if pressures else cur_phase
                                     best_pressure = float(pressures.get(best_phase, 0.0))
 
@@ -1101,7 +1136,7 @@ class TrafficSimulator:
                                         next_phase = int(green_phases[0])
 
                                     # If the next phase has almost no demand, optionally jump to best.
-                                    next_pressure = float(pressures.get(next_phase, _phase_pressure(tl_id, next_phase)))
+                                    next_pressure = float(pressures.get(next_phase, _phase_pressure(ctx, next_phase)))
                                     if best_pressure >= 2.0 and next_pressure < 0.2 * best_pressure:
                                         next_phase = int(best_phase)
                                         next_pressure = best_pressure
@@ -1111,10 +1146,10 @@ class TrafficSimulator:
                                 elif strategy == "DQN":
                                     # NOTE: On OSM maps, the "DQN" option in the UI is not a trained model.
                                     # Treat it as a MaxPressure-like baseline with slightly more switching penalty.
-                                    pressures = {p: _phase_pressure(tl_id, p) for p in green_phases}
+                                    pressures = {p: _phase_pressure(ctx, p) for p in green_phases}
                                     best_phase = max(pressures.keys(), key=lambda p: pressures[p]) if pressures else cur_phase
                                     best_pressure = float(pressures.get(best_phase, 0.0))
-                                    cur_pressure = float(pressures.get(cur_phase, _phase_pressure(tl_id, cur_phase)))
+                                    cur_pressure = float(pressures.get(cur_phase, _phase_pressure(ctx, cur_phase)))
 
                                     # If current is close to best, prefer holding to reduce oscillation.
                                     if cur_pressure >= 0.85 * max(1e-6, best_pressure):
@@ -1130,10 +1165,10 @@ class TrafficSimulator:
 
                                 elif strategy == "SOTL":
                                     # SOTL (OSM): threshold-based switching to the best-demand green phase.
-                                    pressures = {p: _phase_pressure(tl_id, p) for p in green_phases}
+                                    pressures = {p: _phase_pressure(ctx, p) for p in green_phases}
                                     best_phase = max(pressures.keys(), key=lambda p: pressures[p]) if pressures else cur_phase
                                     best_pressure = float(pressures.get(best_phase, 0.0))
-                                    cur_pressure = float(pressures.get(cur_phase, _phase_pressure(tl_id, cur_phase)))
+                                    cur_pressure = float(pressures.get(cur_phase, _phase_pressure(ctx, cur_phase)))
 
                                     # If current phase still has demand, keep it (small extension).
                                     if cur_pressure >= 1.0 and remaining > 3.0:
@@ -1333,6 +1368,16 @@ class TrafficSimulator:
                     print(f"Simulation time: {self.simulation_time:.1f}s, "
                           f"Steps: {self.step_count}, Strategy: {strategy}")
             
+            # Important for SUMO emission-output correctness:
+            # close SUMO before parsing XML, otherwise iterparse may see truncated output.
+            if self.emissions_output_file:
+                try:
+                    self.close_simulation()
+                    closed_for_metrics = True
+                    time.sleep(0.25)
+                except Exception:
+                    pass
+
             # Calculate performance metrics
             metrics = self._calculate_performance_metrics()
             
@@ -1348,7 +1393,8 @@ class TrafficSimulator:
             print("\nUser interrupted simulation")
             return {}
         finally:
-            self.close_simulation()
+            if not closed_for_metrics:
+                self.close_simulation()
 
     def _run_ga_optimized(self, duration: Optional[int]) -> Dict:
         """

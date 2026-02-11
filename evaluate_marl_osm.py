@@ -219,6 +219,12 @@ def main():
     )
     parser.add_argument("--out", type=str, default="", help="Optional JSON output for eval summary")
     parser.add_argument("--calc-metrics", action="store_true", help="Compute performance metrics (slower)")
+    parser.add_argument(
+        "--data-collection-interval",
+        type=int,
+        default=10,
+        help="Collect detailed TraCI vehicle snapshots every N simulation steps (larger is faster).",
+    )
     args = parser.parse_args()
 
     if traci is None:
@@ -266,6 +272,7 @@ def main():
             enable_sumo_emissions_output=bool(args.sumo_emissions_output),
             sumo_seed=sumo_seed,
         )
+        simulator.data_collection_interval = max(1, int(args.data_collection_interval))
         if args.collect_emissions:
             simulator.collect_emissions = True
             simulator.data_collection_interval = 1

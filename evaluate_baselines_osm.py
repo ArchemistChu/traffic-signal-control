@@ -25,6 +25,29 @@ from src.config import SimulationConfig
 from src.traffic_simulator import TrafficSimulator
 
 
+def _to_json_safe(obj):
+    """Recursively convert objects (including dict keys) to JSON-safe types."""
+    try:
+        import numpy as _np
+        if isinstance(obj, (_np.integer,)):
+            return int(obj)
+        if isinstance(obj, (_np.floating,)):
+            return float(obj)
+        if isinstance(obj, (_np.bool_,)):
+            return bool(obj)
+    except Exception:
+        pass
+
+    if isinstance(obj, dict):
+        safe = {}
+        for k, v in obj.items():
+            safe[str(k)] = _to_json_safe(v)
+        return safe
+    if isinstance(obj, (list, tuple)):
+        return [_to_json_safe(v) for v in obj]
+    return obj
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, default="cologne", choices=["cologne", "vancouver", "los_angeles"])
@@ -43,6 +66,12 @@ def main():
     parser.add_argument("--run-id", type=int, default=1)
     parser.add_argument("--sumo-emissions-output", action="store_true", help="Enable SUMO native emission-output and parse totals.")
     parser.add_argument("--keep-emissions-xml", action="store_true", help="Keep emission XML files (default: delete after parsing).")
+    parser.add_argument(
+        "--data-collection-interval",
+        type=int,
+        default=10,
+        help="Collect detailed TraCI vehicle snapshots every N simulation steps (larger is faster).",
+    )
     parser.add_argument("--out", type=str, default="", help="Output eval JSON path")
     args = parser.parse_args()
 
@@ -78,6 +107,7 @@ def main():
             sumo_seed=sumo_seed,
             controlled_lights_ratio=float(args.controlled_lights_ratio),
         )
+        sim.data_collection_interval = max(1, int(args.data_collection_interval))
 
         start = time.time()
         metrics: Dict[str, Any] = {}
@@ -127,7 +157,7 @@ def main():
     }
 
     with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2)
+        json.dump(_to_json_safe(payload), f, indent=2)
 
     print(f"\nSaved baseline eval summary: {out_path}")
 
