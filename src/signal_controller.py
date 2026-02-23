@@ -113,8 +113,11 @@ class BaseController(ABC):
         """Get phase name"""
         return self.phases.get(phase_id, PhaseConfig(phase_id, f"Phase {phase_id}", 30.0, 10.0, 60.0)).name
     
-    def log_decision(self, traffic_state: TrafficState, decision: Tuple[int, float], reason: str = ""):
-        """Log control decision"""
+    def log_decision(self, traffic_state: TrafficState, decision: Tuple[int, float], reason: str = "", enable_logging: bool = True):
+        """Log control decision - can be disabled for performance during training"""
+        if not enable_logging:
+            return
+
         log_entry = {
             'time': traffic_state.time,
             'current_phase': traffic_state.current_phase,
@@ -649,40 +652,56 @@ class MaxPressureController(BaseController):
     still has remaining time, extend it.
     """
 
-    def __init__(self, intersection_id: str = "intersection"):
+    def __init__(self, intersection_id: str = "intersection", enable_logging: bool = True):
         super().__init__(intersection_id)
         self.strategy_name = "MaxPressure Control"
+        self.enable_logging = enable_logging
 
         # Minimum / maximum extension for current phase when it remains best
         self.min_extension = 5.0
         self.max_extension = 20.0
 
     def decide_next_phase(self, traffic_state: TrafficState) -> Tuple[int, float]:
-        """MaxPressure control logic with bus priority"""
+        """MaxPressure control logic with bus priority - optimized version"""
         current_phase = traffic_state.current_phase
 
-        # Compute pressure for all phases (with bus priority weighting)
-        phase_pressures: Dict[int, float] = {}
-        # Get all available lanes (for OSM maps, use traffic_state lanes)
-        all_lanes = []
-        if hasattr(traffic_state, 'lane_list') and traffic_state.lane_list:
-            all_lanes = traffic_state.lane_list
-        elif hasattr(self, 'lane_list') and self.lane_list:
-            all_lanes = self.lane_list
-        
-        for phase_id in self.phases.keys():
-            lanes = self._get_phase_lanes(phase_id)
-            # Handle None or empty lanes - use all available lanes for OSM maps
-            if not lanes:
-                lanes = all_lanes
-            pressure = 0.0
-            for lane in (lanes or []):
+        # Performance optimization: cache lane pressure calculations
+        if not hasattr(self, '_cached_lane_pressures'):
+            self._cached_lane_pressures = {}
+            self._cache_timestamp = -1
+
+        # Only recompute if traffic state has changed significantly
+        if (not hasattr(traffic_state, 'time') or
+            traffic_state.time != getattr(self, '_cache_timestamp', -1) or
+            not self._cached_lane_pressures):
+
+            # Get all available lanes (for OSM maps, use traffic_state lanes)
+            all_lanes = []
+            if hasattr(traffic_state, 'lane_list') and traffic_state.lane_list:
+                all_lanes = traffic_state.lane_list
+            elif hasattr(self, 'lane_list') and self.lane_list:
+                all_lanes = self.lane_list
+
+            # Pre-compute pressure for all relevant lanes
+            self._cached_lane_pressures = {}
+            for lane in (all_lanes or []):
                 q = traffic_state.lane_queue_lengths.get(lane, 0)
                 # Add bus priority: buses count as 2.5x regular vehicles
                 bus_count = (traffic_state.lane_bus_counts or {}).get(lane, 0)
                 bus_wait = (traffic_state.bus_waiting_time or {}).get(lane, 0.0)
                 # Transit priority: buses add significant pressure
-                pressure += q + (bus_count * 2.5) + (bus_wait * 0.3)
+                self._cached_lane_pressures[lane] = q + (bus_count * 2.5) + (bus_wait * 0.3)
+
+            self._cache_timestamp = getattr(traffic_state, 'time', 0)
+
+        # Compute pressure for all phases using cached values
+        phase_pressures: Dict[int, float] = {}
+        for phase_id in self.phases.keys():
+            lanes = self._get_phase_lanes(phase_id)
+            # Handle None or empty lanes - use all available lanes for OSM maps
+            if not lanes:
+                lanes = list(self._cached_lane_pressures.keys())
+            pressure = sum(self._cached_lane_pressures.get(lane, 0.0) for lane in (lanes or []))
             phase_pressures[phase_id] = pressure
 
         # Choose phase with maximum pressure
@@ -694,13 +713,13 @@ class MaxPressureController(BaseController):
         if best_phase == current_phase and traffic_state.phase_remaining_time > 0:
             # Calculate bus bonus for current phase
             current_lanes = self._get_phase_lanes(current_phase)
-            if not current_lanes and hasattr(traffic_state, 'lane_list') and traffic_state.lane_list:
-                current_lanes = traffic_state.lane_list
-            
-            current_bus_count = sum((traffic_state.lane_bus_counts or {}).get(lane, 0) 
+            if not current_lanes:
+                current_lanes = list(self._cached_lane_pressures.keys())
+
+            current_bus_count = sum((traffic_state.lane_bus_counts or {}).get(lane, 0)
                                    for lane in (current_lanes or []))
             bus_bonus = min(8.0, current_bus_count * 2.0) if current_bus_count > 0 else 0
-            
+
             pressure_factor = min(1.0, best_pressure / 10.0)  # 10 queued vehicles → full factor
             extension = max(self.min_extension,
                             min(self.max_extension, pressure_factor * self.max_extension + bus_bonus))
@@ -708,7 +727,7 @@ class MaxPressureController(BaseController):
                       f"extend {extension:.1f}s")
             if current_bus_count > 0:
                 reason += f" [Transit Priority: {current_bus_count} buses]"
-            self.log_decision(traffic_state, (current_phase, extension), reason)
+            self.log_decision(traffic_state, (current_phase, extension), reason, self.enable_logging)
             return current_phase, extension
 
         # Otherwise, switch to the phase with highest pressure
@@ -719,7 +738,7 @@ class MaxPressureController(BaseController):
 
         reason = (f"Switch to {self.get_phase_name(best_phase)} (MaxPressure) - "
                   f"best_pressure={best_pressure:.1f}, current_pressure={current_pressure:.1f}")
-        self.log_decision(traffic_state, (best_phase, duration), reason)
+        self.log_decision(traffic_state, (best_phase, duration), reason, self.enable_logging)
 
         return best_phase, duration
 
@@ -748,10 +767,10 @@ class MaxPressureController(BaseController):
 
 class SignalController:
     """Signal controller main class"""
-    
-    def __init__(self, strategy: ControlStrategy = ControlStrategy.FIXED_TIME, **kwargs):
+
+    def __init__(self, strategy: ControlStrategy = ControlStrategy.FIXED_TIME, enable_logging: bool = True, **kwargs):
         self.strategy = strategy
-        
+
         # Create specific controller based on strategy
         if strategy == ControlStrategy.FIXED_TIME:
             self.controller = FixedTimeController(**kwargs)
@@ -760,12 +779,12 @@ class SignalController:
         elif strategy == ControlStrategy.DQN:
             self.controller = DQNController(**kwargs)
         elif strategy == ControlStrategy.MAX_PRESSURE:
-            self.controller = MaxPressureController(**kwargs)
+            self.controller = MaxPressureController(enable_logging=enable_logging, **kwargs)
         elif strategy == ControlStrategy.SOTL:
             self.controller = SOTLController(**kwargs)
         else:
             raise ValueError(f"Unsupported control strategy: {strategy}")
-        
+
         print(f"Signal controller initialized: {self.controller.strategy_name}")
     
     def control_step(self, traffic_state: TrafficState) -> Tuple[int, float]:

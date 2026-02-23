@@ -59,24 +59,35 @@ def main():
         help="Baseline strategy to evaluate",
     )
     parser.add_argument("--episodes", type=int, default=120)
+    parser.add_argument("--episode-start", type=int, default=1, help="Starting episode number (for parallel evaluation)")
+    parser.add_argument("--episode-end", type=int, help="Ending episode number (for parallel evaluation, defaults to episodes if not specified)")
     parser.add_argument("--duration", type=int, default=1200)
     parser.add_argument("--decision-interval", type=int, default=5, help="Kept for metadata parity (controller checks internally).")
     parser.add_argument("--controlled-lights-ratio", type=float, default=0.2)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--run-id", type=int, default=1)
+    parser.add_argument("--port", type=int, default=8813, help="TraCI port for SUMO connection (for parallel evaluation)")
     parser.add_argument("--sumo-emissions-output", action="store_true", help="Enable SUMO native emission-output and parse totals.")
     parser.add_argument("--keep-emissions-xml", action="store_true", help="Keep emission XML files (default: delete after parsing).")
     parser.add_argument(
         "--data-collection-interval",
         type=int,
         default=10,
-        help="Collect detailed TraCI vehicle snapshots every N simulation steps (larger is faster).",
+        help="Collect vehicle data every N steps. Use 1 for reliable metrics; 50+ for faster runs (may miss data if simulation ends early).",
     )
     parser.add_argument("--out", type=str, default="", help="Output eval JSON path")
     args = parser.parse_args()
 
     if args.controlled_lights_ratio <= 0.0 or args.controlled_lights_ratio > 1.0:
         raise ValueError("--controlled-lights-ratio must be in (0,1].")
+
+    # Determine episode range
+    episode_start = max(1, int(args.episode_start))
+    episode_end = args.episode_end if args.episode_end is not None else int(args.episodes)
+    total_episodes = episode_end - episode_start + 1
+
+    if total_episodes <= 0:
+        raise ValueError("--episode-end must be >= --episode-start")
 
     np.random.seed(int(args.seed))
 
@@ -85,23 +96,24 @@ def main():
 
     out_path = args.out.strip() or os.path.join(
         SimulationConfig.OUTPUT_DIR,
-        f"eval_{args.dataset}_{args.strategy}_ep{int(args.episodes)}.json",
+        f"eval_{args.dataset}_{args.strategy}_ep{episode_start}-{episode_end}.json",
     )
 
     results: List[Dict[str, Any]] = []
 
     print("=" * 78)
     print(f"Baseline evaluation: dataset={args.dataset} strategy={args.strategy}")
-    print(f"Episodes={args.episodes} duration={args.duration}s ratio={args.controlled_lights_ratio:.2f} seed={args.seed} run_id={args.run_id}")
+    print(f"Episodes={episode_start}-{episode_end} ({total_episodes} total) duration={args.duration}s ratio={args.controlled_lights_ratio:.2f} seed={args.seed} run_id={args.run_id}")
     if args.sumo_emissions_output:
         print("Emissions: SUMO native emission-output ENABLED")
     print(f"Output: {out_path}")
     print("=" * 78)
 
-    for ep in range(1, int(args.episodes) + 1):
+    for ep in range(episode_start, episode_end + 1):
         sumo_seed = int(args.seed) + int(args.run_id) * 10000 + int(ep)
         sim = TrafficSimulator(
             use_gui=False,
+            port=int(args.port),
             dataset=args.dataset,
             enable_sumo_emissions_output=bool(args.sumo_emissions_output),
             sumo_seed=sumo_seed,
@@ -130,7 +142,10 @@ def main():
                 pass
 
         wall = time.time() - start
-        print(f"Episode {ep:04d}/{args.episodes} | wall={wall:.2f}s")
+        if not metrics:
+            print(f"Episode {ep:04d}/{args.episodes} | wall={wall:.2f}s | WARNING: empty metrics (sim may have ended early)")
+        else:
+            print(f"Episode {ep:04d}/{args.episodes} | wall={wall:.2f}s")
         results.append(
             {
                 "episode": int(ep),
@@ -146,7 +161,8 @@ def main():
     payload = {
         "dataset": args.dataset,
         "strategy": args.strategy,
-        "episodes": int(args.episodes),
+        "episodes": total_episodes,
+        "episode_range": f"{episode_start}-{episode_end}",
         "duration": int(args.duration),
         "decision_interval": int(args.decision_interval),
         "controlled_lights_ratio": float(args.controlled_lights_ratio),

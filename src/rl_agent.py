@@ -224,7 +224,7 @@ class RLAgent:
             'memory_size': 10000,
             'target_update_freq': 100,
             'hidden_dims': [256, 128, 64],
-            'device': 'cuda' if torch.cuda.is_available() else 'cpu',
+            'device': 'cuda' if (torch.cuda.is_available() and torch.cuda.device_count() > 0 and torch.version.cuda is not None) else 'cpu',
             # Extensions
             'double_dqn': True,   # Use Double DQN update rule
             'dueling': True,      # Use dueling network architecture

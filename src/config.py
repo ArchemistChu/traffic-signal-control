@@ -5,6 +5,7 @@ Manages settings for switching between custom intersection and OSM-based maps
 """
 
 import os
+import torch
 
 class SimulationConfig:
     """Simulation configuration class"""
@@ -122,7 +123,7 @@ class SimulationConfig:
         'memory_size': 50000,  # Larger memory for complex scenarios
         'target_update_freq': 200,
         'hidden_dims': [256, 256, 128],  # Larger network for complex state space
-        'device': 'cuda'  # Will auto-fallback to cpu if cuda not available
+        'device': 'cuda' if (torch.cuda.is_available() and torch.cuda.device_count() > 0 and torch.version.cuda is not None) else 'cpu'
     }
     
     # Output directories

@@ -208,6 +208,7 @@ def main():
         help="Keep generated emissions_*.xml files (default: delete after parsing to save disk space).",
     )
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--port", type=int, default=8813, help="TraCI port for SUMO connection")
     parser.add_argument(
         "--run-id",
         type=int,
@@ -219,6 +220,7 @@ def main():
     )
     parser.add_argument("--out", type=str, default="", help="Optional JSON output for eval summary")
     parser.add_argument("--calc-metrics", action="store_true", help="Compute performance metrics (slower)")
+    parser.add_argument("--force-cpu", action="store_true", help="Force CPU usage even if CUDA is available")
     parser.add_argument(
         "--data-collection-interval",
         type=int,
@@ -268,6 +270,7 @@ def main():
         sumo_seed = int(args.seed) + int(args.run_id) * 10000 + int(ep)
         simulator = TrafficSimulator(
             use_gui=False,
+            port=args.port,
             dataset=args.dataset,
             enable_sumo_emissions_output=bool(args.sumo_emissions_output),
             sumo_seed=sumo_seed,
@@ -307,7 +310,7 @@ def main():
         if agent is None:
             s0 = build_local_state(tls_ids[0], tl_lanes[tls_ids[0]])
             state_dim = len(RLTState(s0, lane_list=tl_lanes[tls_ids[0]]).to_vector())
-            agent = RLAgent(config={
+            agent_config = {
                 "state_dim": state_dim,
                 "action_dim": 2,
                 "lr": 1e-4,
@@ -318,7 +321,10 @@ def main():
                 "dueling": True,
                 "double_dqn": True,
                 "n_step": 3,
-            })
+            }
+            if args.force_cpu:
+                agent_config["device"] = "cpu"
+            agent = RLAgent(config=agent_config)
             agent.load_model(model_path)
 
         start_wall = time.time()

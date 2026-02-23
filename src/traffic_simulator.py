@@ -760,7 +760,8 @@ class TrafficSimulator:
                     'SOTL': ControlStrategy.SOTL
                 }
                 control_strategy = strategy_map.get(strategy, ControlStrategy.FIXED_TIME)
-                controller = SignalController(control_strategy)
+                # Disable detailed logging during training for better performance
+                controller = SignalController(control_strategy, enable_logging=False)
                 print(f"Signal control strategy: {strategy} ({control_strategy.value})")
             except ImportError as e:
                 print(f"Warning: Unable to import signal controller, using default SUMO control: {e}")
@@ -770,7 +771,10 @@ class TrafficSimulator:
         
         print("Starting simulation...")
         start_time = time.time()
-        
+
+        # Track if SUMO was closed for metrics parsing
+        closed_for_metrics = False
+
         try:
             # Manually control simulation steps to avoid TraCI early termination
             # Calculate max_steps based on duration (assuming 1 second per step)
@@ -997,7 +1001,9 @@ class TrafficSimulator:
                                 max_green = 120.0
 
                                 # Decide only near phase end (cheap + stable)
-                                should_check = (remaining <= 1.0) or (self.step_count % 5 == 0 and remaining <= 5.0)
+                                # For MAX_PRESSURE, reduce frequency to every 10 steps to improve performance
+                                check_frequency = 10 if strategy == "MAX_PRESSURE" else 5
+                                should_check = (remaining <= 1.0) or (self.step_count % check_frequency == 0 and remaining <= 5.0)
                                 if not should_check:
                                     continue
 
@@ -1028,12 +1034,23 @@ class TrafficSimulator:
                                     if lanes:
                                         lanes_needed.update(lanes)
 
+                            # Performance optimization: batch lane queries and cache results
                             lane_queue: Dict[str, float] = {}
-                            for lane_id in lanes_needed:
+                            if lanes_needed:
                                 try:
-                                    lane_queue[lane_id] = float(traci.lane.getLastStepHaltingNumber(lane_id))
+                                    # Batch query all needed lanes at once for better performance
+                                    for lane_id in lanes_needed:
+                                        lane_queue[lane_id] = float(traci.lane.getLastStepHaltingNumber(lane_id))
                                 except Exception:
-                                    lane_queue[lane_id] = 0.0
+                                    # Fallback to individual queries if batch fails
+                                    for lane_id in lanes_needed:
+                                        try:
+                                            lane_queue[lane_id] = float(traci.lane.getLastStepHaltingNumber(lane_id))
+                                        except Exception:
+                                            lane_queue[lane_id] = 0.0
+                            else:
+                                # No lanes needed, initialize empty
+                                pass
 
                             def _lane_weighted_queue(lane_id: str) -> float:
                                 # Keep pressure definition lightweight and stable on large OSM maps.

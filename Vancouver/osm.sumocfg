@@ -33,8 +33,6 @@
         <no-step-log value="true"/>
     </report>
 
-    <gui_only>
-        <gui-settings-file value="osm.view.xml"/>
-    </gui_only>
+    <!-- gui_only removed: osm.view.xml is missing; headless runs don't need it -->
 
 </sumoConfiguration>
