@@ -38,16 +38,13 @@ class DQNNetwork(nn.Module):
         layers = []
         input_dim = state_dim
         
-        # Build hidden layers
         for hidden_dim in hidden_dims:
             layers.extend([
                 nn.Linear(input_dim, hidden_dim),
                 nn.ReLU(),
-                nn.Dropout(0.2)
             ])
             input_dim = hidden_dim
         
-        # Output layer
         layers.append(nn.Linear(input_dim, action_dim))
         
         self.network = nn.Sequential(*layers)
@@ -218,8 +215,8 @@ class RLAgent:
             'lr': 1e-3,
             'gamma': 0.95,
             'epsilon_start': 1.0,
-            'epsilon_end': 0.1,
-            'epsilon_decay': 0.995,
+            'epsilon_end': 0.05,
+            'epsilon_decay': 0.97,
             'batch_size': 64,
             'memory_size': 10000,
             'target_update_freq': 100,
@@ -419,8 +416,7 @@ class RLAgent:
             next_q_values[effective_nonterminal] = target_next_q[effective_nonterminal]
             target_q_values = rewards + self.config['gamma'] * next_q_values
         
-        # Calculate loss
-        loss = F.mse_loss(current_q_values.squeeze(), target_q_values)
+        loss = F.smooth_l1_loss(current_q_values.squeeze(), target_q_values)
         
         # Backward propagation
         self.optimizer.zero_grad()
@@ -431,30 +427,31 @@ class RLAgent:
         
         self.optimizer.step()
         
-        # Update target network
+        # Soft target update (Polyak averaging) every target_update_freq steps
         if self.step_count % self.config['target_update_freq'] == 0:
-            self.target_network.load_state_dict(self.q_network.state_dict())
+            tau = self.config.get('tau', 0.005)
+            for tp, op in zip(self.target_network.parameters(), self.q_network.parameters()):
+                tp.data.copy_(tau * op.data + (1.0 - tau) * tp.data)
         
-        # Update epsilon
-        self.epsilon = max(
-            self.config['epsilon_end'],
-            self.epsilon * self.config['epsilon_decay']
-        )
-        
-        # Record statistics
+        # Record statistics (epsilon is decayed per-episode in end_episode())
         self.training_history['losses'].append(loss.item())
         self.training_history['epsilon_values'].append(self.epsilon)
         
         return loss.item()
     
     def end_episode(self):
-        """End current episode"""
+        """End current episode and decay epsilon."""
         self.training_history['episode_rewards'].append(self.current_episode_reward)
         self.training_history['episode_lengths'].append(self.current_episode_length)
         
         self.episode_count += 1
         self.current_episode_reward = 0.0
         self.current_episode_length = 0
+
+        self.epsilon = max(
+            self.config['epsilon_end'],
+            self.epsilon * self.config['epsilon_decay']
+        )
     
     def action_to_control_command(self, action: int, current_state: TrafficState) -> Tuple[str, Dict]:
         """

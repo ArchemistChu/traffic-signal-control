@@ -234,9 +234,11 @@ a_t=
 \arg\max_a Q_\theta(s_t,a) & \text{with probability }1-\epsilon
 \end{cases}
 \]
-with \(\epsilon\) decayed from \(\epsilon_{\text{start}}\) to \(\epsilon_{\min}\).
+with \(\epsilon\) decayed exponentially from \(\epsilon_{\text{start}}=1.0\) to \(\epsilon_{\min}=0.1\) using decay rate \(\epsilon_{\text{decay}}=0.995\) per step.
 
-\textbf{Key hyperparameters (to report).} Learning rate \(\alpha\), discount \(\gamma\), replay size \(N\), batch size \(B\), target update period \(C\), \(n\)-step horizon \(n\), and network width/depth should be explicitly stated (Table~\ref{tab:exp_setup}) to ensure fair comparison and reproducibility.
+\textbf{Network architecture.} The Q-network uses a three-layer fully-connected MLP with hidden dimensions [256, 128, 64]. All layers use ReLU activation functions, and weights are initialized using Xavier uniform initialization. The dueling architecture splits the final hidden layer into separate value and advantage streams before combining them.
+
+\textbf{Key hyperparameters (to report).} Learning rate \(\alpha\), discount \(\gamma\), replay size \(N\), batch size \(B\), target update period \(C\), \(n\)-step horizon \(n\), and network architecture should be explicitly stated (Table~\ref{tab:exp_setup}) to ensure fair comparison and reproducibility.
 
 \begin{algorithm}
 \caption{Shared Multi-Agent Dueling Double DQN Training (OSM networks)}
@@ -259,12 +261,6 @@ with \(\epsilon\) decayed from \(\epsilon_{\text{start}}\) to \(\epsilon_{\min}\
     \EndFor
 \end{algorithmic}
 \end{algorithm}
-
-\subsection{PressLight-inspired Pressure DQN (PRESSLIGHT)}
-As an additional RL baseline, a PressLight-inspired controller is implemented. For each traffic light, the state is a fixed-size vector of \(K\) \emph{phase pressures} (queue demand for each candidate green phase), padded to length \(K\). The action selects the index of the green phase to serve next (mapped to a valid SUMO green phase). A pressure-reduction reward is used:
-\[
-r_t = -\sum_{k=1}^{K} P_k(t) + 0.3\left(\sum_{k=1}^{K} P_k(t-1)-\sum_{k=1}^{K} P_k(t)\right)
-\]
 
 \section{Experimental Protocol and Performance Metrics}
 \label{sec:metrics}
