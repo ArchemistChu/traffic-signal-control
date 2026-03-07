@@ -4,7 +4,7 @@
 \chapter{Results}
 \label{ch:results}
 
-This chapter reports the experimental results of the proposed traffic signal control system on OSM Web Wizard city networks. Following common practice in the traffic-signal-control literature, results are presented as a structured comparison against non-learning baselines using multiple complementary metrics (delay/waiting time, queue length, throughput, and environmental impact), together with a stability and robustness discussion \cite{xiao2024advances,noaeen2022reinforcement}.
+This chapter reports the experimental results of the proposed traffic signal control system on OSM Web Wizard city networks. Following common practice in the traffic-signal-control literature, results are presented as a structured comparison against non-learning baselines using multiple complementary metrics (delay/waiting time, queue length, throughput, and environmental impact), together with a stability and robustness discussion \cite{noaeen2022reinforcement, xiao2024advances}.
 
 In particular, prior work highlights that the credibility of learning-based traffic signal control depends on \emph{(i)} comparisons to multiple baselines under the same demand, \emph{(ii)} reporting both efficiency and robustness (e.g., stability under demand variation or perturbations), and \emph{(iii)} analyzing the role of the reward design and action formulation \cite{xiao2024advances,noaeen2022reinforcement}. Therefore, rather than reporting a single metric, the evaluation in this project emphasizes a multi-metric view of network performance and explicitly relates each metric to the intended control objective (reducing congestion while avoiding unstable switching).
 
@@ -12,17 +12,17 @@ Experiments are conducted on the OSM Web Wizard city maps (e.g., Cologne, Vancou
 
 Beyond traffic efficiency, recent works increasingly motivate the inclusion of sustainability and side-effects in the evaluation (e.g., fuel consumption and emissions) when a microscopic simulator is available \cite{xiao2024advances}. For this reason, the results section includes total \(CO_2\) emissions and fuel consumption computed from SUMO’s emission model. These environmental metrics are interpreted together with delay and throughput to evaluate whether improvements in mobility also translate to reduced idling and acceleration-related emissions.
 
-Finally, the literature also stresses that reinforcement learning controllers should be assessed not only for average performance but also for \emph{stability} (e.g., sensitivity to scenario changes, reward choice, and stochasticity of simulation runs) \cite{xiao2024advances,noaeen2022reinforcement}. Accordingly, where multiple runs are available, we summarize results with mean and variability and discuss qualitative stability indicators such as reduced oscillatory phase switching and consistent performance across maps. The remainder of this chapter is organized as follows: Section~\ref{sec:results_setup} summarizes the evaluation protocol; Section~\ref{sec:results_main} presents the preliminary generalization results; Section~\ref{sec:results_tests} outlines the planned statistical testing and baseline comparison protocol; and Section~\ref{sec:results_future} discusses remaining work and future improvements.
+Finally, the literature also stresses that reinforcement learning controllers should be assessed not only for average performance but also for \emph{stability} (e.g., sensitivity to scenario changes, reward choice, and stochasticity of simulation runs) \cite{noaeen2022reinforcement,xiao2024advances}. Accordingly, where multiple runs are available, we summarize results with mean and variability and discuss qualitative stability indicators such as reduced oscillatory phase switching and consistent performance across maps. The remainder of this chapter is organized as follows: Section~\ref{sec:results_setup} summarizes the evaluation protocol; Section~\ref{sec:results_main} presents the preliminary generalization results; Section~\ref{sec:results_tests} outlines the planned statistical testing and baseline comparison protocol; and Section~\ref{sec:results_future} discusses remaining work and future improvements.
 
 \section{Evaluation Setup}
 \label{sec:results_setup}
 Table~\ref{tab:results_setup} summarizes the concrete evaluation configuration used to produce the reported generalization results. This level of detail is necessary for reproducibility and for fair comparison with baselines, consistent with the reporting discipline in recent traffic-signal-control literature.
 
-Table~\ref{tab:drl_hyperparams} summarizes the key hyperparameters used for training the DRL agent (Dueling Double DQN with parameter sharing).
+Table~\ref{tab:drl_hyperparams} summarizes the key parameters used for training the RL agent (Dueling Double DQN with parameter sharing).
 
 \begin{table}[h]
     \centering
-    \caption{Hyperparameters and parameters for training the DRL agent.}
+    \caption{Variables and parameters for training the RL agent.}
     \label{tab:drl_hyperparams}
     \begin{tabular}{l c p{6.5cm}}
         \hline

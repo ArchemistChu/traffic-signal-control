@@ -414,7 +414,8 @@ class RLAgent:
 
             next_q_values = torch.zeros(self.config['batch_size']).to(self.device)
             next_q_values[effective_nonterminal] = target_next_q[effective_nonterminal]
-            target_q_values = rewards + self.config['gamma'] * next_q_values
+            gamma_n = self.config['gamma'] ** self.n_step
+            target_q_values = rewards + gamma_n * next_q_values
         
         loss = F.smooth_l1_loss(current_q_values.squeeze(), target_q_values)
         
@@ -439,11 +440,18 @@ class RLAgent:
         
         return loss.item()
     
-    def end_episode(self):
-        """End current episode and decay epsilon."""
-        self.training_history['episode_rewards'].append(self.current_episode_reward)
+    def end_episode(self, avg_reward_override: float = None):
+        """End current episode and decay epsilon.
+
+        Args:
+            avg_reward_override: if provided, store this as the episode reward
+                instead of the raw accumulated sum. Useful in multi-agent settings
+                where the raw sum scales with agent count and is hard to interpret.
+        """
+        reward_to_log = avg_reward_override if avg_reward_override is not None else self.current_episode_reward
+        self.training_history['episode_rewards'].append(reward_to_log)
         self.training_history['episode_lengths'].append(self.current_episode_length)
-        
+
         self.episode_count += 1
         self.current_episode_reward = 0.0
         self.current_episode_length = 0

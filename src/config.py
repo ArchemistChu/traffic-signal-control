@@ -118,11 +118,11 @@ class SimulationConfig:
         'gamma': 0.95,
         'epsilon_start': 1.0,
         'epsilon_end': 0.05,
-        'epsilon_decay': 0.97,
+        'epsilon_decay': 0.985,
         'batch_size': 64,
         'memory_size': 50000,
         'target_update_freq': 200,
-        'tau': 0.005,
+        'tau': 0.01,
         'hidden_dims': [256, 256, 128],
         'device': 'cuda' if (torch.cuda.is_available() and torch.cuda.device_count() > 0 and torch.version.cuda is not None) else 'cpu'
     }

@@ -23,6 +23,7 @@ import time
 from typing import Dict, List, Tuple
 
 import numpy as np
+import torch
 
 from src.config import SimulationConfig
 from src.traffic_simulator import TrafficSimulator
@@ -33,6 +34,8 @@ try:
 except ImportError:
     traci = None
 
+
+MAX_GREEN_PHASES = 6  # fixed action dimension — pad/mask if fewer green phases
 
 def get_phase_count(tl_id: str) -> int:
     """SUMO-version-safe phase count for a TLS."""
@@ -48,6 +51,42 @@ def get_phase_count(tl_id: str) -> int:
     except Exception:
         pass
     return 1
+
+
+def get_green_phases(tl_id: str) -> List[int]:
+    """Return indices of phases that give green to at least one vehicle lane."""
+    def _is_ped(lane_id: str) -> bool:
+        if not lane_id:
+            return False
+        low = lane_id.lower()
+        return any(k in low for k in [":w", "ped", "walk", "sidewalk", "foot", "crossing"])
+
+    try:
+        logics = traci.trafficlight.getAllProgramLogics(tl_id)
+        if not logics:
+            return list(range(max(1, get_phase_count(tl_id))))
+        links = traci.trafficlight.getControlledLinks(tl_id)
+        phases = logics[0].phases
+        greens = []
+        for p_idx, phase in enumerate(phases):
+            state_str = phase.state
+            has_vehicle_green = False
+            for li, ch in enumerate(state_str):
+                if ch in ("G", "g"):
+                    if li < len(links):
+                        for link in links[li]:
+                            if link and len(link) > 0 and not _is_ped(link[0]):
+                                has_vehicle_green = True
+                                break
+                    else:
+                        has_vehicle_green = True
+                if has_vehicle_green:
+                    break
+            if has_vehicle_green:
+                greens.append(int(p_idx))
+        return greens if greens else list(range(max(1, len(phases))))
+    except Exception:
+        return list(range(max(1, get_phase_count(tl_id))))
 
 
 def get_controlled_lanes_for_tl(tl_id: str) -> List[str]:
@@ -120,15 +159,39 @@ def build_local_state(tl_id: str, lane_ids_fixed: List[str]) -> Dict:
     }
 
 
-def local_reward(prev_state: Dict, curr_state: Dict, action: int) -> float:
-    """Local reward: reduce queue; small penalty for switching."""
+def local_reward(prev_state: Dict, curr_state: Dict, action: int,
+                  prev_action: int = 0, n_green_phases: int = 2) -> float:
+    """Reward targeting the metrics we measure: queue length, waiting time, speed.
+
+    Components (all clipped to keep total in roughly [-1.5, +1]):
+      1. Queue improvement (delta)       — encourages queue reduction
+      2. Absolute queue penalty           — penalises large standing queues
+      3. Speed improvement (delta)        — encourages flow
+      4. Phase-switch penalty             — discourages oscillation
+    """
     prev_q = sum(prev_state.get("lane_queue_lengths", {}).values())
     curr_q = sum(curr_state.get("lane_queue_lengths", {}).values())
-    improvement = prev_q - curr_q
-    r = -0.1 * curr_q + 0.05 * improvement
-    if action == 1:
-        r -= 0.02
-    return float(r)
+    queue_change = prev_q - curr_q
+
+    prev_speeds = list(prev_state.get("lane_mean_speeds", {}).values())
+    curr_speeds = list(curr_state.get("lane_mean_speeds", {}).values())
+    prev_avg_speed = np.mean(prev_speeds) if prev_speeds else 0.0
+    curr_avg_speed = np.mean(curr_speeds) if curr_speeds else 0.0
+    speed_change = curr_avg_speed - prev_avg_speed
+
+    QUEUE_SCALE = 10.0
+    SPEED_SCALE = 5.0
+    ABS_QUEUE_SCALE = 30.0
+
+    r_delta_q = 0.45 * np.clip(queue_change / QUEUE_SCALE, -1.0, 1.0)
+    r_abs_q = -0.25 * np.clip(curr_q / ABS_QUEUE_SCALE, 0.0, 1.0)
+    r_speed = 0.25 * np.clip(speed_change / SPEED_SCALE, -1.0, 1.0)
+
+    r_switch = 0.0
+    if action != 0 and action != prev_action:
+        r_switch = -0.05
+
+    return float(r_delta_q + r_abs_q + r_speed + r_switch)
 
 
 def pad_or_truncate(lanes: List[str], k: int) -> List[str]:
@@ -219,6 +282,7 @@ def main():
     out_path = args.out.strip() or default_out
 
     agent: RLAgent | None = None
+    lr_scheduler = None
 
     print("=" * 78)
     print(f"MARL training: {args.dataset} | parameter-sharing DQN")
@@ -260,26 +324,41 @@ def main():
             tl_lanes[tl_id] = pad_or_truncate(lanes, int(args.lanes_per_tl))
             tl_phase_counts[tl_id] = max(1, get_phase_count(tl_id))
 
+        # Per-TL green phase list (for N-action mapping)
+        tl_green_phases: Dict[str, List[int]] = {}
+        for tl_id in tls_ids:
+            gp = get_green_phases(tl_id)
+            tl_green_phases[tl_id] = gp
+            if ep == 1:
+                print(f"  TL {tl_id}: {len(gp)} green phases {gp[:8]}")
+
         tl_regions: Dict[str, Tuple[int, int]] = {}
         if args.regional_reward_weight and args.regional_reward_weight > 0.0:
             tl_regions = build_region_map(tls_ids, float(args.region_grid_size))
 
         # Init agent once we know state_dim (fixed by lanes-per-tl)
+        # action_dim = MAX_GREEN_PHASES+1: action 0 = keep, actions 1..N = jump to green phase i
         if agent is None:
             s0 = build_local_state(tls_ids[0], tl_lanes[tls_ids[0]])
             state_dim = len(RLTState(s0, lane_list=tl_lanes[tls_ids[0]]).to_vector())
+            action_dim = MAX_GREEN_PHASES + 1
+            print(f"Action space: {action_dim} (0=keep, 1..{MAX_GREEN_PHASES}=jump to green phase)")
             agent = RLAgent(config={
                 "state_dim": state_dim,
-                "action_dim": 2,
+                "action_dim": action_dim,
                 "lr": 1e-4,
-                "gamma": 0.99,
+                "gamma": 0.95,
+                "epsilon_start": 1.0,
+                "epsilon_end": 0.05,
+                "epsilon_decay": 1.0,
                 "batch_size": 64,
-                "memory_size": 100000,
+                "memory_size": 200000,
                 "target_update_freq": 500,
+                "tau": 0.01,
                 "dueling": True,
                 "double_dqn": True,
-                "n_step": 3,
-                # --- metadata for reproducibility (not used by RLAgent logic) ---
+                "n_step": 1,
+                "max_green_phases": MAX_GREEN_PHASES,
                 "dataset": args.dataset,
                 "lanes_per_tl": int(args.lanes_per_tl),
                 "decision_interval": int(args.decision_interval),
@@ -288,6 +367,9 @@ def main():
                 "regional_reward_weight": float(args.regional_reward_weight),
                 "region_grid_size": float(args.region_grid_size),
             })
+            lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                agent.optimizer, T_max=args.episodes, eta_min=1e-5
+            )
 
         # Episode loop
         start_wall = time.time()
@@ -301,6 +383,8 @@ def main():
         }
 
         losses: List[float] = []
+        ep_rewards_per_step: List[float] = []
+        prev_actions: Dict[str, int] = {tl_id: 0 for tl_id in tls_ids}
 
         while True:
             traci.simulationStep()
@@ -310,23 +394,26 @@ def main():
             if done or (sim_t - last_decision_t) >= float(args.decision_interval):
                 last_decision_t = sim_t
 
-                # Act for each TLS (multi-agent)
                 actions: Dict[str, int] = {}
                 for tl_id in tls_ids:
                     actions[tl_id] = agent.select_action(prev_state_obj[tl_id], training=True)
 
-                # Apply actions
+                # Apply N-action: 0=keep, 1..N=jump to green phase index
                 for tl_id, action in actions.items():
-                    if action != 1:
+                    if action == 0:
                         continue
+                    gp = tl_green_phases.get(tl_id, [])
+                    if not gp:
+                        continue
+                    phase_idx = (action - 1) % len(gp)
+                    target_phase = gp[phase_idx]
                     try:
                         cur = int(traci.trafficlight.getPhase(tl_id))
-                        nph = int(tl_phase_counts.get(tl_id, 1))
-                        traci.trafficlight.setPhase(tl_id, (cur + 1) % max(1, nph))
+                        if target_phase != cur:
+                            traci.trafficlight.setPhase(tl_id, target_phase)
                     except Exception:
                         pass
 
-                # Observe next for all TLS
                 curr_state_dict: Dict[str, Dict] = {}
                 curr_state_obj: Dict[str, RLTState] = {}
                 for tl_id in tls_ids:
@@ -334,7 +421,6 @@ def main():
                     curr_state_dict[tl_id] = curr_dict
                     curr_state_obj[tl_id] = RLTState(curr_dict, lane_list=tl_lanes[tl_id])
 
-                # Regional congestion (avg queue per region)
                 region_sum: Dict[Tuple[int, int], float] = {}
                 region_cnt: Dict[Tuple[int, int], int] = {}
                 if tl_regions:
@@ -344,33 +430,63 @@ def main():
                         region_sum[region] = region_sum.get(region, 0.0) + q
                         region_cnt[region] = region_cnt.get(region, 0) + 1
 
-                # Store experience per agent
+                step_rewards: List[float] = []
                 for tl_id in tls_ids:
-                    r = local_reward(prev_state_dict[tl_id], curr_state_dict[tl_id], actions[tl_id])
+                    gp = tl_green_phases.get(tl_id, [])
+                    r = local_reward(
+                        prev_state_dict[tl_id], curr_state_dict[tl_id],
+                        actions[tl_id], prev_actions.get(tl_id, 0),
+                        n_green_phases=len(gp),
+                    )
                     if tl_regions:
                         region = tl_regions.get(tl_id, (0, 0))
                         denom = max(1, region_cnt.get(region, 1))
                         region_avg_q = region_sum.get(region, 0.0) / float(denom)
-                        r += -float(args.regional_reward_weight) * region_avg_q
+                        regional_penalty = -float(args.regional_reward_weight) * region_avg_q
+                        r += float(np.clip(regional_penalty, -0.3, 0.0))
 
-                    agent.store_experience(prev_state_obj[tl_id], actions[tl_id], r, curr_state_obj[tl_id], done)
-                    loss = agent.train_step()
-                    if loss is not None:
-                        losses.append(float(loss))
+                    step_rewards.append(r)
+                    agent.store_experience(
+                        prev_state_obj[tl_id],
+                        actions[tl_id],
+                        r,
+                        curr_state_obj[tl_id],
+                        done
+                    )
 
                     prev_state_dict[tl_id] = curr_state_dict[tl_id]
                     prev_state_obj[tl_id] = curr_state_obj[tl_id]
 
+                prev_actions = dict(actions)
+
+                NUM_TRAIN_STEPS = 4
+                for _ in range(NUM_TRAIN_STEPS):
+                    loss = agent.train_step()
+                    if loss is not None:
+                        losses.append(float(loss))
+
+                ep_rewards_per_step.append(float(np.mean(step_rewards)))
+
             if done:
                 break
 
-        agent.end_episode()
+        n_agents = max(1, len(tls_ids))
+        avg_r_per_step = float(np.mean(ep_rewards_per_step)) if ep_rewards_per_step else 0.0
+        agent.end_episode(avg_reward_override=avg_r_per_step)
+
+        # Linear epsilon decay: 1.0 -> 0.05 over all episodes
+        agent.epsilon = max(
+            agent.config['epsilon_end'],
+            1.0 - (1.0 - agent.config['epsilon_end']) * ep / args.episodes
+        )
+        lr_scheduler.step()
+
         simulator.close_simulation()
 
         wall = time.time() - start_wall
         avg_loss = float(np.mean(losses)) if losses else float("nan")
-        ep_reward = agent.training_history["episode_rewards"][-1] if agent.training_history["episode_rewards"] else 0.0
-        print(f"Episode {ep:04d}/{args.episodes} | wall={wall:.2f}s | reward(sum)={ep_reward:.2f} | avg_loss={avg_loss:.4f} | epsilon={agent.epsilon:.3f} | tls={len(tls_ids)}")
+        current_lr = lr_scheduler.get_last_lr()[0]
+        print(f"Episode {ep:04d}/{args.episodes} | wall={wall:.2f}s | avg_reward/step={avg_r_per_step:.4f} | avg_loss={avg_loss:.4f} | epsilon={agent.epsilon:.3f} | lr={current_lr:.2e} | tls={n_agents}")
 
         if ep % int(args.save_every) == 0:
             agent.save_model(out_path)
