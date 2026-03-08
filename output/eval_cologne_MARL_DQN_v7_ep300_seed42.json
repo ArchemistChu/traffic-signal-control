@@ -1,0 +1,1096 @@
+{
+  "dataset": "cologne",
+  "model": "D:\\Final Year Project\\traffic-signal-control\\models\\marl_cologne_shared_dqn_regionaware_v7.pt",
+  "episodes": 120,
+  "duration": 1200,
+  "decision_interval": 5,
+  "lanes_per_tl": 8,
+  "controlled_lights_ratio": 0.5,
+  "max_controlled_lights": 3,
+  "regional_reward_weight": 0.0,
+  "region_grid_size": 500.0,
+  "seed": 42,
+  "run_id": 0,
+  "results": [
+    {
+      "episode": 1,
+      "sumo_seed": 43,
+      "wall_seconds": 168.42102217674255,
+      "reward_sum": -536.2398555190781,
+      "avg_reward": -0.055858318283237306,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 2,
+      "sumo_seed": 44,
+      "wall_seconds": 169.87821698188782,
+      "reward_sum": -523.9753131976829,
+      "avg_reward": -0.054580761791425306,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 3,
+      "sumo_seed": 45,
+      "wall_seconds": 169.0767698287964,
+      "reward_sum": -536.4944818511455,
+      "avg_reward": -0.05588484185949432,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 4,
+      "sumo_seed": 46,
+      "wall_seconds": 167.71080923080444,
+      "reward_sum": -547.1244217082383,
+      "avg_reward": -0.056992127261274825,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 5,
+      "sumo_seed": 47,
+      "wall_seconds": 168.13994455337524,
+      "reward_sum": -557.4382349733859,
+      "avg_reward": -0.0580664828097277,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 6,
+      "sumo_seed": 48,
+      "wall_seconds": 169.9363648891449,
+      "reward_sum": -539.4303464713017,
+      "avg_reward": -0.056190661090760596,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 7,
+      "sumo_seed": 49,
+      "wall_seconds": 168.86818051338196,
+      "reward_sum": -544.8043397332111,
+      "avg_reward": -0.05675045205554283,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 8,
+      "sumo_seed": 50,
+      "wall_seconds": 168.3257565498352,
+      "reward_sum": -546.3376865306589,
+      "avg_reward": -0.05691017568027697,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 9,
+      "sumo_seed": 51,
+      "wall_seconds": 170.9173505306244,
+      "reward_sum": -547.8965614600794,
+      "avg_reward": -0.05707255848542494,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 10,
+      "sumo_seed": 52,
+      "wall_seconds": 168.37963032722473,
+      "reward_sum": -530.6604805325491,
+      "avg_reward": -0.055277133388807194,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 11,
+      "sumo_seed": 53,
+      "wall_seconds": 167.77960395812988,
+      "reward_sum": -539.3243065079266,
+      "avg_reward": -0.056179615261242356,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 12,
+      "sumo_seed": 54,
+      "wall_seconds": 167.7736735343933,
+      "reward_sum": -526.7585629111138,
+      "avg_reward": -0.05487068363657435,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 13,
+      "sumo_seed": 55,
+      "wall_seconds": 171.4336292743683,
+      "reward_sum": -559.1742737173905,
+      "avg_reward": -0.05824732017889485,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 14,
+      "sumo_seed": 56,
+      "wall_seconds": 167.94997930526733,
+      "reward_sum": -542.2432636150039,
+      "avg_reward": -0.05648367329322957,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 15,
+      "sumo_seed": 57,
+      "wall_seconds": 168.19690036773682,
+      "reward_sum": -552.4816932387239,
+      "avg_reward": -0.057550176379033736,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 16,
+      "sumo_seed": 58,
+      "wall_seconds": 169.26764130592346,
+      "reward_sum": -524.1816539837756,
+      "avg_reward": -0.05460225562330996,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 17,
+      "sumo_seed": 59,
+      "wall_seconds": 168.55229783058167,
+      "reward_sum": -518.1544342619991,
+      "avg_reward": -0.053974420235624904,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 18,
+      "sumo_seed": 60,
+      "wall_seconds": 169.34349298477173,
+      "reward_sum": -541.8000925898555,
+      "avg_reward": -0.05643750964477661,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 19,
+      "sumo_seed": 61,
+      "wall_seconds": 168.16979908943176,
+      "reward_sum": -528.3112548044559,
+      "avg_reward": -0.05503242237546415,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 20,
+      "sumo_seed": 62,
+      "wall_seconds": 171.21758770942688,
+      "reward_sum": -544.522679543734,
+      "avg_reward": -0.056721112452472286,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 21,
+      "sumo_seed": 63,
+      "wall_seconds": 167.51092100143433,
+      "reward_sum": -525.8383923620244,
+      "avg_reward": -0.05477483253771087,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 22,
+      "sumo_seed": 64,
+      "wall_seconds": 167.74558472633362,
+      "reward_sum": -547.259593606181,
+      "avg_reward": -0.05700620766731053,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 23,
+      "sumo_seed": 65,
+      "wall_seconds": 169.4329652786255,
+      "reward_sum": -538.1610593862941,
+      "avg_reward": -0.05605844368607231,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 24,
+      "sumo_seed": 66,
+      "wall_seconds": 169.64278316497803,
+      "reward_sum": -543.5351310972384,
+      "avg_reward": -0.056618242822629,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 25,
+      "sumo_seed": 67,
+      "wall_seconds": 167.4098460674286,
+      "reward_sum": -529.1586685000334,
+      "avg_reward": -0.055120694635420145,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 26,
+      "sumo_seed": 68,
+      "wall_seconds": 167.76642632484436,
+      "reward_sum": -540.9221801578184,
+      "avg_reward": -0.05634606043310608,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 27,
+      "sumo_seed": 69,
+      "wall_seconds": 169.93844056129456,
+      "reward_sum": -532.0599623619689,
+      "avg_reward": -0.05542291274603843,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 28,
+      "sumo_seed": 70,
+      "wall_seconds": 169.0122344493866,
+      "reward_sum": -553.6304824078943,
+      "avg_reward": -0.05766984191748899,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 29,
+      "sumo_seed": 71,
+      "wall_seconds": 167.56620526313782,
+      "reward_sum": -550.1296849723549,
+      "avg_reward": -0.05730517551795363,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 30,
+      "sumo_seed": 72,
+      "wall_seconds": 169.55303812026978,
+      "reward_sum": -553.2961510685857,
+      "avg_reward": -0.05763501573631101,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 31,
+      "sumo_seed": 73,
+      "wall_seconds": 168.72304773330688,
+      "reward_sum": -536.1610918287629,
+      "avg_reward": -0.0558501137321628,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 32,
+      "sumo_seed": 74,
+      "wall_seconds": 167.448627948761,
+      "reward_sum": -534.8981473422352,
+      "avg_reward": -0.05571855701481617,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 33,
+      "sumo_seed": 75,
+      "wall_seconds": 168.64884614944458,
+      "reward_sum": -527.0801253551261,
+      "avg_reward": -0.054904179724492304,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 34,
+      "sumo_seed": 76,
+      "wall_seconds": 169.9138035774231,
+      "reward_sum": -536.5443502507553,
+      "avg_reward": -0.055890036484453676,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 35,
+      "sumo_seed": 77,
+      "wall_seconds": 169.09621930122375,
+      "reward_sum": -535.0873214712351,
+      "avg_reward": -0.055738262653253656,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 36,
+      "sumo_seed": 78,
+      "wall_seconds": 168.84609842300415,
+      "reward_sum": -554.8285204820409,
+      "avg_reward": -0.05779463755021259,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 37,
+      "sumo_seed": 79,
+      "wall_seconds": 169.70057368278503,
+      "reward_sum": -555.0639885078444,
+      "avg_reward": -0.05781916546956713,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 38,
+      "sumo_seed": 80,
+      "wall_seconds": 169.19288110733032,
+      "reward_sum": -543.3136197717145,
+      "avg_reward": -0.05659516872622026,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 39,
+      "sumo_seed": 81,
+      "wall_seconds": 169.22084021568298,
+      "reward_sum": -551.4004842777143,
+      "avg_reward": -0.057437550445595245,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 40,
+      "sumo_seed": 82,
+      "wall_seconds": 167.08120608329773,
+      "reward_sum": -533.7440500636947,
+      "avg_reward": -0.055598338548301526,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 41,
+      "sumo_seed": 83,
+      "wall_seconds": 169.4675567150116,
+      "reward_sum": -520.4477367807305,
+      "avg_reward": -0.05421330591465942,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 42,
+      "sumo_seed": 84,
+      "wall_seconds": 167.8346197605133,
+      "reward_sum": -536.6902161662949,
+      "avg_reward": -0.05590523085065572,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 43,
+      "sumo_seed": 85,
+      "wall_seconds": 167.788991689682,
+      "reward_sum": -523.1563041447525,
+      "avg_reward": -0.054495448348411725,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 44,
+      "sumo_seed": 86,
+      "wall_seconds": 168.0622787475586,
+      "reward_sum": -541.5604528221181,
+      "avg_reward": -0.056412547168970636,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 45,
+      "sumo_seed": 87,
+      "wall_seconds": 170.12744331359863,
+      "reward_sum": -526.5921959953891,
+      "avg_reward": -0.054853353749519704,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 46,
+      "sumo_seed": 88,
+      "wall_seconds": 167.600989818573,
+      "reward_sum": -536.820131036397,
+      "avg_reward": -0.05591876364962469,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 47,
+      "sumo_seed": 89,
+      "wall_seconds": 167.800607919693,
+      "reward_sum": -544.219382887183,
+      "avg_reward": -0.056689519050748226,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 48,
+      "sumo_seed": 90,
+      "wall_seconds": 170.35469722747803,
+      "reward_sum": -549.096353808955,
+      "avg_reward": -0.05719753685509948,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 49,
+      "sumo_seed": 91,
+      "wall_seconds": 168.37397122383118,
+      "reward_sum": -532.8224666610681,
+      "avg_reward": -0.0555023402771946,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 50,
+      "sumo_seed": 92,
+      "wall_seconds": 168.04390287399292,
+      "reward_sum": -542.0180864955054,
+      "avg_reward": -0.05646021734328181,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 51,
+      "sumo_seed": 93,
+      "wall_seconds": 169.12751078605652,
+      "reward_sum": -533.5285243741286,
+      "avg_reward": -0.05557588795563839,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 52,
+      "sumo_seed": 94,
+      "wall_seconds": 169.73783659934998,
+      "reward_sum": -526.1809653027752,
+      "avg_reward": -0.05481051721903909,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 53,
+      "sumo_seed": 95,
+      "wall_seconds": 168.3738191127777,
+      "reward_sum": -533.4695229580866,
+      "avg_reward": -0.05556974197480069,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 54,
+      "sumo_seed": 96,
+      "wall_seconds": 169.05732083320618,
+      "reward_sum": -516.3054074561907,
+      "avg_reward": -0.053781813276686526,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 55,
+      "sumo_seed": 97,
+      "wall_seconds": 170.62022376060486,
+      "reward_sum": -557.5288247613747,
+      "avg_reward": -0.058075919245976534,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 56,
+      "sumo_seed": 98,
+      "wall_seconds": 167.93687176704407,
+      "reward_sum": -561.5261008048859,
+      "avg_reward": -0.05849230216717562,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 57,
+      "sumo_seed": 99,
+      "wall_seconds": 168.81356573104858,
+      "reward_sum": -523.5847266271993,
+      "avg_reward": -0.05454007569033326,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 58,
+      "sumo_seed": 100,
+      "wall_seconds": 169.54835271835327,
+      "reward_sum": -531.4812808549254,
+      "avg_reward": -0.05536263342238807,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 59,
+      "sumo_seed": 101,
+      "wall_seconds": 168.52443432807922,
+      "reward_sum": -547.8995253320933,
+      "avg_reward": -0.05707286722209305,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 60,
+      "sumo_seed": 102,
+      "wall_seconds": 168.31898760795593,
+      "reward_sum": -519.0626033547165,
+      "avg_reward": -0.05406902118278297,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 61,
+      "sumo_seed": 103,
+      "wall_seconds": 167.94488406181335,
+      "reward_sum": -548.2632251499235,
+      "avg_reward": -0.057110752619783704,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 62,
+      "sumo_seed": 104,
+      "wall_seconds": 170.54099488258362,
+      "reward_sum": -555.8693487523841,
+      "avg_reward": -0.05790305716170668,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 63,
+      "sumo_seed": 105,
+      "wall_seconds": 168.0339322090149,
+      "reward_sum": -536.1640889907201,
+      "avg_reward": -0.05585042593653334,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 64,
+      "sumo_seed": 106,
+      "wall_seconds": 168.34553956985474,
+      "reward_sum": -524.7300120580147,
+      "avg_reward": -0.0546593762560432,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 65,
+      "sumo_seed": 107,
+      "wall_seconds": 167.6961371898651,
+      "reward_sum": -553.958550732004,
+      "avg_reward": -0.057704015701250416,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 66,
+      "sumo_seed": 108,
+      "wall_seconds": 169.57856106758118,
+      "reward_sum": -531.5851628963896,
+      "avg_reward": -0.05537345446837392,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 67,
+      "sumo_seed": 109,
+      "wall_seconds": 166.96924924850464,
+      "reward_sum": -528.4172534318174,
+      "avg_reward": -0.05504346389914764,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 68,
+      "sumo_seed": 110,
+      "wall_seconds": 168.31407403945923,
+      "reward_sum": -541.2267731789201,
+      "avg_reward": -0.056377788872804174,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 69,
+      "sumo_seed": 111,
+      "wall_seconds": 170.09471917152405,
+      "reward_sum": -534.3025477633952,
+      "avg_reward": -0.05565651539202033,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 70,
+      "sumo_seed": 112,
+      "wall_seconds": 168.62185645103455,
+      "reward_sum": -559.5925506787096,
+      "avg_reward": -0.05829089069569891,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 71,
+      "sumo_seed": 113,
+      "wall_seconds": 168.36076164245605,
+      "reward_sum": -563.8095848349915,
+      "avg_reward": -0.05873016508697828,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 72,
+      "sumo_seed": 114,
+      "wall_seconds": 168.46448945999146,
+      "reward_sum": -523.438300797261,
+      "avg_reward": -0.054524822999714694,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 73,
+      "sumo_seed": 115,
+      "wall_seconds": 170.41792392730713,
+      "reward_sum": -549.1577917640428,
+      "avg_reward": -0.057203936642087796,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 74,
+      "sumo_seed": 116,
+      "wall_seconds": 168.2389485836029,
+      "reward_sum": -524.6164988974966,
+      "avg_reward": -0.05464755196848923,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 75,
+      "sumo_seed": 117,
+      "wall_seconds": 168.71004581451416,
+      "reward_sum": -546.5124752432401,
+      "avg_reward": -0.056928382837837514,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 76,
+      "sumo_seed": 118,
+      "wall_seconds": 170.92043542861938,
+      "reward_sum": -526.0583176040177,
+      "avg_reward": -0.054797741417085176,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 77,
+      "sumo_seed": 119,
+      "wall_seconds": 167.86402535438538,
+      "reward_sum": -516.3437419236872,
+      "avg_reward": -0.05378580645038408,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 78,
+      "sumo_seed": 120,
+      "wall_seconds": 167.98044157028198,
+      "reward_sum": -541.7716924377931,
+      "avg_reward": -0.05643455129560345,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 79,
+      "sumo_seed": 121,
+      "wall_seconds": 168.40674257278442,
+      "reward_sum": -526.7212830593455,
+      "avg_reward": -0.054866800318681824,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 80,
+      "sumo_seed": 122,
+      "wall_seconds": 169.56919741630554,
+      "reward_sum": -538.3795992327333,
+      "avg_reward": -0.05608120825340972,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 81,
+      "sumo_seed": 123,
+      "wall_seconds": 167.20610904693604,
+      "reward_sum": -523.6106316663493,
+      "avg_reward": -0.05454277413191138,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 82,
+      "sumo_seed": 124,
+      "wall_seconds": 167.8238832950592,
+      "reward_sum": -511.6335086594249,
+      "avg_reward": -0.053295157152023424,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 83,
+      "sumo_seed": 125,
+      "wall_seconds": 170.67192029953003,
+      "reward_sum": -549.4520420707455,
+      "avg_reward": -0.05723458771570266,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 84,
+      "sumo_seed": 126,
+      "wall_seconds": 167.33101415634155,
+      "reward_sum": -549.588254149182,
+      "avg_reward": -0.05724877647387313,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 85,
+      "sumo_seed": 127,
+      "wall_seconds": 167.89492511749268,
+      "reward_sum": -533.63409426281,
+      "avg_reward": -0.055586884819042705,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 86,
+      "sumo_seed": 128,
+      "wall_seconds": 167.50199508666992,
+      "reward_sum": -542.53095753282,
+      "avg_reward": -0.056513641409668754,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 87,
+      "sumo_seed": 129,
+      "wall_seconds": 170.12525629997253,
+      "reward_sum": -532.2093107996081,
+      "avg_reward": -0.05543846987495918,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 88,
+      "sumo_seed": 130,
+      "wall_seconds": 168.23063898086548,
+      "reward_sum": -536.650133287645,
+      "avg_reward": -0.05590105555079635,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 89,
+      "sumo_seed": 131,
+      "wall_seconds": 167.46120738983154,
+      "reward_sum": -517.6451142334092,
+      "avg_reward": -0.05392136606598013,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 90,
+      "sumo_seed": 132,
+      "wall_seconds": 169.64473819732666,
+      "reward_sum": -567.6361411105371,
+      "avg_reward": -0.059128764699014284,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 91,
+      "sumo_seed": 133,
+      "wall_seconds": 167.7869701385498,
+      "reward_sum": -534.1395715939599,
+      "avg_reward": -0.055639538707704154,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 92,
+      "sumo_seed": 134,
+      "wall_seconds": 167.48650074005127,
+      "reward_sum": -527.18169937863,
+      "avg_reward": -0.05491476035194063,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 93,
+      "sumo_seed": 135,
+      "wall_seconds": 168.28979992866516,
+      "reward_sum": -544.1526347284826,
+      "avg_reward": -0.056682566117550265,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 94,
+      "sumo_seed": 136,
+      "wall_seconds": 170.1711974143982,
+      "reward_sum": -515.105579616321,
+      "avg_reward": -0.053656831210033444,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 95,
+      "sumo_seed": 137,
+      "wall_seconds": 167.62009692192078,
+      "reward_sum": -537.7273563265716,
+      "avg_reward": -0.05601326628401787,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 96,
+      "sumo_seed": 138,
+      "wall_seconds": 167.7288646697998,
+      "reward_sum": -529.8597594262391,
+      "avg_reward": -0.05519372494023324,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 97,
+      "sumo_seed": 139,
+      "wall_seconds": 170.2694799900055,
+      "reward_sum": -530.7422958013644,
+      "avg_reward": -0.05528565581264213,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 98,
+      "sumo_seed": 140,
+      "wall_seconds": 167.82535219192505,
+      "reward_sum": -513.6301052463872,
+      "avg_reward": -0.05350313596316533,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 99,
+      "sumo_seed": 141,
+      "wall_seconds": 167.69646453857422,
+      "reward_sum": -501.5760691104275,
+      "avg_reward": -0.05224750719900287,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 100,
+      "sumo_seed": 142,
+      "wall_seconds": 167.21132445335388,
+      "reward_sum": -521.4858587458139,
+      "avg_reward": -0.05432144361935561,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 101,
+      "sumo_seed": 143,
+      "wall_seconds": 171.02800846099854,
+      "reward_sum": -549.9476826679562,
+      "avg_reward": -0.05728621694457877,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 102,
+      "sumo_seed": 144,
+      "wall_seconds": 169.00541234016418,
+      "reward_sum": -533.2161967361405,
+      "avg_reward": -0.0555433538266813,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 103,
+      "sumo_seed": 145,
+      "wall_seconds": 167.8865146636963,
+      "reward_sum": -538.6246121283868,
+      "avg_reward": -0.056106730430040296,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 104,
+      "sumo_seed": 146,
+      "wall_seconds": 170.47612714767456,
+      "reward_sum": -547.073149178598,
+      "avg_reward": -0.056986786372770624,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 105,
+      "sumo_seed": 147,
+      "wall_seconds": 167.81912684440613,
+      "reward_sum": -564.3188716586355,
+      "avg_reward": -0.058783215797774534,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 106,
+      "sumo_seed": 148,
+      "wall_seconds": 167.90159726142883,
+      "reward_sum": -536.6836347523889,
+      "avg_reward": -0.05590454528670718,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 107,
+      "sumo_seed": 149,
+      "wall_seconds": 167.82863426208496,
+      "reward_sum": -551.9282694355734,
+      "avg_reward": -0.05749252806620556,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 108,
+      "sumo_seed": 150,
+      "wall_seconds": 170.05658745765686,
+      "reward_sum": -511.89400670925676,
+      "avg_reward": -0.05332229236554758,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 109,
+      "sumo_seed": 151,
+      "wall_seconds": 168.30709171295166,
+      "reward_sum": -526.2844757021933,
+      "avg_reward": -0.0548212995523118,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 110,
+      "sumo_seed": 152,
+      "wall_seconds": 168.45186018943787,
+      "reward_sum": -536.6984087466071,
+      "avg_reward": -0.05590608424443824,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 111,
+      "sumo_seed": 153,
+      "wall_seconds": 170.43431186676025,
+      "reward_sum": -541.0699380341157,
+      "avg_reward": -0.056361451878553716,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 112,
+      "sumo_seed": 154,
+      "wall_seconds": 167.93872332572937,
+      "reward_sum": -543.8111017339749,
+      "avg_reward": -0.05664698976395571,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 113,
+      "sumo_seed": 155,
+      "wall_seconds": 168.55904483795166,
+      "reward_sum": -539.0951346440356,
+      "avg_reward": -0.05615574319208704,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 114,
+      "sumo_seed": 156,
+      "wall_seconds": 168.36668372154236,
+      "reward_sum": -532.4614137696238,
+      "avg_reward": -0.05546473060100248,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 115,
+      "sumo_seed": 157,
+      "wall_seconds": 170.1390540599823,
+      "reward_sum": -534.6559004233568,
+      "avg_reward": -0.05569332296076633,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 116,
+      "sumo_seed": 158,
+      "wall_seconds": 167.34556698799133,
+      "reward_sum": -539.4544817258527,
+      "avg_reward": -0.056193175179776324,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 117,
+      "sumo_seed": 159,
+      "wall_seconds": 167.4810221195221,
+      "reward_sum": -542.5448977626567,
+      "avg_reward": -0.0565150935169434,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 118,
+      "sumo_seed": 160,
+      "wall_seconds": 169.35636806488037,
+      "reward_sum": -533.0231321758945,
+      "avg_reward": -0.05552324293498901,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 119,
+      "sumo_seed": 161,
+      "wall_seconds": 168.15578842163086,
+      "reward_sum": -540.7949355603233,
+      "avg_reward": -0.05633280578753368,
+      "decisions": 9600,
+      "metrics": {}
+    },
+    {
+      "episode": 120,
+      "sumo_seed": 162,
+      "wall_seconds": 167.51545476913452,
+      "reward_sum": -526.8959796733534,
+      "avg_reward": -0.05488499788264098,
+      "decisions": 9600,
+      "metrics": {}
+    }
+  ]
+}

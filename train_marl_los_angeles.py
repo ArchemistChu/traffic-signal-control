@@ -251,6 +251,7 @@ def main():
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--save-every", type=int, default=10)
     parser.add_argument("--out", type=str, default="", help="Model output path")
+    parser.add_argument("--resume", type=str, default="", help="Path to checkpoint to resume training from")
     args = parser.parse_args()
 
     if traci is None:
@@ -296,7 +297,14 @@ def main():
     print(f"Output: {out_path}")
     print("=" * 78)
 
-    for ep in range(1, args.episodes + 1):
+    start_ep = None
+    total_episodes = None
+
+    ep = 0
+    while True:
+        ep += 1
+        if start_ep is not None and ep > total_episodes:
+            break
         simulator = TrafficSimulator(
             use_gui=False,
             dataset=args.dataset,
@@ -312,11 +320,10 @@ def main():
             desired = int(round(total_tls * float(args.controlled_lights_ratio)))
             desired = max(1, min(total_tls, desired))
             tls_ids = (simulator.traffic_lights or simulator.controlled_traffic_lights)[:desired]
-            if ep == 1:
+            if agent is None:
                 print(f"Computed TLS count: {desired}/{total_tls} ({args.controlled_lights_ratio:.2f})")
         else:
             tls_ids = simulator.controlled_traffic_lights[: int(args.max_controlled_lights)]
-        # per TLS: fixed lane list
         tl_lanes: Dict[str, List[str]] = {}
         tl_phase_counts: Dict[str, int] = {}
         for tl_id in tls_ids:
@@ -324,12 +331,11 @@ def main():
             tl_lanes[tl_id] = pad_or_truncate(lanes, int(args.lanes_per_tl))
             tl_phase_counts[tl_id] = max(1, get_phase_count(tl_id))
 
-        # Per-TL green phase list (for N-action mapping)
         tl_green_phases: Dict[str, List[int]] = {}
         for tl_id in tls_ids:
             gp = get_green_phases(tl_id)
             tl_green_phases[tl_id] = gp
-            if ep == 1:
+            if agent is None:
                 print(f"  TL {tl_id}: {len(gp)} green phases {gp[:8]}")
 
         tl_regions: Dict[str, Tuple[int, int]] = {}
@@ -367,6 +373,16 @@ def main():
                 "regional_reward_weight": float(args.regional_reward_weight),
                 "region_grid_size": float(args.region_grid_size),
             })
+            if args.resume and os.path.isfile(args.resume):
+                agent.load_model(args.resume)
+                print(f"Resumed from {args.resume} (ep={agent.episode_count}, eps={agent.epsilon:.4f})")
+
+            resumed_ep = agent.episode_count if (args.resume and agent.episode_count > 0) else 0
+            start_ep = resumed_ep + 1
+            total_episodes = resumed_ep + args.episodes
+            ep = start_ep
+            print(f"Training episodes {start_ep}..{total_episodes} ({args.episodes} new)")
+
             lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
                 agent.optimizer, T_max=args.episodes, eta_min=1e-5
             )
@@ -474,10 +490,9 @@ def main():
         avg_r_per_step = float(np.mean(ep_rewards_per_step)) if ep_rewards_per_step else 0.0
         agent.end_episode(avg_reward_override=avg_r_per_step)
 
-        # Linear epsilon decay: 1.0 -> 0.05 over all episodes
         agent.epsilon = max(
             agent.config['epsilon_end'],
-            1.0 - (1.0 - agent.config['epsilon_end']) * ep / args.episodes
+            1.0 - (1.0 - agent.config['epsilon_end']) * ep / total_episodes
         )
         lr_scheduler.step()
 
@@ -486,7 +501,7 @@ def main():
         wall = time.time() - start_wall
         avg_loss = float(np.mean(losses)) if losses else float("nan")
         current_lr = lr_scheduler.get_last_lr()[0]
-        print(f"Episode {ep:04d}/{args.episodes} | wall={wall:.2f}s | avg_reward/step={avg_r_per_step:.4f} | avg_loss={avg_loss:.4f} | epsilon={agent.epsilon:.3f} | lr={current_lr:.2e} | tls={n_agents}")
+        print(f"Episode {ep:04d}/{total_episodes} | wall={wall:.2f}s | avg_reward/step={avg_r_per_step:.4f} | avg_loss={avg_loss:.4f} | epsilon={agent.epsilon:.3f} | lr={current_lr:.2e} | tls={n_agents}")
 
         if ep % int(args.save_every) == 0:
             agent.save_model(out_path)
