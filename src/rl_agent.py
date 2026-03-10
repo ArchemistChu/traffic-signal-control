@@ -31,22 +31,23 @@ Experience = namedtuple('Experience', ['state', 'action', 'reward', 'next_state'
 
 class DQNNetwork(nn.Module):
     """Standard Deep Q-Network"""
-    
+
     def __init__(self, state_dim: int, action_dim: int, hidden_dims: List[int] = [128, 128, 64]):
         super(DQNNetwork, self).__init__()
-        
+
         layers = []
         input_dim = state_dim
-        
+
         for hidden_dim in hidden_dims:
             layers.extend([
                 nn.Linear(input_dim, hidden_dim),
+                nn.LayerNorm(hidden_dim),
                 nn.ReLU(),
             ])
             input_dim = hidden_dim
-        
+
         layers.append(nn.Linear(input_dim, action_dim))
-        
+
         self.network = nn.Sequential(*layers)
         self._init_weights()
     
@@ -71,18 +72,17 @@ class DuelingDQNNetwork(nn.Module):
     def __init__(self, state_dim: int, action_dim: int, hidden_dims: List[int] = [128, 128, 64]):
         super(DuelingDQNNetwork, self).__init__()
 
-        # Shared feature extractor
         feature_layers = []
         input_dim = state_dim
         for hidden_dim in hidden_dims:
             feature_layers.extend([
                 nn.Linear(input_dim, hidden_dim),
+                nn.LayerNorm(hidden_dim),
                 nn.ReLU(),
             ])
             input_dim = hidden_dim
         self.feature = nn.Sequential(*feature_layers)
 
-        # Value and advantage streams
         self.value_head = nn.Linear(input_dim, 1)
         self.advantage_head = nn.Linear(input_dim, action_dim)
 
@@ -96,9 +96,8 @@ class DuelingDQNNetwork(nn.Module):
 
     def forward(self, x):
         features = self.feature(x)
-        value = self.value_head(features)                 # (batch, 1)
-        advantage = self.advantage_head(features)         # (batch, action_dim)
-        # Subtract mean advantage for identifiability
+        value = self.value_head(features)
+        advantage = self.advantage_head(features)
         advantage_mean = advantage.mean(dim=1, keepdim=True)
         q_values = value + (advantage - advantage_mean)
         return q_values
@@ -172,8 +171,7 @@ class TrafficState:
             occupancy = self.detector_occupancy.get(det, 0.0)
             state_vector.append(min(1.0, occupancy))  # Already in [0,1] range
         
-        # 5. Current phase (one-hot encoding, max 8 phases)
-        max_phases = 8
+        max_phases = 16
         phase_encoding = [0.0] * max_phases
         if 0 <= self.current_phase < max_phases:
             phase_encoding[self.current_phase] = 1.0
@@ -366,25 +364,20 @@ class RLAgent:
     def train_step(self) -> Optional[float]:
         """
         Execute one training step
-        
+
         Returns:
             float: loss value, returns None if training is not possible
         """
         if len(self.memory) < self.config['batch_size']:
             return None
-        
-        # Sample experiences
+
         batch = self.memory.sample(self.config['batch_size'])
-        
-        # Prepare batch data
+
         states = torch.FloatTensor(np.array([e.state for e in batch])).to(self.device)
         actions = torch.LongTensor([e.action for e in batch]).to(self.device)
         rewards = torch.FloatTensor([e.reward for e in batch]).to(self.device)
         dones = torch.BoolTensor([e.done for e in batch]).to(self.device)
 
-        # Build next_states for the whole batch (mask-safe).
-        # Some code paths may store a next_state even for terminal transitions.
-        # We compute target Q for all and then zero-out terminal ones.
         has_next = torch.BoolTensor([e.next_state is not None for e in batch]).to(self.device)
         state_dim = states.shape[1]
         next_state_np = np.array([
@@ -392,52 +385,41 @@ class RLAgent:
             for e in batch
         ], dtype=np.float32)
         next_states = torch.FloatTensor(next_state_np).to(self.device)
-        
-        # Calculate current Q values
+
         current_q_values = self.q_network(states).gather(1, actions.unsqueeze(1))
-        
-        # --- Double DQN target calculation (online selects action, target evaluates) ---
+
         with torch.no_grad():
             effective_nonterminal = (~dones) & has_next
 
             if self.config.get('double_dqn', False):
-                # Actions from online network
                 online_next_q = self.q_network(next_states)
                 best_actions = online_next_q.argmax(1)
-                # Q-values from target network for those actions
                 target_next_q = self.target_network(next_states).gather(
                     1, best_actions.unsqueeze(1)
                 ).squeeze(1)
             else:
-                # Standard DQN: max over target network
                 target_next_q = self.target_network(next_states).max(1)[0]
 
             next_q_values = torch.zeros(self.config['batch_size']).to(self.device)
             next_q_values[effective_nonterminal] = target_next_q[effective_nonterminal]
             gamma_n = self.config['gamma'] ** self.n_step
             target_q_values = rewards + gamma_n * next_q_values
-        
+            target_q_values = target_q_values.clamp(-2.0, 2.0)
+
         loss = F.smooth_l1_loss(current_q_values.squeeze(), target_q_values)
-        
-        # Backward propagation
+
         self.optimizer.zero_grad()
         loss.backward()
-        
-        # Gradient clipping
-        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
-        
+        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 0.5)
         self.optimizer.step()
-        
-        # Soft target update (Polyak averaging) every target_update_freq steps
+
+        # Hard target update: copy online -> target every target_update_freq steps
         if self.step_count % self.config['target_update_freq'] == 0:
-            tau = self.config.get('tau', 0.005)
-            for tp, op in zip(self.target_network.parameters(), self.q_network.parameters()):
-                tp.data.copy_(tau * op.data + (1.0 - tau) * tp.data)
-        
-        # Record statistics (epsilon is decayed per-episode in end_episode())
+            self.target_network.load_state_dict(self.q_network.state_dict())
+
         self.training_history['losses'].append(loss.item())
         self.training_history['epsilon_values'].append(self.epsilon)
-        
+
         return loss.item()
     
     def end_episode(self, avg_reward_override: float = None):

@@ -102,6 +102,17 @@ def get_controlled_lanes_for_tl(tl_id: str) -> List[str]:
     return sorted(lanes)
 
 
+def get_lane_waiting_time(lane_id: str) -> float:
+    """Sum of waiting times of all vehicles on a lane."""
+    try:
+        total = 0.0
+        for veh_id in traci.lane.getLastStepVehicleIDs(lane_id):
+            total += float(traci.vehicle.getWaitingTime(veh_id))
+        return total
+    except Exception:
+        return 0.0
+
+
 def build_local_state(tl_id: str, lane_ids_fixed: List[str]) -> Dict:
     """Build a SUMO state dict compatible with src.rl_agent.TrafficState."""
     sim_time = float(traci.simulation.getTime())
@@ -109,24 +120,28 @@ def build_local_state(tl_id: str, lane_ids_fixed: List[str]) -> Dict:
     lane_vehicle_counts: Dict[str, int] = {}
     lane_queue_lengths: Dict[str, int] = {}
     lane_mean_speeds: Dict[str, float] = {}
+    lane_waiting_times: Dict[str, float] = {}
 
     for lane_id in lane_ids_fixed:
         if not lane_id:
             lane_vehicle_counts[lane_id] = 0
             lane_queue_lengths[lane_id] = 0
             lane_mean_speeds[lane_id] = 0.0
+            lane_waiting_times[lane_id] = 0.0
             continue
         try:
             lane_vehicle_counts[lane_id] = int(traci.lane.getLastStepVehicleNumber(lane_id))
             lane_queue_lengths[lane_id] = int(traci.lane.getLastStepHaltingNumber(lane_id))
             lane_mean_speeds[lane_id] = float(traci.lane.getLastStepMeanSpeed(lane_id))
+            lane_waiting_times[lane_id] = get_lane_waiting_time(lane_id)
         except Exception:
             lane_vehicle_counts[lane_id] = 0
             lane_queue_lengths[lane_id] = 0
             lane_mean_speeds[lane_id] = 0.0
+            lane_waiting_times[lane_id] = 0.0
 
     try:
-        phase = int(traci.trafficlight.getPhase(tl_id)) % 8
+        phase = int(traci.trafficlight.getPhase(tl_id)) % 16
     except Exception:
         phase = 0
 
@@ -141,6 +156,7 @@ def build_local_state(tl_id: str, lane_ids_fixed: List[str]) -> Dict:
         "lane_vehicle_counts": lane_vehicle_counts,
         "lane_queue_lengths": lane_queue_lengths,
         "lane_mean_speeds": lane_mean_speeds,
+        "lane_waiting_times": lane_waiting_times,
         "detector_occupancy": {},
         "traffic_light_phase": phase,
         "traffic_light_remaining_time": remaining,
@@ -149,22 +165,16 @@ def build_local_state(tl_id: str, lane_ids_fixed: List[str]) -> Dict:
 
 def local_reward(prev_state: Dict, curr_state: Dict, action: int,
                   prev_action: int = 0, n_green_phases: int = 2) -> float:
-    """Reward aligned with training (queue delta + absolute queue + speed)."""
-    prev_q = sum(prev_state.get("lane_queue_lengths", {}).values())
+    """Reward aligned with training — targets waiting time + queue reduction."""
+    curr_wait = sum(curr_state.get("lane_waiting_times", {}).values())
     curr_q = sum(curr_state.get("lane_queue_lengths", {}).values())
+    prev_q = sum(prev_state.get("lane_queue_lengths", {}).values())
     queue_change = prev_q - curr_q
 
-    prev_speeds = list(prev_state.get("lane_mean_speeds", {}).values())
-    curr_speeds = list(curr_state.get("lane_mean_speeds", {}).values())
-    prev_avg_speed = np.mean(prev_speeds) if prev_speeds else 0.0
-    curr_avg_speed = np.mean(curr_speeds) if curr_speeds else 0.0
-    speed_change = curr_avg_speed - prev_avg_speed
-
-    r_delta_q = 0.45 * np.clip(queue_change / 10.0, -1.0, 1.0)
-    r_abs_q = -0.25 * np.clip(curr_q / 30.0, 0.0, 1.0)
-    r_speed = 0.25 * np.clip(speed_change / 5.0, -1.0, 1.0)
-    r_switch = -0.05 if (action != 0 and action != prev_action) else 0.0
-    return float(r_delta_q + r_abs_q + r_speed + r_switch)
+    r_wait = -0.50 * np.clip(curr_wait / 200.0, 0.0, 1.0)
+    r_queue = 0.35 * np.clip(queue_change / 10.0, -1.0, 1.0)
+    r_switch = -0.05 if action == 1 else 0.0
+    return float(r_wait + r_queue + r_switch)
 
 
 def pad_or_truncate(lanes: List[str], k: int) -> List[str]:
@@ -229,7 +239,7 @@ def main():
         default=0.0,
         help="If >0, use this ratio of total TLS (overrides --max-controlled-lights). Example: 0.2 for 20%",
     )
-    parser.add_argument("--lanes-per-tl", type=int, default=8)
+    parser.add_argument("--lanes-per-tl", type=int, default=20)
     parser.add_argument(
         "--regional-reward-weight",
         type=float,
@@ -260,14 +270,14 @@ def main():
     parser.add_argument(
         "--run-id",
         type=int,
-        default=0,
+        default=1,
         help=(
             "Optional run identifier to decorrelate SUMO seeds across repeated invocations. "
             "Effective SUMO seed used per episode is: seed + run_id*10000 + episode."
         ),
     )
     parser.add_argument("--out", type=str, default="", help="Optional JSON output for eval summary")
-    parser.add_argument("--calc-metrics", action="store_true", help="Compute performance metrics (slower)")
+    parser.add_argument("--calc-metrics", action="store_true", default=True, help="Compute performance metrics (default: on)")
     parser.add_argument("--force-cpu", action="store_true", help="Force CPU usage even if CUDA is available")
     parser.add_argument(
         "--data-collection-interval",
@@ -322,6 +332,7 @@ def main():
             dataset=args.dataset,
             enable_sumo_emissions_output=bool(args.sumo_emissions_output),
             sumo_seed=sumo_seed,
+            controlled_lights_ratio=float(args.controlled_lights_ratio) if args.controlled_lights_ratio > 0 else None,
         )
         simulator.data_collection_interval = max(1, int(args.data_collection_interval))
         if args.collect_emissions:

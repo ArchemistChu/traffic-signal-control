@@ -113,6 +113,17 @@ def get_controlled_lanes_for_tl(tl_id: str) -> List[str]:
     return sorted(lanes)
 
 
+def get_lane_waiting_time(lane_id: str) -> float:
+    """Sum of waiting times of all vehicles on a lane."""
+    try:
+        total = 0.0
+        for veh_id in traci.lane.getLastStepVehicleIDs(lane_id):
+            total += float(traci.vehicle.getWaitingTime(veh_id))
+        return total
+    except Exception:
+        return 0.0
+
+
 def build_local_state(tl_id: str, lane_ids_fixed: List[str]) -> Dict:
     """Build a SUMO state dict compatible with src.rl_agent.TrafficState."""
     sim_time = float(traci.simulation.getTime())
@@ -120,25 +131,28 @@ def build_local_state(tl_id: str, lane_ids_fixed: List[str]) -> Dict:
     lane_vehicle_counts: Dict[str, int] = {}
     lane_queue_lengths: Dict[str, int] = {}
     lane_mean_speeds: Dict[str, float] = {}
+    lane_waiting_times: Dict[str, float] = {}
 
     for lane_id in lane_ids_fixed:
         if not lane_id:
-            # padding lane
             lane_vehicle_counts[lane_id] = 0
             lane_queue_lengths[lane_id] = 0
             lane_mean_speeds[lane_id] = 0.0
+            lane_waiting_times[lane_id] = 0.0
             continue
         try:
             lane_vehicle_counts[lane_id] = int(traci.lane.getLastStepVehicleNumber(lane_id))
             lane_queue_lengths[lane_id] = int(traci.lane.getLastStepHaltingNumber(lane_id))
             lane_mean_speeds[lane_id] = float(traci.lane.getLastStepMeanSpeed(lane_id))
+            lane_waiting_times[lane_id] = get_lane_waiting_time(lane_id)
         except Exception:
             lane_vehicle_counts[lane_id] = 0
             lane_queue_lengths[lane_id] = 0
             lane_mean_speeds[lane_id] = 0.0
+            lane_waiting_times[lane_id] = 0.0
 
     try:
-        phase = int(traci.trafficlight.getPhase(tl_id)) % 8
+        phase = int(traci.trafficlight.getPhase(tl_id)) % 16
     except Exception:
         phase = 0
 
@@ -153,6 +167,7 @@ def build_local_state(tl_id: str, lane_ids_fixed: List[str]) -> Dict:
         "lane_vehicle_counts": lane_vehicle_counts,
         "lane_queue_lengths": lane_queue_lengths,
         "lane_mean_speeds": lane_mean_speeds,
+        "lane_waiting_times": lane_waiting_times,
         "detector_occupancy": {},
         "traffic_light_phase": phase,
         "traffic_light_remaining_time": remaining,
@@ -161,37 +176,23 @@ def build_local_state(tl_id: str, lane_ids_fixed: List[str]) -> Dict:
 
 def local_reward(prev_state: Dict, curr_state: Dict, action: int,
                   prev_action: int = 0, n_green_phases: int = 2) -> float:
-    """Reward targeting the metrics we measure: queue length, waiting time, speed.
+    """Reward directly targeting the metrics we're evaluated on.
 
-    Components (all clipped to keep total in roughly [-1.5, +1]):
-      1. Queue improvement (delta)       — encourages queue reduction
-      2. Absolute queue penalty           — penalises large standing queues
-      3. Speed improvement (delta)        — encourages flow
-      4. Phase-switch penalty             — discourages oscillation
+    Components:
+      1. Waiting time penalty (absolute) — THE key metric baselines are measured on
+      2. Queue reduction (delta)         — encourages clearing queues
+      3. Phase-switch penalty            — discourages rapid oscillation
     """
-    prev_q = sum(prev_state.get("lane_queue_lengths", {}).values())
+    curr_wait = sum(curr_state.get("lane_waiting_times", {}).values())
     curr_q = sum(curr_state.get("lane_queue_lengths", {}).values())
+    prev_q = sum(prev_state.get("lane_queue_lengths", {}).values())
     queue_change = prev_q - curr_q
 
-    prev_speeds = list(prev_state.get("lane_mean_speeds", {}).values())
-    curr_speeds = list(curr_state.get("lane_mean_speeds", {}).values())
-    prev_avg_speed = np.mean(prev_speeds) if prev_speeds else 0.0
-    curr_avg_speed = np.mean(curr_speeds) if curr_speeds else 0.0
-    speed_change = curr_avg_speed - prev_avg_speed
+    r_wait = -0.50 * np.clip(curr_wait / 200.0, 0.0, 1.0)
+    r_queue = 0.35 * np.clip(queue_change / 10.0, -1.0, 1.0)
+    r_switch = -0.05 if action == 1 else 0.0
 
-    QUEUE_SCALE = 10.0
-    SPEED_SCALE = 5.0
-    ABS_QUEUE_SCALE = 30.0
-
-    r_delta_q = 0.45 * np.clip(queue_change / QUEUE_SCALE, -1.0, 1.0)
-    r_abs_q = -0.25 * np.clip(curr_q / ABS_QUEUE_SCALE, 0.0, 1.0)
-    r_speed = 0.25 * np.clip(speed_change / SPEED_SCALE, -1.0, 1.0)
-
-    r_switch = 0.0
-    if action != 0 and action != prev_action:
-        r_switch = -0.05
-
-    return float(r_delta_q + r_abs_q + r_speed + r_switch)
+    return float(r_wait + r_queue + r_switch)
 
 
 def pad_or_truncate(lanes: List[str], k: int) -> List[str]:
@@ -247,7 +248,7 @@ def main():
         default=500.0,
         help="Grid size in meters for regional congestion (default: 500)",
     )
-    parser.add_argument("--lanes-per-tl", type=int, default=8, help="Fixed lanes per TLS in observation (pad/truncate)")
+    parser.add_argument("--lanes-per-tl", type=int, default=20, help="Fixed lanes per TLS in observation (pad/truncate)")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--save-every", type=int, default=10)
     parser.add_argument("--out", type=str, default="", help="Model output path")
@@ -342,25 +343,23 @@ def main():
         if args.regional_reward_weight and args.regional_reward_weight > 0.0:
             tl_regions = build_region_map(tls_ids, float(args.region_grid_size))
 
-        # Init agent once we know state_dim (fixed by lanes-per-tl)
-        # action_dim = MAX_GREEN_PHASES+1: action 0 = keep, actions 1..N = jump to green phase i
         if agent is None:
             s0 = build_local_state(tls_ids[0], tl_lanes[tls_ids[0]])
             state_dim = len(RLTState(s0, lane_list=tl_lanes[tls_ids[0]]).to_vector())
-            action_dim = MAX_GREEN_PHASES + 1
-            print(f"Action space: {action_dim} (0=keep, 1..{MAX_GREEN_PHASES}=jump to green phase)")
+            action_dim = 2
+            print(f"Action space: {action_dim} (0=keep, 1=switch to next phase)")
             agent = RLAgent(config={
                 "state_dim": state_dim,
                 "action_dim": action_dim,
-                "lr": 1e-4,
-                "gamma": 0.95,
+                "lr": 5e-5,
+                "gamma": 0.90,
                 "epsilon_start": 1.0,
                 "epsilon_end": 0.05,
                 "epsilon_decay": 1.0,
-                "batch_size": 64,
+                "batch_size": 128,
                 "memory_size": 200000,
-                "target_update_freq": 500,
-                "tau": 0.01,
+                "target_update_freq": 2000,
+                "tau": 0.005,
                 "dueling": True,
                 "double_dqn": True,
                 "n_step": 1,
@@ -414,19 +413,13 @@ def main():
                 for tl_id in tls_ids:
                     actions[tl_id] = agent.select_action(prev_state_obj[tl_id], training=True)
 
-                # Apply N-action: 0=keep, 1..N=jump to green phase index
                 for tl_id, action in actions.items():
                     if action == 0:
                         continue
-                    gp = tl_green_phases.get(tl_id, [])
-                    if not gp:
-                        continue
-                    phase_idx = (action - 1) % len(gp)
-                    target_phase = gp[phase_idx]
                     try:
                         cur = int(traci.trafficlight.getPhase(tl_id))
-                        if target_phase != cur:
-                            traci.trafficlight.setPhase(tl_id, target_phase)
+                        nph = max(1, tl_phase_counts.get(tl_id, 1))
+                        traci.trafficlight.setPhase(tl_id, (cur + 1) % nph)
                     except Exception:
                         pass
 
@@ -475,11 +468,9 @@ def main():
 
                 prev_actions = dict(actions)
 
-                NUM_TRAIN_STEPS = 4
-                for _ in range(NUM_TRAIN_STEPS):
-                    loss = agent.train_step()
-                    if loss is not None:
-                        losses.append(float(loss))
+                loss = agent.train_step()
+                if loss is not None:
+                    losses.append(float(loss))
 
                 ep_rewards_per_step.append(float(np.mean(step_rewards)))
 
