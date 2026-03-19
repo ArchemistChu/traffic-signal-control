@@ -26,6 +26,11 @@ except ImportError:
 
 
 MAX_GREEN_PHASES = 6
+PRESSURE_FEATURE_COUNT = 4
+PRESSURE_FEATURE_SCALE = 20.0
+PRESSURE_TOTAL_QUEUE_SCALE = 40.0
+PRESSURE_REWARD_WEIGHT = 0.20
+PRESSURE_REWARD_SCALE = 15.0
 
 def get_phase_count(tl_id: str) -> int:
     """SUMO-version-safe phase count for a TLS."""
@@ -43,40 +48,122 @@ def get_phase_count(tl_id: str) -> int:
     return 1
 
 
-def get_green_phases(tl_id: str) -> List[int]:
-    """Return indices of phases that give green to at least one vehicle lane."""
+def get_phase_lane_map(tl_id: str) -> Dict:
+    """Return green phases and the lanes they serve for one TLS."""
     def _is_ped(lane_id: str) -> bool:
         if not lane_id:
             return False
         low = lane_id.lower()
         return any(k in low for k in [":w", "ped", "walk", "sidewalk", "foot", "crossing"])
 
+    result = {"green_phases": [], "phase_to_lanes": {}}
     try:
         logics = traci.trafficlight.getAllProgramLogics(tl_id)
         if not logics:
-            return list(range(max(1, get_phase_count(tl_id))))
+            phase_count = max(1, get_phase_count(tl_id))
+            result["green_phases"] = list(range(phase_count))
+            result["phase_to_lanes"] = {p: [] for p in result["green_phases"]}
+            return result
         links = traci.trafficlight.getControlledLinks(tl_id)
         phases = logics[0].phases
-        greens = []
         for p_idx, phase in enumerate(phases):
             state_str = phase.state
             has_vehicle_green = False
+            phase_lanes = set()
             for li, ch in enumerate(state_str):
                 if ch in ("G", "g"):
                     if li < len(links):
                         for link in links[li]:
                             if link and len(link) > 0 and not _is_ped(link[0]):
                                 has_vehicle_green = True
+                                phase_lanes.add(link[0])
                                 break
                     else:
                         has_vehicle_green = True
-                if has_vehicle_green:
-                    break
             if has_vehicle_green:
-                greens.append(int(p_idx))
-        return greens if greens else list(range(max(1, len(phases))))
+                result["green_phases"].append(int(p_idx))
+            result["phase_to_lanes"][int(p_idx)] = sorted(phase_lanes)
+        if not result["green_phases"]:
+            result["green_phases"] = list(range(max(1, len(phases))))
+            for p_idx in result["green_phases"]:
+                result["phase_to_lanes"].setdefault(int(p_idx), [])
+        return result
     except Exception:
-        return list(range(max(1, get_phase_count(tl_id))))
+        phase_count = max(1, get_phase_count(tl_id))
+        result["green_phases"] = list(range(phase_count))
+        result["phase_to_lanes"] = {p: [] for p in result["green_phases"]}
+        return result
+
+
+def get_green_phases(tl_id: str) -> List[int]:
+    """Return indices of phases that give green to at least one vehicle lane."""
+    return list(get_phase_lane_map(tl_id).get("green_phases", []))
+
+
+def get_reference_green_phase(current_phase: int, green_phases: List[int]) -> int:
+    """Map a raw SUMO phase to the most recent vehicle-green phase."""
+    if not green_phases:
+        return int(current_phase)
+    ordered = sorted({int(p) for p in green_phases})
+    if current_phase in ordered:
+        return int(current_phase)
+    prior = [p for p in ordered if p <= int(current_phase)]
+    return int(prior[-1] if prior else ordered[-1])
+
+
+def get_next_green_phase(current_phase: int, green_phases: List[int], phase_count: int) -> int:
+    """Cycle to the next vehicle-green phase while skipping yellow/all-red phases."""
+    if not green_phases:
+        return (int(current_phase) + 1) % max(1, int(phase_count))
+    ordered = sorted({int(p) for p in green_phases})
+    if current_phase in ordered:
+        idx = ordered.index(int(current_phase))
+        return int(ordered[(idx + 1) % len(ordered)])
+    for phase in ordered:
+        if phase > int(current_phase):
+            return int(phase)
+    return int(ordered[0])
+
+
+def compute_phase_pressure(state_dict: Dict, phase_lanes: List[str]) -> float:
+    """Simple local pressure proxy based on queued vehicles on served lanes."""
+    lane_queues = state_dict.get("lane_queue_lengths", {})
+    return float(sum(float(lane_queues.get(lane_id, 0.0)) for lane_id in phase_lanes if lane_id))
+
+
+def add_pressure_features(
+    state_dict: Dict,
+    phase_to_lanes: Dict[int, List[str]],
+    green_phases: List[int],
+    phase_count: int,
+) -> Dict:
+    """Append pressure-aware features without changing legacy state fields."""
+    out = dict(state_dict)
+    current_phase = int(state_dict.get("traffic_light_phase", 0))
+    current_green = get_reference_green_phase(current_phase, green_phases)
+    next_green = get_next_green_phase(current_green, green_phases, phase_count)
+
+    current_pressure = compute_phase_pressure(state_dict, phase_to_lanes.get(current_green, []))
+    next_pressure = compute_phase_pressure(state_dict, phase_to_lanes.get(next_green, []))
+    total_queue = float(sum(state_dict.get("lane_queue_lengths", {}).values()))
+
+    out["extra_features"] = [
+        float(np.clip(current_pressure / PRESSURE_FEATURE_SCALE, 0.0, 1.0)),
+        float(np.clip(next_pressure / PRESSURE_FEATURE_SCALE, 0.0, 1.0)),
+        float(np.clip((next_pressure - current_pressure) / PRESSURE_FEATURE_SCALE, -1.0, 1.0)),
+        float(np.clip(total_queue / PRESSURE_TOTAL_QUEUE_SCALE, 0.0, 1.0)),
+    ]
+    return out
+
+
+def get_max_phase_pressure(state_dict: Dict, phase_to_lanes: Dict[int, List[str]], green_phases: List[int]) -> float:
+    """Maximum queue pressure over available vehicle-green phases."""
+    if not green_phases:
+        return float(sum(state_dict.get("lane_queue_lengths", {}).values()))
+    return float(max(
+        compute_phase_pressure(state_dict, phase_to_lanes.get(int(phase), []))
+        for phase in green_phases
+    ))
 
 
 def get_controlled_lanes_for_tl(tl_id: str) -> List[str]:
@@ -163,8 +250,17 @@ def build_local_state(tl_id: str, lane_ids_fixed: List[str]) -> Dict:
     }
 
 
-def local_reward(prev_state: Dict, curr_state: Dict, action: int,
-                  prev_action: int = 0, n_green_phases: int = 2) -> float:
+def local_reward(
+    prev_state: Dict,
+    curr_state: Dict,
+    action: int,
+    prev_action: int = 0,
+    n_green_phases: int = 2,
+    phase_to_lanes: Dict[int, List[str]] | None = None,
+    green_phases: List[int] | None = None,
+    pressure_reward_weight: float = PRESSURE_REWARD_WEIGHT,
+    pressure_reward_scale: float = PRESSURE_REWARD_SCALE,
+) -> float:
     """Reward aligned with training — targets waiting time + queue reduction."""
     curr_wait = sum(curr_state.get("lane_waiting_times", {}).values())
     curr_q = sum(curr_state.get("lane_queue_lengths", {}).values())
@@ -174,7 +270,15 @@ def local_reward(prev_state: Dict, curr_state: Dict, action: int,
     r_wait = -0.50 * np.clip(curr_wait / 200.0, 0.0, 1.0)
     r_queue = 0.35 * np.clip(queue_change / 10.0, -1.0, 1.0)
     r_switch = -0.05 if action == 1 else 0.0
-    return float(r_wait + r_queue + r_switch)
+    r_pressure = 0.0
+    if phase_to_lanes and green_phases:
+        prev_max_pressure = get_max_phase_pressure(prev_state, phase_to_lanes, green_phases)
+        curr_max_pressure = get_max_phase_pressure(curr_state, phase_to_lanes, green_phases)
+        pressure_delta = prev_max_pressure - curr_max_pressure
+        r_pressure = float(pressure_reward_weight) * np.clip(
+            pressure_delta / max(1e-6, float(pressure_reward_scale)), -1.0, 1.0
+        )
+    return float(r_wait + r_queue + r_switch + r_pressure)
 
 
 def pad_or_truncate(lanes: List[str], k: int) -> List[str]:
@@ -240,6 +344,7 @@ def main():
         help="If >0, use this ratio of total TLS (overrides --max-controlled-lights). Example: 0.2 for 20%",
     )
     parser.add_argument("--lanes-per-tl", type=int, default=20)
+    parser.add_argument("--demand-scale", type=float, default=0.0, help="SUMO --scale for traffic demand (0=default, 0.7=70%%)")
     parser.add_argument(
         "--regional-reward-weight",
         type=float,
@@ -310,6 +415,11 @@ def main():
 
     results = []
     agent: RLAgent | None = None
+    is_n_action = False
+    switch_mode = "legacy_cycle"
+    use_pressure_state_features = False
+    pressure_reward_weight_local = PRESSURE_REWARD_WEIGHT
+    pressure_reward_scale_local = PRESSURE_REWARD_SCALE
 
     print("=" * 78)
     print(f"MARL evaluation: {args.dataset} | model={model_path}")
@@ -333,6 +443,7 @@ def main():
             enable_sumo_emissions_output=bool(args.sumo_emissions_output),
             sumo_seed=sumo_seed,
             controlled_lights_ratio=float(args.controlled_lights_ratio) if args.controlled_lights_ratio > 0 else None,
+            demand_scale=float(args.demand_scale) if args.demand_scale > 0 else None,
         )
         simulator.data_collection_interval = max(1, int(args.data_collection_interval))
         if args.collect_emissions:
@@ -356,32 +467,49 @@ def main():
 
         tl_lanes: Dict[str, List[str]] = {}
         tl_phase_counts: Dict[str, int] = {}
+        tl_green_phases: Dict[str, List[int]] = {}
+        tl_phase_lanes: Dict[str, Dict[int, List[str]]] = {}
         for tl_id in tls_ids:
             lanes = get_controlled_lanes_for_tl(tl_id)
             tl_lanes[tl_id] = pad_or_truncate(lanes, int(args.lanes_per_tl))
             tl_phase_counts[tl_id] = max(1, get_phase_count(tl_id))
+            phase_map = get_phase_lane_map(tl_id)
+            gp = list(phase_map.get("green_phases", [])) or list(range(tl_phase_counts[tl_id]))
+            tl_green_phases[tl_id] = gp
+            tl_phase_lanes[tl_id] = {
+                int(phase): list(lanes_for_phase)
+                for phase, lanes_for_phase in phase_map.get("phase_to_lanes", {}).items()
+            }
+            if ep == 1:
+                print(f"  TL {tl_id}: {len(gp)} green phases {gp[:8]}")
 
         tl_regions: Dict[str, Tuple[int, int]] = {}
         if args.regional_reward_weight and args.regional_reward_weight > 0.0:
             tl_regions = build_region_map(tls_ids, float(args.region_grid_size))
 
-        # Per-TL green phase list
-        tl_green_phases: Dict[str, List[int]] = {}
-        for tl_id in tls_ids:
-            gp = get_green_phases(tl_id)
-            tl_green_phases[tl_id] = gp
-            if ep == 1:
-                print(f"  TL {tl_id}: {len(gp)} green phases {gp[:8]}")
-
         # Init agent once we know state_dim; read action_dim from checkpoint
         if agent is None:
             import torch as _torch
             ckpt = _torch.load(model_path, map_location="cpu")
-            ckpt_action_dim = ckpt.get("config", {}).get("action_dim", 2)
+            ckpt_cfg = ckpt.get("config", {})
+            ckpt_action_dim = ckpt_cfg.get("action_dim", 2)
             is_n_action = ckpt_action_dim > 2
-            print(f"Model action_dim={ckpt_action_dim} ({'N-action' if is_n_action else 'legacy 2-action'})")
+            switch_mode = str(ckpt_cfg.get("switch_mode", "legacy_cycle"))
+            use_pressure_state_features = bool(ckpt_cfg.get("pressure_state_features", False))
+            pressure_reward_weight_local = float(ckpt_cfg.get("pressure_reward_weight", PRESSURE_REWARD_WEIGHT))
+            pressure_reward_scale_local = float(ckpt_cfg.get("pressure_reward_scale", PRESSURE_REWARD_SCALE))
+            mode_label = "N-action" if is_n_action else ("2-action next-green" if switch_mode == "next_green" else "legacy 2-action")
+            print(f"Model action_dim={ckpt_action_dim} ({mode_label}) | pressure_state={use_pressure_state_features}")
 
-            s0 = build_local_state(tls_ids[0], tl_lanes[tls_ids[0]])
+            first_tl = tls_ids[0]
+            s0 = build_local_state(first_tl, tl_lanes[first_tl])
+            if use_pressure_state_features:
+                s0 = add_pressure_features(
+                    s0,
+                    tl_phase_lanes[first_tl],
+                    tl_green_phases[first_tl],
+                    tl_phase_counts[first_tl],
+                )
             state_dim = len(RLTState(s0, lane_list=tl_lanes[tls_ids[0]]).to_vector())
             agent_config = {
                 "state_dim": state_dim,
@@ -406,9 +534,17 @@ def main():
         decisions = 0
         prev_actions: Dict[str, int] = {tl_id: 0 for tl_id in tls_ids}
 
-        prev_state_dict: Dict[str, Dict] = {
-            tl_id: build_local_state(tl_id, tl_lanes[tl_id]) for tl_id in tls_ids
-        }
+        prev_state_dict: Dict[str, Dict] = {}
+        for tl_id in tls_ids:
+            state_dict = build_local_state(tl_id, tl_lanes[tl_id])
+            if use_pressure_state_features:
+                state_dict = add_pressure_features(
+                    state_dict,
+                    tl_phase_lanes[tl_id],
+                    tl_green_phases[tl_id],
+                    tl_phase_counts[tl_id],
+                )
+            prev_state_dict[tl_id] = state_dict
         prev_state_obj: Dict[str, RLTState] = {
             tl_id: RLTState(prev_state_dict[tl_id], lane_list=tl_lanes[tl_id]) for tl_id in tls_ids
         }
@@ -426,11 +562,11 @@ def main():
                 for tl_id in tls_ids:
                     actions[tl_id] = agent.select_action(prev_state_obj[tl_id], training=False)
 
-                # Apply actions — auto-detect legacy vs N-action from checkpoint
+                # Apply actions — support legacy 2-action, next-green 2-action, and N-action.
                 for tl_id, action in actions.items():
-                    if action == 0:
-                        continue
                     if is_n_action:
+                        if action == 0:
+                            continue
                         gp = tl_green_phases.get(tl_id, [])
                         if not gp:
                             continue
@@ -442,7 +578,24 @@ def main():
                                 traci.trafficlight.setPhase(tl_id, target_phase)
                         except Exception:
                             pass
+                    elif switch_mode == "next_green":
+                        try:
+                            cur = int(traci.trafficlight.getPhase(tl_id))
+                            gp = tl_green_phases.get(tl_id, [])
+                            nph = int(tl_phase_counts.get(tl_id, 1))
+                            if action == 0:
+                                if cur in gp:
+                                    traci.trafficlight.setPhaseDuration(tl_id, float(args.decision_interval))
+                                continue
+                            target_phase = get_next_green_phase(cur, gp, nph)
+                            if target_phase != cur:
+                                traci.trafficlight.setPhase(tl_id, target_phase)
+                            traci.trafficlight.setPhaseDuration(tl_id, float(args.decision_interval))
+                        except Exception:
+                            pass
                     else:
+                        if action == 0:
+                            continue
                         try:
                             cur = int(traci.trafficlight.getPhase(tl_id))
                             nph = int(tl_phase_counts.get(tl_id, 1))
@@ -454,6 +607,13 @@ def main():
                 curr_state_obj: Dict[str, RLTState] = {}
                 for tl_id in tls_ids:
                     curr_dict = build_local_state(tl_id, tl_lanes[tl_id])
+                    if use_pressure_state_features:
+                        curr_dict = add_pressure_features(
+                            curr_dict,
+                            tl_phase_lanes[tl_id],
+                            tl_green_phases[tl_id],
+                            tl_phase_counts[tl_id],
+                        )
                     curr_state_dict[tl_id] = curr_dict
                     curr_state_obj[tl_id] = RLTState(curr_dict, lane_list=tl_lanes[tl_id])
 
@@ -472,6 +632,10 @@ def main():
                         prev_state_dict[tl_id], curr_state_dict[tl_id],
                         actions[tl_id], prev_actions.get(tl_id, 0),
                         n_green_phases=len(gp),
+                        phase_to_lanes=tl_phase_lanes.get(tl_id, {}) if use_pressure_state_features else None,
+                        green_phases=gp if use_pressure_state_features else None,
+                        pressure_reward_weight=pressure_reward_weight_local,
+                        pressure_reward_scale=pressure_reward_scale_local,
                     )
                     if tl_regions:
                         region = tl_regions.get(tl_id, (0, 0))

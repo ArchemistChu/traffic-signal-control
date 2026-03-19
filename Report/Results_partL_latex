@@ -1,52 +1,25 @@
-% Results chapter starter (Overleaf/LaTeX).
-% Paste into your main report and adjust labels/citations to match your bibliography keys.
+% Results chapter – Final Year Project Report
+% Updated with actual evaluation data (demand scale 0.7, Cologne network)
 
 \chapter{Results}
 \label{ch:results}
 
-This chapter reports the experimental results of the proposed traffic signal control system on OSM Web Wizard city networks. Following common practice in the traffic-signal-control literature, results are presented as a structured comparison against non-learning baselines using multiple complementary metrics (delay/waiting time, queue length, throughput, and environmental impact), together with a stability and robustness discussion \cite{noaeen2022reinforcement, xiao2024advances}.
+This chapter reports the experimental results of the proposed Multi-Agent Reinforcement Learning (MARL) DQN traffic signal controller, benchmarked against four classical baselines on the Cologne OSM network under moderate congestion (demand scale~$=0.7$). Following established practice in the traffic-signal-control literature, results are presented as a structured multi-metric comparison covering traffic efficiency, environmental impact, and composite performance indicators \cite{noaeen2022reinforcement, xiao2024advances}.
 
-In particular, prior work highlights that the credibility of learning-based traffic signal control depends on \emph{(i)} comparisons to multiple baselines under the same demand, \emph{(ii)} reporting both efficiency and robustness (e.g., stability under demand variation or perturbations), and \emph{(iii)} analyzing the role of the reward design and action formulation \cite{xiao2024advances,noaeen2022reinforcement}. Therefore, rather than reporting a single metric, the evaluation in this project emphasizes a multi-metric view of network performance and explicitly relates each metric to the intended control objective (reducing congestion while avoiding unstable switching).
+Prior work stresses that the credibility of learning-based traffic control depends on \emph{(i)} comparison against multiple baselines under identical demand, \emph{(ii)} reporting both efficiency and robustness, and \emph{(iii)} relating each metric to the intended control objective \cite{xiao2024advances,noaeen2022reinforcement}. Accordingly, this evaluation reports core traffic metrics (waiting time, queue length, throughput, congestion), environmental metrics (CO$_2$), and derived composite metrics (throughput efficiency, waiting time per arrived vehicle) that reveal where the learned policy adds practical value beyond what simple rules achieve.
 
-Experiments are conducted on the OSM Web Wizard city maps (e.g., Cologne, Vancouver, Los Angeles) with customized synthetic traffic demand. For each run, the simulator logs per-vehicle and per-signal trajectories and computes aggregated performance indicators. The primary objective metric is the average waiting time (average delay proxy), as widely used in traffic signal control studies due to its direct relationship to congestion and user-perceived performance \cite{noaeen2022reinforcement}. We additionally report throughput (arrived vehicles per hour) to ensure that reductions in delay do not come from artificially restricting flow, and we report queue-based measures (average queue length and a pressure proxy) to capture how effectively each controller dissipates standing queues.
+The remainder of this chapter is organized as follows: Section~\ref{sec:results_setup} summarizes the evaluation and training setup; Section~\ref{sec:results_main} presents the main comparative results; Section~\ref{sec:results_derived} analyses derived efficiency metrics; Section~\ref{sec:results_stat} provides statistical significance testing; Section~\ref{sec:results_training} discusses training dynamics; and Section~\ref{sec:results_discussion} interprets the findings and their limitations.
 
-Beyond traffic efficiency, recent works increasingly motivate the inclusion of sustainability and side-effects in the evaluation (e.g., fuel consumption and emissions) when a microscopic simulator is available \cite{xiao2024advances}. For this reason, the results section includes total \(CO_2\) emissions and fuel consumption computed from SUMO’s emission model. These environmental metrics are interpreted together with delay and throughput to evaluate whether improvements in mobility also translate to reduced idling and acceleration-related emissions.
 
-Finally, the literature also stresses that reinforcement learning controllers should be assessed not only for average performance but also for \emph{stability} (e.g., sensitivity to scenario changes, reward choice, and stochasticity of simulation runs) \cite{noaeen2022reinforcement,xiao2024advances}. Accordingly, where multiple runs are available, we summarize results with mean and variability and discuss qualitative stability indicators such as reduced oscillatory phase switching and consistent performance across maps. The remainder of this chapter is organized as follows: Section~\ref{sec:results_setup} summarizes the evaluation protocol; Section~\ref{sec:results_main} presents the preliminary generalization results; Section~\ref{sec:results_tests} outlines the planned statistical testing and baseline comparison protocol; and Section~\ref{sec:results_future} discusses remaining work and future improvements.
-
+%% ===================================================================
 \section{Evaluation Setup}
 \label{sec:results_setup}
-Table~\ref{tab:results_setup} summarizes the concrete evaluation configuration used to produce the reported generalization results. This level of detail is necessary for reproducibility and for fair comparison with baselines, consistent with the reporting discipline in recent traffic-signal-control literature.
 
-Table~\ref{tab:drl_hyperparams} summarizes the key parameters used for training the RL agent (Dueling Double DQN with parameter sharing).
-
-\begin{table}[h]
-    \centering
-    \caption{Variables and parameters for training the RL agent.}
-    \label{tab:drl_hyperparams}
-    \begin{tabular}{l c p{6.5cm}}
-        \hline
-        \textbf{Variable} & \textbf{Value} & \textbf{Description} \\
-        \hline
-        $\gamma$ (gamma) & 0.99 & Discount factor \\
-        $\varepsilon_{\text{start}}$ (epsilon start) & 1.0 & Initial exploration rate \\
-        $\varepsilon_{\min}$ (epsilon min) & 0.1 & Minimum epsilon \\
-        $\varepsilon_{\mathrm{decay}}$ (epsilon decay) & 0.995 & Epsilon decay rate per step \\
-        $l_r$ (learning rate) & $1\times 10^{-4}$ & Learning rate (Adam optimizer) \\
-        $\tau$ (target update) & 500 & Target network update interval (steps) \\
-        Replay memory & 100,000 & Replay buffer capacity \\
-        Batch size & 64 & Mini-batch size \\
-        $n$-step horizon & 3 & $n$-step return horizon \\
-        Network architecture & [256, 128, 64] & Hidden layer dimensions (3-layer MLP) \\
-        Episodes & 120 & Number of training episodes \\
-        Horizon & 1,200 s & Simulation duration per episode \\
-        \hline
-    \end{tabular}
-\end{table}
+All controllers are evaluated on the Cologne OSM network with a demand scale of~$0.7$ (moderate congestion), using 120~independent episodes per controller with distinct SUMO random seeds. All strategies share the same episode horizon, controlled-intersection budget, and seed schedule; only the control policy differs. Table~\ref{tab:results_setup} summarizes the evaluation configuration, and Table~\ref{tab:drl_hyperparams} lists the DRL agent hyperparameters for the checkpoint used to generate the results reported in this chapter.
 
 \begin{table}[h]
     \centering
-    \caption{Evaluation setup (generalization: Vancouver-trained model evaluated on Cologne).}
+    \caption{Evaluation setup for the comparative study.}
     \label{tab:results_setup}
     \begin{tabular}{p{4.0cm} p{10.4cm}}
         \hline
@@ -54,73 +27,386 @@ Table~\ref{tab:drl_hyperparams} summarizes the key parameters used for training 
         \hline
         SUMO version & v1.25.0 (headless) \\
         Map & Cologne (OSM Web Wizard) \\
-        Policy & MARL\_DQN (parameter-sharing, region-aware), trained on Vancouver \\
-        Episodes & \(n=120\) independent episodes (distinct SUMO seeds) \\
-        Horizon & \(T_{\mathrm{sim}}=1200\) s per episode \\
-        Decision interval & \(\Delta t=5\) s \\
-        Controlled traffic lights & ratio \(=0.2\) (observed \(16/79\) on Cologne) \\
-        Lane padding & \(K=8\) lanes per traffic light \\
-        Action space & \(|\mathcal{A}|=2\): keep phase / switch to next phase \\
-        Reward shaping & region-aware penalty weight \(\lambda=0.01\), grid size \(500\) m \\
-        Emissions & SUMO \texttt{--emission-output} parsed into totals (CO\(_2\), fuel) \\
+        Demand scale & $0.7$ (moderate congestion) \\
+        MARL policy & MARL\_DQN (parameter-sharing, Dueling Double DQN, region-aware) \\
+        Training episodes & $M = 300$ on Cologne \\
+        Evaluation episodes & $n = 120$ independent episodes per controller \\
+        Horizon & $T_{\mathrm{sim}} = 1200$\,s per episode \\
+        Decision interval & $\Delta t = 5$\,s \\
+        Controlled traffic lights & ratio $= 0.5$ of detected traffic lights \\
+        Lane padding & $K = 20$ lanes per traffic light \\
+        Action space & Evaluated checkpoint uses a legacy 2-action interface: keep current phase / switch to next phase \\
+        Reward shaping & region-aware penalty weight $\lambda = 0.01$, grid size $500$\,m \\
+        Emissions & SUMO \texttt{--emission-output} parsed into totals (CO$_2$, fuel, NO$_x$, PM$_x$) \\
+        Baselines & Fixed-Time, SOTL, Adaptive (queue extension), MaxPressure \\
         \hline
     \end{tabular}
 \end{table}
-
-\section{Main Results: Generalization (\texorpdfstring{Vancouver $\rightarrow$ Cologne}{Vancouver to Cologne})}
-\label{sec:results_main}
-Table~\ref{tab:gen_stats} reports the generalization performance of the Vancouver-trained region-aware MARL\_DQN controller on the Cologne map over 120 independent episodes. Following the reporting style in the reference literature, we present mean \(\pm\) standard deviation and the 95\% confidence interval.
 
 \begin{table}[h]
     \centering
-    \caption{Generalization results on Cologne over \(n=120\) seeded episodes (mean \(\pm\) std, with 95\% CI).}
-    \label{tab:gen_stats}
-    \begin{tabular}{l c c}
+    \caption{Hyperparameters of the MARL DQN agent.}
+    \label{tab:drl_hyperparams}
+    \begin{tabular}{l c p{6.5cm}}
         \hline
-        \textbf{Metric} & \textbf{Mean \(\pm\) Std} & \textbf{95\% CI} \\
+        \textbf{Variable} & \textbf{Value} & \textbf{Description} \\
         \hline
-        Avg. waiting time (s) & \(103.78 \pm 1.03\) & \([103.60,\;103.97]\) \\
-        Avg. queue length (veh) & \(3008.97 \pm 10.94\) & \([3007.01,\;3010.92]\) \\
-        Throughput (veh/h) & \(511.98 \pm 33.24\) & \([506.03,\;517.92]\) \\
-        Congestion index (-) & \(0.7568 \pm 0.0089\) & \([0.7552,\;0.7584]\) \\
-        \hline
-        Total CO\(_2\) (mg) & \(7.84\times 10^{9} \pm 2.76\times 10^{7}\) & \([7.8346,\;7.8445]\times 10^{9}\) \\
-        Total fuel (ml) & \(2.53\times 10^{9} \pm 8.90\times 10^{6}\) & \([2.53195,\;2.53514]\times 10^{9}\) \\
+        $\gamma$ (discount) & 0.90 & Discount factor \\
+        $\varepsilon_{\text{start}}$ & 1.0 & Initial exploration rate \\
+        $\varepsilon_{\min}$ & 0.05 & Minimum exploration rate \\
+        $\alpha$ (learning rate) & $5 \times 10^{-5}$ & Adam optimizer learning rate \\
+        Target update ($C$) & 2\,000 steps & Hard copy interval \\
+        Replay memory & 200\,000 & Replay buffer capacity \\
+        Batch size & 128 & Mini-batch size \\
+        $n$-step horizon & 1 & Single-step returns \\
+        Network & [256, 256, 128] & Hidden layer dimensions (3-layer MLP) \\
+        Normalization & Layer Norm & Applied after each hidden layer \\
+        Gradient clipping & max norm $= 0.5$ & Prevents exploding gradients \\
+        Q-target clamp & $[-2,\;2]$ & Prevents extreme TD targets \\
+        State dimension & 77 & $3K + 16 + 1$ with $K = 20$ \\
+        Training episodes & 300 & On Cologne (demand scale 0.7) \\
         \hline
     \end{tabular}
 \end{table}
 
-\textbf{Interpretation.} The controller achieves an average waiting time of \(103.78\) seconds with low variance across seeds, indicating stable performance under stochastic demand realizations. The throughput variability (\(\pm 33\) veh/h) suggests sensitivity to episode-level randomness (e.g., departures, teleports, and routing), which is expected in large OSM networks. Importantly, emissions totals remain within a narrow band (approximately \(\approx 1.8\%\) range across episodes), supporting the claim that the evaluation is consistent and not dominated by rare outlier runs.
 
-These preliminary results demonstrate that the proposed MARL\_DQN controller successfully generalizes from the Vancouver training environment to the unseen Cologne city map, achieving consistent performance across 120 independent episodes. The low variance in key metrics (waiting time, queue length, emissions) indicates that the learned policy is stable and robust to stochastic traffic demand variations.
+%% ===================================================================
+\section{Main Results: Comparative Performance}
+\label{sec:results_main}
 
-\section{Statistical Tests and Baseline Comparisons}
-\label{sec:results_tests}
-To provide a comprehensive evaluation of the proposed MARL\_DQN controller, a full comparative analysis against baseline controllers is planned. The evaluation protocol will include: (i) baseline performance means computed under the same seed configuration as the MARL\_DQN runs, (ii) pairwise statistical tests (independent t-test and Mann--Whitney U test) to assess significance of performance differences, and (iii) effect size analysis (e.g., absolute seconds saved per vehicle, percentage improvement in throughput) to quantify practical relevance.
+Table~\ref{tab:main_results} presents the core traffic metrics for all five controllers, averaged over 120~episodes. The percentage changes relative to the Fixed-Time baseline are shown in Table~\ref{tab:pct_change}.
 
-The baseline controllers to be evaluated include Fixed-Time Controller (FTC), Adaptive Controller, MaxPressure Controller, SOTL (Self-Organizing Traffic Lights), and Genetic Algorithm (GA). All baseline runs will use the same evaluation setup as described in Table~\ref{tab:results_setup}, ensuring fair comparison under identical traffic demand, simulation horizon, and controlled intersection selection.
+\begin{table}[!htbp]
+    \centering
+    \caption{Core traffic metrics on Cologne (demand scale 0.7), mean $\pm$ std over $n = 120$ episodes.}
+    \label{tab:main_results}
+    \begin{tabular}{l r@{$\;\pm\;$}l r@{$\;\pm\;$}l r@{$\;\pm\;$}l r@{$\;\pm\;$}l}
+        \hline
+        \textbf{Strategy} & \multicolumn{2}{c}{\textbf{Avg Wait (s)}} & \multicolumn{2}{c}{\textbf{Avg Queue}} & \multicolumn{2}{c}{\textbf{Throughput (/h)}} & \multicolumn{2}{c}{\textbf{Congest.\ Idx}} \\
+        \hline
+        Fixed-Time      & 95.93 & 1.21 & 2282.0 & 10.9 & 692.4 & 35.6 & 0.74 & 0.01 \\
+        SOTL            & \textbf{94.80} & \textbf{1.20} & \textbf{2248.6} & \textbf{13.3} & 759.0 & 40.3 & 0.72 & 0.02 \\
+        Adaptive        & 95.26 & 1.20 & 2254.6 & 11.5 & 762.2 & 41.2 & 0.69 & 0.02 \\
+        MaxPressure     & 95.68 & 1.25 & 2257.5 & 11.4 & 773.9 & 32.9 & 0.66 & 0.02 \\
+        MARL DQN (Ours) & 95.34 & 1.30 & 2249.8 & 12.0 & \textbf{775.8} & \textbf{40.1} & \textbf{0.64} & \textbf{0.02} \\
+        \hline
+    \end{tabular}
+\end{table}
 
-\section{Remaining Work and Future Improvement}
-\label{sec:results_future}
-Current work focuses on finalizing the evaluation of comparison baselines (FTC, Adaptive, MaxPressure, SOTL, GA) to enable the statistical testing described in Section~\ref{sec:results_tests}. These baseline controllers have been implemented and integrated into the simulation framework, but their full evaluation across 120 independent episodes on the Cologne map is still in progress. Once completed, the comparative results will enable rigorous statistical analysis to determine whether the MARL\_DQN controller achieves significant improvements over rule-based and optimization-based baselines.
+\begin{table}[!htbp]
+    \centering
+    \caption{Percentage change relative to Fixed-Time baseline (negative values indicate improvement for waiting time, queue, and congestion; positive values indicate improvement for throughput and speed).}
+    \label{tab:pct_change}
+    \begin{tabular}{l r r r r r}
+        \hline
+        \textbf{Strategy} & \textbf{Avg Wait} & \textbf{Avg Queue} & \textbf{Throughput} & \textbf{Congest.\ Idx} & \textbf{Avg Speed} \\
+        \hline
+        SOTL           & $-1.2\%$ & $-1.5\%$ & $+9.6\%$  & $-2.4\%$  & $+4.6\%$ \\
+        Adaptive       & $-0.7\%$ & $-1.2\%$ & $+10.1\%$ & $-7.5\%$  & $+4.3\%$ \\
+        MaxPressure    & $-0.3\%$ & $-1.1\%$ & $+11.8\%$ & $-11.1\%$ & $+4.0\%$ \\
+        \textbf{MARL DQN} & $\mathbf{-0.6\%}$ & $\mathbf{-1.4\%}$ & $\mathbf{+12.0\%}$ & $\mathbf{-13.7\%}$ & $\mathbf{+3.9\%}$ \\
+        \hline
+    \end{tabular}
+\end{table}
 
-In addition to baseline comparisons, several components of the system have been identified for further improvement and will be addressed in the Final Report:
+\subsection{Analysis of Core Metrics}
+
+\textbf{Throughput.} The MARL DQN controller achieves the highest mean throughput of $775.8$\,veh/h, representing a $+12.0\%$ improvement over Fixed-Time ($692.4$\,veh/h). This exceeds all classical baselines: SOTL ($+9.6\%$), Adaptive ($+10.1\%$), and MaxPressure ($+11.8\%$). However, the absolute gap over MaxPressure is small ($+1.9$\,veh/h), so the advantage should be interpreted as incremental rather than transformative.
+
+\textbf{Congestion index.} The clearest advantage of the MARL agent appears in the congestion index (fraction of time-lane samples experiencing queuing). MARL DQN achieves $0.64$, a $-13.7\%$ reduction versus Fixed-Time. This outperforms all baselines: SOTL ($-2.4\%$), Adaptive ($-7.5\%$), and MaxPressure ($-11.1\%$). Relative to MaxPressure, the reduction is approximately $2.6$ percentage points. This pattern is consistent with the interpretation that the learned policy allocates green time in a way that suppresses localized queue buildup more effectively than the rule-based alternatives.
+
+\textbf{Average waiting time and queue length.} All adaptive controllers reduce average waiting time relative to Fixed-Time, but the improvements are modest ($< 2\%$). SOTL achieves the largest waiting-time reduction ($-1.2\%$), while MARL DQN ($-0.6\%$) and Adaptive ($-0.7\%$) are comparable. Average queue length reductions follow a similar pattern, with SOTL ($-1.5\%$) and MARL DQN ($-1.4\%$) leading. This reflects the fact that on a large city network with only 50\% of intersections controlled, the network-wide average delay is dominated by uncontrolled intersections, compressing the observable differences.
+
+\textbf{Average speed.} All adaptive controllers improve average vehicle speed by approximately $4\%$ over Fixed-Time ($0.61$\,m/s). SOTL achieves the largest speed gain ($+4.6\%$), while MARL DQN achieves $+3.9\%$, reflecting a trade-off between congestion reduction and throughput maximization.
+
+Figure~\ref{fig:bar_comparison} provides a visual comparison of the five controllers across six core metrics, and Figure~\ref{fig:multi_metric_panel} presents a detailed multi-metric panel view.
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figures/nb_bar_chart_comparison.pdf}
+    \caption{Bar chart comparison of all strategies across core traffic metrics (Cologne, demand scale 0.7, $n = 120$ episodes).}
+    \label{fig:bar_comparison}
+\end{figure}
+\FloatBarrier
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figures/nb_multi_metric_panel.pdf}
+    \caption{Multi-metric panel: per-episode comparison across controllers.}
+    \label{fig:multi_metric_panel}
+\end{figure}
+\FloatBarrier
+
+
+%% ===================================================================
+\section{Derived Efficiency Metrics}
+\label{sec:results_derived}
+
+To capture the joint effect of throughput improvement and congestion reduction, we define composite metrics that better reflect overall network efficiency:
 
 \begin{itemize}
-    \item \textbf{Comprehensive baseline evaluation}: Complete the 120-episode evaluation runs for all baseline controllers (FTC, Adaptive, MaxPressure, SOTL, GA) on the Cologne map to enable full statistical comparison.
-    
-    \item \textbf{Ablation studies}: Conduct ablation studies to isolate the contribution of key design choices, including:
-    \begin{itemize}
-        \item Region-aware reward shaping: compare \(\lambda=0\) vs \(\lambda=0.01\) to quantify the impact of regional cooperation.
-        \item Lane padding \(K\): evaluate \(K\in\{4,8,12\}\) to study the trade-off between state compression and representation fidelity.
-        \item Controlled traffic lights ratio: vary controlled ratio (e.g., 0.1, 0.2, 0.3) to assess scalability to larger networks.
-        \item Switching penalty coefficient: vary the switch penalty to quantify the balance between stability and responsiveness.
-    \end{itemize}
-    
-    \item \textbf{Multi-city evaluation}: Extend evaluation to additional OSM city maps (e.g., Los Angeles) to further assess generalization capability across diverse urban topologies.
-    
-    \item \textbf{Training analysis}: Provide detailed training curves, convergence analysis, and hyperparameter sensitivity studies to document the learning dynamics of the MARL\_DQN agent.
+    \item \textbf{Throughput efficiency}: $\text{TE} = \text{Throughput}_{/h} \;/\; \text{Congestion Index}$, measuring vehicles processed per unit of congestion.
+    \item \textbf{Normalized waiting burden}: $\text{WA} = \text{Total Waiting Time} \;/\; N_{\text{arrived}}$, a normalized network-level waiting burden.
+    \item \textbf{CO$_2$ per arrived vehicle}: $\text{CA} = \text{Total CO}_2 \;/\; N_{\text{arrived}}$, a normalized emissions burden per arrived vehicle.
 \end{itemize}
 
-The full comparative results, statistical analysis, and ablation studies will be presented in the Final Report, providing a complete assessment of the proposed traffic signal control system's performance relative to established baselines.
+Table~\ref{tab:derived_results} reports these derived metrics across controllers.
+
+\begin{table}[!htbp]
+    \centering
+    \caption{Derived efficiency metrics (mean over $n = 120$ episodes). The waiting and emission normalisations are network-level totals divided by the number of arrived vehicles. Bold indicates the best mean value in each column.}
+    \label{tab:derived_results}
+    \begin{tabular}{l r r r r}
+        \hline
+        \textbf{Strategy} & \textbf{Thr.\ Efficiency} & \textbf{Norm.\ Wait Burden (s/arrived)} & \textbf{CO$_2$/Arrived (mg)} & \textbf{\% $\Delta$ TE vs FT} \\
+        \hline
+        Fixed-Time       & 921.9  & 135\,143 & $2.71 \times 10^7$ & --- \\
+        SOTL              & 1\,035.6 & 121\,098 & $2.47 \times 10^7$ & $+12.3\%$ \\
+        Adaptive          & 1\,096.2 & 121\,435 & $2.47 \times 10^7$ & $+18.9\%$ \\
+        MaxPressure       & 1\,158.2 & 119\,945 & $\mathbf{2.42 \times 10^7}$ & $+25.6\%$ \\
+        MARL DQN          & \textbf{1\,195.1} & \textbf{119\,355} & $\mathbf{2.42 \times 10^7}$ & \textbf{+29.6\%} \\
+        \hline
+    \end{tabular}
+\end{table}
+
+The throughput efficiency metric reveals the clearest advantage of the MARL DQN controller: a $+29.6\%$ improvement over Fixed-Time, compared to $+25.6\%$ for MaxPressure and $+12.3\%$ for SOTL. The MARL agent processes nearly 1\,195 vehicles per hour per unit of congestion, versus 1\,158 for MaxPressure---a $3.2\%$ relative improvement. This arises because the MARL agent simultaneously attains the highest throughput and the lowest congestion index among the evaluated strategies.
+
+The normalized burden metrics also favor the MARL agent. The normalized waiting burden ($119\,355$\,s per arrived vehicle) is the lowest among the evaluated controllers, while CO$_2$ per arrived vehicle is tied with MaxPressure at $2.42 \times 10^7$\,mg. These results suggest that the throughput gains do not come at the expense of a higher normalized waiting or emissions burden.
+
+Figure~\ref{fig:derived_bar} visualizes the derived metrics across controllers, and Figure~\ref{fig:improvement_bars} shows the MARL DQN agent's percentage improvement over each baseline.
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figures/nb_derived_efficiency_bar_chart.pdf}
+    \caption{Derived efficiency metrics across controllers. Throughput efficiency and per-vehicle indicators highlight the MARL agent's advantage.}
+    \label{fig:derived_bar}
+\end{figure}
+\FloatBarrier
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figures/nb_marl_improvement_over_baselines.pdf}
+    \caption{MARL DQN percentage improvement over each baseline controller across core and derived metrics.}
+    \label{fig:improvement_bars}
+\end{figure}
+\FloatBarrier
+
+
+%% ===================================================================
+\section{Statistical Significance}
+\label{sec:results_stat}
+
+To assess whether the observed differences are statistically reliable, pairwise Welch's $t$-tests are performed between the MARL DQN agent and each baseline. Table~\ref{tab:stat_tests} reports the test statistics and $p$-values for MARL DQN versus SOTL (the strongest traditional adaptive baseline in terms of waiting time reduction).
+
+\begin{table}[!htbp]
+    \centering
+    \caption{Welch's $t$-test: MARL DQN vs.\ SOTL ($n = 120$ episodes each).}
+    \label{tab:stat_tests}
+    \begin{tabular}{l r r l}
+        \hline
+        \textbf{Metric} & \textbf{$t$-statistic} & \textbf{$p$-value} & \textbf{Significance} \\
+        \hline
+        Avg waiting time      & $3.34$   & $9.81 \times 10^{-4}$   & $***$ \\
+        Avg queue length      & $0.74$   & $0.461$                  & n.s. \\
+        Throughput (/h)       & $3.24$   & $1.36 \times 10^{-3}$   & $**$ \\
+        Congestion index      & $-38.19$ & $8.33 \times 10^{-102}$ & $***$ \\
+        Avg speed             & $-2.97$  & $3.26 \times 10^{-3}$   & $**$ \\
+        Total CO$_2$          & $3.66$   & $3.15 \times 10^{-4}$   & $***$ \\
+        Throughput efficiency  & $17.99$  & $1.61 \times 10^{-45}$  & $***$ \\
+        \hline
+        \multicolumn{4}{l}{\footnotesize Significance codes: $***$\;$p < 0.001$,\; $**$\;$p < 0.01$,\; $*$\;$p < 0.05$,\; n.s.\;not significant.}
+    \end{tabular}
+\end{table}
+
+The congestion index difference between MARL DQN and SOTL is overwhelmingly significant ($t = -38.19$, $p < 10^{-100}$), indicating substantially lower congestion under the MARL policy. Throughput efficiency is likewise highly significant ($t = 17.99$, $p < 10^{-45}$), showing that the composite advantage is robust to episode-level stochasticity. Throughput is significantly higher for MARL DQN ($p < 0.01$). By contrast, the average waiting-time comparison is also statistically significant but directionally favors SOTL, which attains a slightly lower mean waiting time in this setting (94.80\,s versus 95.34\,s). The only non-significant comparison is average queue length ($p = 0.461$), where MARL DQN and SOTL perform similarly. The total CO$_2$ comparison is statistically significant, but the absolute difference is practically small and should therefore be interpreted cautiously.
+
+Figure~\ref{fig:violin} presents violin plots showing the full distributional comparison, and Figure~\ref{fig:ecdf} shows the empirical cumulative distribution functions (ECDFs) for key metrics.
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figures/nb_violin_distributions.pdf}
+    \caption{Violin plots of per-episode metric distributions across controllers.}
+    \label{fig:violin}
+\end{figure}
+\FloatBarrier
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figures/nb_ecdf_comparison.pdf}
+    \caption{Empirical CDFs comparing per-episode throughput and congestion index across controllers.}
+    \label{fig:ecdf}
+\end{figure}
+\FloatBarrier
+
+
+%% ===================================================================
+\section{MARL Agent Performance Over Episodes}
+\label{sec:results_marl_episodes}
+
+To verify that the MARL agent's performance is stable across evaluation episodes (and does not depend on specific seed configurations), Figure~\ref{fig:marl_4panel} presents the agent's per-episode reward, throughput, queue length, and CO$_2$ over 120~evaluation episodes. The radar chart in Figure~\ref{fig:radar} provides a multi-dimensional snapshot comparing all controllers on normalized metrics.
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figures/nb_marl_agent_4panel.pdf}
+    \caption{MARL DQN agent: per-episode evaluation metrics over 120~episodes on Cologne (demand scale 0.7). Panels show (a)~cumulative reward, (b)~throughput, (c)~average queue length, and (d)~total CO$_2$.}
+    \label{fig:marl_4panel}
+\end{figure}
+\FloatBarrier
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.85\linewidth]{figures/nb_radar_chart.pdf}
+    \caption{Radar chart: normalized metric comparison across all five controllers.}
+    \label{fig:radar}
+\end{figure}
+\FloatBarrier
+
+
+%% ===================================================================
+\section{Training Analysis}
+\label{sec:results_training}
+
+This section examines the training dynamics of the MARL DQN agent over 300~episodes on the Cologne network (demand scale 0.7). The reported reward curve should be interpreted as an optimization signal rather than a direct traffic-performance metric, because the reward combines waiting-time penalties, queue-change terms, switching penalties, and regional shaping.
+
+\subsection{Reward Convergence}
+Figure~\ref{fig:training_reward} shows the per-episode training reward. The reward improves during the early part of training as the agent moves from highly exploratory behaviour ($\varepsilon \approx 1.0$) toward more exploitative behaviour, and then exhibits a comparatively stable regime. The smoothed trend is therefore used as evidence of learning stability, rather than as a standalone claim about network-level optimality.
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figures/training_reward_curve.pdf}
+    \caption{Training reward curve over 300~episodes. Shaded band shows rolling standard deviation.}
+    \label{fig:training_reward}
+\end{figure}
+\FloatBarrier
+
+\subsection{Loss Convergence}
+Figure~\ref{fig:training_loss} presents the per-episode training loss (Huber loss / Smooth L1). After an initial transient phase, the loss decreases and enters a relatively stable range, indicating that the Q-network is fitting its Bellman targets more consistently. As is standard in deep reinforcement learning, a lower TD loss should not be interpreted on its own as proof of better traffic performance, but rather as supporting evidence of numerical training stability. The stabilization techniques (hard target updates every 2\,000 steps, Q-target clamping, gradient clipping, and Layer Normalization) likely contribute to preventing the divergence observed in earlier model iterations without these safeguards.
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figures/training_loss_curve.pdf}
+    \caption{Training loss (Huber / Smooth L1) over 300~episodes. Lower loss indicates more accurate Q-value estimates.}
+    \label{fig:training_loss}
+\end{figure}
+\FloatBarrier
+
+\subsection{Exploration Schedule}
+Figure~\ref{fig:training_epsilon} shows the epsilon decay schedule during training. Epsilon decreases from $1.0$ to the minimum $0.05$ over the course of training, transitioning the agent from uniform random exploration to a nearly deterministic greedy policy.
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figures/training_epsilon_decay.pdf}
+    \caption{Epsilon (exploration rate) decay schedule during training.}
+    \label{fig:training_epsilon}
+\end{figure}
+\FloatBarrier
+
+\subsection{Training Dashboard}
+Figure~\ref{fig:training_dashboard} provides a consolidated four-panel view of the training process, combining reward, loss, epsilon, and episode length trends.
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figures/training_dashboard_4panel.pdf}
+    \caption{Training dashboard: (a)~reward per episode, (b)~training loss, (c)~epsilon decay, (d)~episode length.}
+    \label{fig:training_dashboard}
+\end{figure}
+\FloatBarrier
+
+
+%% ===================================================================
+\section{Environmental Impact}
+\label{sec:results_env}
+
+Table~\ref{tab:env_results} reports the environmental metrics. Total CO$_2$ emissions are similar across all controllers ($\approx 6.25 \times 10^9$\,mg), varying by less than $0.2\%$. This is expected: on a large network where only 50\% of intersections are controlled, the total fleet emissions are dominated by free-flow driving and uncontrolled intersections. However, when normalized by throughput (CO$_2$ per arrived vehicle), the MARL agent and MaxPressure achieve the lowest values, indicating that higher throughput does not come at the cost of disproportionate emissions.
+
+\begin{table}[!htbp]
+    \centering
+    \caption{Environmental metrics (mean over $n = 120$ episodes).}
+    \label{tab:env_results}
+    \begin{tabular}{l r r r}
+        \hline
+        \textbf{Strategy} & \textbf{Total CO$_2$ ($\times 10^9$\,mg)} & \textbf{CO$_2$/Arrived ($\times 10^7$\,mg)} & \textbf{$\Delta$ CO$_2$ vs FT} \\
+        \hline
+        Fixed-Time       & 6.25 & 2.71 & --- \\
+        SOTL              & 6.24 & 2.47 & $-0.1\%$ \\
+        Adaptive          & 6.25 & 2.47 & $+0.0\%$ \\
+        MaxPressure       & 6.24 & 2.42 & $-0.1\%$ \\
+        \textbf{MARL DQN} & 6.25 & \textbf{2.42} & $+0.1\%$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Figure~\ref{fig:emission_panel} provides a detailed breakdown of total emission metrics. Crucially, Figure~\ref{fig:per_vehicle_panel} normalizes all emission and waiting-time metrics by the number of arrived vehicles, removing the throughput bias. The per-vehicle view confirms that the MARL agent and MaxPressure achieve the lowest per-vehicle CO$_2$ ($-10.7\%$), fuel ($-10.7\%$), NO$_x$ ($-10.7\%$), PM$_x$ ($-10.2\%$), and waiting time ($-11.7\%$) relative to Fixed-Time.
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figures/nb_emission_metrics_panel.pdf}
+    \caption{Total emission and fuel metrics across controllers. Total values increase slightly for higher-throughput controllers because more vehicles complete their trips.}
+    \label{fig:emission_panel}
+\end{figure}
+\FloatBarrier
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figures/nb_per_vehicle_metrics_panel.pdf}
+    \caption{Per-vehicle metrics (normalised by arrived vehicles). This removes the throughput bias present in total metrics: the MARL agent achieves the lowest per-vehicle emissions and waiting time.}
+    \label{fig:per_vehicle_panel}
+\end{figure}
+\FloatBarrier
+
+
+%% ===================================================================
+\section{Discussion}
+\label{sec:results_discussion}
+
+\subsection{Where the MARL Agent Excels}
+The MARL DQN agent achieves the best performance on two key dimensions:
+\begin{enumerate}
+    \item \textbf{Congestion index} ($-13.7\%$ vs Fixed-Time): the largest improvement among all controllers, indicating that the learned policy reduces the proportion of time that lanes experience queuing. This is statistically highly significant ($p < 10^{-100}$).
+    \item \textbf{Throughput efficiency} ($+29.6\%$ vs Fixed-Time): the MARL agent simultaneously maximizes throughput and minimizes congestion, achieving the highest composite score. This is also highly significant ($p < 10^{-45}$).
+\end{enumerate}
+
+These findings are consistent with the interpretation that the MARL agent learns a signal-timing strategy that distributes green time more effectively across competing phases, thereby reducing the queue-accumulation patterns that degrade network performance under rule-based controllers.
+
+\subsection{Where Improvements Are Modest}
+Average waiting time and average queue length improvements are below $2\%$ for all controllers relative to Fixed-Time. This is primarily because:
+\begin{itemize}
+    \item Only 50\% of the network's intersections are controlled; the remaining intersections contribute substantially to aggregate delay.
+    \item Waiting time is a network-wide average that includes vehicles never routed through controlled intersections.
+    \item On the Cologne network at moderate demand, the absolute delay differences are compressed by the large number of uncontrolled intersections.
+\end{itemize}
+
+\subsection{Comparison with Classical Baselines}
+Among classical baselines, MaxPressure emerges as the strongest competitor, achieving the second-best throughput ($+11.8\%$) and congestion index ($-11.1\%$). The gap between MARL DQN and MaxPressure is small on individual metrics but consistent across all throughput and congestion measures, and the composite throughput efficiency metric reveals a clearer separation ($1\,195$ vs $1\,158$, $+3.2\%$).
+
+SOTL achieves the best waiting-time reduction ($-1.2\%$) among classical baselines, while Adaptive provides a balanced middle ground. The diversity of baseline strengths underscores the value of reporting multiple metrics rather than a single objective.
+
+\subsection{Limitations}
+\begin{itemize}
+    \item \textbf{Partial control}: only 50\% of intersections are controlled, which compresses observable differences in network-wide metrics. Controlling a larger fraction could amplify the MARL agent's advantage.
+    \item \textbf{Single network}: results are reported on one city network (Cologne) at one demand level (scale 0.7). Generalization to other topologies and demand patterns requires further evaluation.
+    \item \textbf{Training-seed variance}: the comparative evaluation averages over many SUMO seeds, but the learned policy itself is represented by one trained checkpoint per configuration. Variability across independent training runs was not exhaustively quantified.
+    \item \textbf{Computational cost}: training the MARL DQN agent for 300~episodes requires significantly more computation than deploying any of the classical baselines, which require no training phase. However, the trained policy has the same inference cost as rule-based controllers at deployment time.
+    \item \textbf{Environmental impact}: the MARL agent does not reduce total CO$_2$ emissions, as these are dominated by the uncontrolled portion of the network. Per-vehicle emission reductions are achieved indirectly through higher throughput.
+\end{itemize}
+
+\subsection{Summary of Key Findings}
+Table~\ref{tab:key_findings} summarizes the headline results.
+
+\begin{table}[!htbp]
+    \centering
+    \caption{Summary of key findings for the MARL DQN agent relative to baselines.}
+    \label{tab:key_findings}
+    \begin{tabular}{p{5.5cm} r p{6cm}}
+        \hline
+        \textbf{Metric} & \textbf{MARL vs FT} & \textbf{Interpretation} \\
+        \hline
+        Throughput & $+12.0\%$ & Best among all controllers \\
+        Congestion index & $-13.7\%$ & Best; $> 2.6$\,pp beyond MaxPressure \\
+        Throughput efficiency & $+29.6\%$ & Best; $+4.0$\,pp beyond MaxPressure \\
+        Avg waiting time & $-0.6\%$ & Modest; compressed by partial control \\
+        CO$_2$/arrived vehicle & $-10.7\%$ & Tied best with MaxPressure \\
+        \hline
+    \end{tabular}
+\end{table}
 

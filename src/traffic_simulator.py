@@ -43,7 +43,8 @@ class TrafficSimulator:
                  gui_delay: float = 0.0,
                  enable_sumo_emissions_output: bool = True,
                  sumo_seed: Optional[int] = None,
-                 controlled_lights_ratio: Optional[float] = None):
+                 controlled_lights_ratio: Optional[float] = None,
+                 demand_scale: Optional[float] = None):
         """
         Initialize traffic simulator
         
@@ -75,6 +76,7 @@ class TrafficSimulator:
         self.enable_sumo_emissions_output = enable_sumo_emissions_output
         self.sumo_seed = sumo_seed
         self.controlled_lights_ratio = controlled_lights_ratio
+        self.demand_scale = demand_scale
         self.port = port
         self.is_connected = False
         self.simulation_time = 0
@@ -491,6 +493,9 @@ class TrafficSimulator:
                 except Exception:
                     pass
 
+            if self.demand_scale is not None and self.demand_scale > 0:
+                sumo_cmd.extend(["--scale", str(float(self.demand_scale))])
+
             # Option A: For OSM maps, enable SUMO-native emissions output (faster than per-vehicle TraCI calls)
             # Keep file in output/ so it doesn't clutter map folders.
             if self.enable_sumo_emissions_output and not SimulationConfig.is_custom_dataset():
@@ -649,6 +654,11 @@ class TrafficSimulator:
         marl_tl_phase_counts: Dict[str, int] = {}
         marl_last_decision_t: float = 0.0
         marl_decision_interval: float = 5.0  # seconds; keep consistent with training default
+        marl_phase_hold_seconds: float = marl_decision_interval
+        marl_switch_mode: str = "legacy_cycle"
+        marl_use_pressure_state: bool = False
+        marl_pressure_feature_count: int = 0
+        marl_is_n_action: bool = False
         # Cheap pedestrian support: force a pedestrian-green phase at least every N seconds
         ped_max_red: float = 90.0  # seconds (OSM maps)
         ped_min_green: float = 12.0  # seconds
@@ -660,6 +670,54 @@ class TrafficSimulator:
         presslight_last_decision_t: float = 0.0
         presslight_decision_interval: float = 10.0  # align with paper-style timestep
         presslight_k: int = 8  # number of phase-pressure features (pad/truncate)
+
+        def _marl_reference_green_phase(current_phase: int, green_phases: List[int]) -> int:
+            if not green_phases:
+                return int(current_phase)
+            ordered = sorted({int(p) for p in green_phases})
+            if current_phase in ordered:
+                return int(current_phase)
+            prior = [p for p in ordered if p <= int(current_phase)]
+            return int(prior[-1] if prior else ordered[-1])
+
+        def _marl_next_green_phase(current_phase: int, green_phases: List[int], phase_count: int) -> int:
+            if not green_phases:
+                return (int(current_phase) + 1) % max(1, int(phase_count))
+            ordered = sorted({int(p) for p in green_phases})
+            if current_phase in ordered:
+                idx = ordered.index(int(current_phase))
+                return int(ordered[(idx + 1) % len(ordered)])
+            for phase in ordered:
+                if phase > int(current_phase):
+                    return int(phase)
+            return int(ordered[0])
+
+        def _marl_phase_pressure(lane_queue_lengths: Dict[str, int], phase_lanes: List[str]) -> float:
+            return float(sum(float(lane_queue_lengths.get(lane_id, 0.0)) for lane_id in phase_lanes if lane_id))
+
+        def _marl_extra_features(current_phase: int, lane_queue_lengths: Dict[str, int], phase_map: Dict, phase_count: int) -> List[float]:
+            green_phases = list(phase_map.get("green_phases", [])) or list(range(max(1, phase_count)))
+            phase_to_lanes = phase_map.get("phase_to_lanes", {}) or {}
+            current_green = _marl_reference_green_phase(current_phase, green_phases)
+            next_green = _marl_next_green_phase(current_green, green_phases, phase_count)
+
+            current_pressure = _marl_phase_pressure(lane_queue_lengths, phase_to_lanes.get(current_green, []))
+            next_pressure = _marl_phase_pressure(lane_queue_lengths, phase_to_lanes.get(next_green, []))
+            total_queue = float(sum(lane_queue_lengths.values()))
+            feature_scale = 20.0
+            total_scale = 40.0
+            try:
+                if marl_agent is not None:
+                    feature_scale = float(marl_agent.config.get("pressure_feature_scale", feature_scale))
+                    total_scale = float(marl_agent.config.get("pressure_total_queue_scale", total_scale))
+            except Exception:
+                pass
+            return [
+                float(np.clip(current_pressure / max(1e-6, feature_scale), 0.0, 1.0)),
+                float(np.clip(next_pressure / max(1e-6, feature_scale), 0.0, 1.0)),
+                float(np.clip((next_pressure - current_pressure) / max(1e-6, feature_scale), -1.0, 1.0)),
+                float(np.clip(total_queue / max(1e-6, total_scale), 0.0, 1.0)),
+            ]
 
         if marl_enabled:
             try:
@@ -691,7 +749,16 @@ class TrafficSimulator:
                     ckpt_cfg = checkpoint.get("config", {})
                     state_dim = int(ckpt_cfg.get("state_dim", 33))
                     action_dim = int(ckpt_cfg.get("action_dim", 2))
-                    marl_agent = RLAgent(config={"state_dim": state_dim, "action_dim": action_dim})
+                    marl_is_n_action = action_dim > 2
+                    marl_switch_mode = str(ckpt_cfg.get("switch_mode", "legacy_cycle"))
+                    marl_use_pressure_state = bool(ckpt_cfg.get("pressure_state_features", False))
+                    marl_pressure_feature_count = int(ckpt_cfg.get("pressure_feature_count", 0))
+                    marl_decision_interval = float(ckpt_cfg.get("decision_interval", marl_decision_interval))
+                    marl_phase_hold_seconds = float(ckpt_cfg.get("decision_interval", marl_decision_interval))
+                    marl_agent_config = dict(ckpt_cfg)
+                    marl_agent_config["state_dim"] = state_dim
+                    marl_agent_config["action_dim"] = action_dim
+                    marl_agent = RLAgent(config=marl_agent_config)
                     marl_agent.load_model(model_path)
                     marl_agent.epsilon = 0.0  # inference
                 except Exception as e:
@@ -703,11 +770,15 @@ class TrafficSimulator:
             # Use all controlled TLS (respects max_controlled_lights from dataset config)
             marl_tls_ids = list(self.controlled_traffic_lights)
 
-            # Infer lanes_per_tl from state_dim if possible (TrafficState vector is: 3*lanes + detectors + 8 + 1)
+            # Prefer the saved training config; otherwise infer from the encoded state size.
             lanes_per_tl = 8
             try:
-                state_dim = int(marl_agent.config.get("state_dim", 33))
-                lanes_per_tl = max(1, int((state_dim - 9) // 3))
+                lanes_per_tl = int(marl_agent.config.get("lanes_per_tl", 0))
+                if lanes_per_tl <= 0:
+                    state_dim = int(marl_agent.config.get("state_dim", 33))
+                    extra_features = int(marl_agent.config.get("pressure_feature_count", marl_pressure_feature_count))
+                    base_dim = max(0, state_dim - 17 - max(0, extra_features))
+                    lanes_per_tl = max(1, int(base_dim // 3))
             except Exception:
                 lanes_per_tl = 8
 
@@ -718,7 +789,11 @@ class TrafficSimulator:
                 self._tl_last_ped_green_time.setdefault(tl_id, float(self.simulation_time))
 
             print(f"MARL_DQN enabled: loaded {os.path.basename(model_path)}")
-            print(f"MARL agents (traffic lights): {len(marl_tls_ids)} | lanes_per_tl={lanes_per_tl} | interval={marl_decision_interval}s")
+            print(
+                f"MARL agents (traffic lights): {len(marl_tls_ids)} | lanes_per_tl={lanes_per_tl} | "
+                f"interval={marl_decision_interval}s | switch_mode={marl_switch_mode} | "
+                f"pressure_state={marl_use_pressure_state}"
+            )
 
         if presslight_enabled:
             model_path = os.path.join(SimulationConfig.MODEL_DIR, "presslight_shared_dqn.pt")
@@ -900,6 +975,7 @@ class TrafficSimulator:
                             for tl_id in marl_tls_ids:
                                 lane_ids_fixed = marl_tl_lanes.get(tl_id, [])
                                 sim_time = float(self.simulation_time)
+                                phase_map = self._get_tl_phase_lane_map(tl_id)
 
                                 lane_vehicle_counts: Dict[str, int] = {}
                                 lane_queue_lengths: Dict[str, int] = {}
@@ -921,7 +997,7 @@ class TrafficSimulator:
                                         lane_mean_speeds[lane_id] = 0.0
 
                                 try:
-                                    phase = int(traci.trafficlight.getPhase(tl_id)) % 8
+                                    phase = int(traci.trafficlight.getPhase(tl_id)) % 16
                                 except Exception:
                                     phase = 0
 
@@ -940,6 +1016,13 @@ class TrafficSimulator:
                                     "traffic_light_phase": phase,
                                     "traffic_light_remaining_time": remaining,
                                 }
+                                if marl_use_pressure_state:
+                                    sumo_state["extra_features"] = _marl_extra_features(
+                                        current_phase=phase,
+                                        lane_queue_lengths=lane_queue_lengths,
+                                        phase_map=phase_map,
+                                        phase_count=int(marl_tl_phase_counts.get(tl_id, 1)),
+                                    )
                                 state_obj = RLTState(sumo_state, lane_list=lane_ids_fixed)
                                 actions[tl_id] = int(marl_agent.select_action(state_obj, training=False))
 
@@ -960,11 +1043,34 @@ class TrafficSimulator:
                                 except Exception:
                                     pass
 
-                                if act != 1:
-                                    continue
                                 try:
                                     cur_phase = int(traci.trafficlight.getPhase(tl_id))
                                     nph = int(marl_tl_phase_counts.get(tl_id, 1))
+                                    phase_map = self._get_tl_phase_lane_map(tl_id)
+                                    green_phases = phase_map.get("green_phases", []) or list(range(max(1, nph)))
+
+                                    if marl_is_n_action:
+                                        if act == 0:
+                                            continue
+                                        target_phase = int(green_phases[(act - 1) % len(green_phases)])
+                                        if target_phase != cur_phase:
+                                            traci.trafficlight.setPhase(tl_id, target_phase)
+                                        traci.trafficlight.setPhaseDuration(tl_id, marl_phase_hold_seconds)
+                                        continue
+
+                                    if marl_switch_mode == "next_green":
+                                        if act == 0:
+                                            if cur_phase in green_phases:
+                                                traci.trafficlight.setPhaseDuration(tl_id, marl_phase_hold_seconds)
+                                            continue
+                                        target_phase = _marl_next_green_phase(cur_phase, green_phases, nph)
+                                        if target_phase != cur_phase:
+                                            traci.trafficlight.setPhase(tl_id, target_phase)
+                                        traci.trafficlight.setPhaseDuration(tl_id, marl_phase_hold_seconds)
+                                        continue
+
+                                    if act != 1:
+                                        continue
                                     traci.trafficlight.setPhase(tl_id, (cur_phase + 1) % max(1, nph))
                                 except Exception:
                                     pass

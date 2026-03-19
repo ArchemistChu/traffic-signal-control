@@ -75,6 +75,7 @@ def main():
         default=10,
         help="Collect vehicle data every N steps. Use 1 for reliable metrics; 50+ for faster runs (may miss data if simulation ends early).",
     )
+    parser.add_argument("--demand-scale", type=float, default=0.0, help="SUMO --scale for traffic demand (0=default, 0.7=70%%)")
     parser.add_argument("--out", type=str, default="", help="Output eval JSON path")
     args = parser.parse_args()
 
@@ -118,6 +119,7 @@ def main():
             enable_sumo_emissions_output=bool(args.sumo_emissions_output),
             sumo_seed=sumo_seed,
             controlled_lights_ratio=float(args.controlled_lights_ratio),
+            demand_scale=float(args.demand_scale) if args.demand_scale > 0 else None,
         )
         sim.data_collection_interval = max(1, int(args.data_collection_interval))
 

@@ -3,7 +3,7 @@
 \chapter{Methodology}
 \label{ch:method}
 
-This chapter describes the design, implementation, and evaluation methodology used to develop the proposed intelligent traffic signal control system. The methodology follows a closed-loop control paradigm: the simulator provides a state observation, the controller selects an action (signal decision), SUMO executes the action, and the system measures the resulting traffic performance.
+This chapter define the design, implementation, and evaluation methodology used to develop the proposed intelligent traffic signal control system. The methodology follows a closed-loop control paradigm: the simulator provides a state observation, the controller selects an action (signal decision), SUMO executes the action, and the system measures the resulting traffic performance.
 
 \section{System Architecture and Simulation Environment}
 The implementation is built around a SUMO--TraCI closed loop:
@@ -20,12 +20,13 @@ The overall architecture (Figure~\ref{System diagram}) contains four functional 
     \item \textbf{DQN Networks}: online Q-network and a lagged target network for stable training.
 \end{itemize}
 
-\begin{figure}
+\begin{figure}[!htbp]
     \centering
-    \includegraphics[width=1.2\linewidth]{figures/Blank diagram.pdf}
+    \includegraphics[width=\linewidth]{figures/Blank diagram.pdf}
     \caption{System diagram}
     \label{System diagram}
 \end{figure}
+\FloatBarrier
 
 \section{SUMO: Microscopic Traffic Simulation}
 The simulation environment uses SUMO (Simulation of Urban Mobility), an open-source microscopic traffic simulator. SUMO was selected because it:
@@ -50,7 +51,7 @@ TraCI enables real-time communication between Python and SUMO. In each step, the
 
 \textbf{Excluding the single-intersection dataset.} Although the repository contains a custom single-intersection scenario for debugging and rapid prototyping, the final evaluation in this report focuses on the OSM Web Wizard city networks; therefore, the single-intersection map is excluded from the experimental protocol and discussion.
 
-\textbf{Controlled traffic lights.} City networks can contain many signalized intersections. For computational feasibility, only a subset of traffic lights is controlled during each run (configurable cap \(N_{\mathrm{TL}}\), e.g., the first \(5\) detected traffic lights). All other traffic lights continue under SUMO’s default programs.
+\textbf{Controlled traffic lights.} City networks can contain many signalized intersections. For computational feasibility, only a configurable fraction of traffic lights is controlled during each run (ratio \(=0.5\) in the final experiments). All other traffic lights continue under SUMO’s default programs.
 
 \section{Baseline Signal Control Strategies}
 \label{sec:baselines}
@@ -128,23 +129,7 @@ SOTL is a threshold-based baseline. It continues the current green unless a comp
 \end{itemize}
 
 \subsection{Genetic Algorithm (GA) Baseline}
-A lightweight Genetic Algorithm tunes two global parameters used by a pressure-driven timing rule:
-\[
-g = \text{base\_green} + \text{pressure\_scale}\cdot \text{pressure}
-\]
-The GA searches \(\text{base\_green}\in[10,40]\) and \(\text{pressure\_scale}\in[0,4]\) using a small population and short evaluation episodes. Each candidate is scored by:
-\[
-F = -\overline{W} - 0.2\,\overline{Q} + 0.001\,\text{Throughput}_{/h}
-\]
-where \(\overline{W}\) is average waiting time and \(\overline{Q}\) is average queue length.
-
-\textbf{Inputs/Outputs/Assumptions/Cost.}
-\begin{itemize}
-    \item \textbf{Inputs}: candidate parameter vector \((\text{base\_green},\text{pressure\_scale})\); evaluation horizon and metrics.
-    \item \textbf{Outputs}: tuned parameters maximizing fitness \(F\), then a final rollout using the tuned parameters.
-    \item \textbf{Assumptions}: small search space is sufficient for meaningful baseline; short rollout approximates long-horizon quality.
-    \item \textbf{Computational cost}: \(O(\text{population}\times\text{generations}\times T_{\text{eval}})\) simulation steps.
-\end{itemize}
+\textbf{Note:} A Genetic Algorithm baseline was implemented during early prototyping but was excluded from the final experimental comparison due to its high computational cost and the difficulty of ensuring a fair comparison with reactive controllers on large OSM networks. The four baselines used in the final evaluation are Fixed-Time, Adaptive, MaxPressure, and SOTL.
 
 \section{Reinforcement Learning Controllers}
 \label{sec:rl}
@@ -158,14 +143,14 @@ In a city network, multiple traffic lights must be controlled. The adopted appro
 
 \textbf{Inputs/Outputs/Assumptions/Cost.}
 \begin{itemize}
-    \item \textbf{Inputs}: per-traffic-light local state vector \(s_t^{(i)}\in\mathbb{R}^d\) (lane counts/queues/speeds + phase + remaining time), decision interval \(\Delta t\), controlled-TL set size \(N_{\mathrm{TL}}\), lane padding \(K\).
+    \item \textbf{Inputs}: per-traffic-light local state vector \(s_t^{(i)}\in\mathbb{R}^{77}\) (lane counts/queues/speeds for \(K=20\) padded lanes + 16-bin phase one-hot + remaining time), decision interval \(\Delta t\), controlled-TL set size \(N_{\mathrm{TL}}\).
     \item \textbf{Outputs}: per-traffic-light discrete action \(a_t^{(i)}\in\{0,1\}\) (keep vs next phase), applied via TraCI.
-    \item \textbf{Assumptions}: local observation is sufficient (partial observability); fixed lane padding \(K\) adequately represents each intersection; the 2-action abstraction generalizes across heterogeneous OSM phase programs.
+    \item \textbf{Assumptions}: local observation is sufficient (partial observability); fixed lane padding \(K=20\) adequately represents each intersection; the 2-action abstraction generalizes across heterogeneous OSM phase programs.
     \item \textbf{Computational cost}: inference cost scales as \(O(N_{\mathrm{TL}}\cdot f_{\theta})\) per decision, where \(f_{\theta}\) is one forward-pass through the shared network. Training adds minibatch updates (replay sampling + backprop) per decision step.
 \end{itemize}
 
 \subsubsection{Local State Representation}
-For each controlled traffic light \(i\), the simulator retrieves the set of controlled incoming lanes and enforces a fixed input size by padding/truncating to \(K\) lanes (default \(K=8\)). For each lane \(\ell\), three features are used: vehicle count \(n_\ell\), queue length \(q_\ell\), and mean speed \(v_\ell\). These are normalized and concatenated with a one-hot encoding of the current phase \(\phi_t\) (up to 8 bins) and the normalized remaining time \(\tau_t\):
+For each controlled traffic light \(i\), the simulator retrieves the set of controlled incoming lanes and enforces a fixed input size by padding/truncating to \(K=20\) lanes. For each lane \(\ell\), three features are used: vehicle count \(n_\ell\), queue length \(q_\ell\), and mean speed \(v_\ell\). These are normalized and concatenated with a one-hot encoding of the current phase \(\phi_t\) (16 bins) and the normalized remaining time \(\tau_t\):
 \[
 s_t^{(i)}=
 \Big[
@@ -178,7 +163,7 @@ s_t^{(i)}=
 \]
 Hence, the OSM observation dimension is:
 \[
-d = 3K + 8 + 1
+d = 3K + 16 + 1 = 77
 \]
 
 \subsubsection{Action Space}
@@ -188,18 +173,12 @@ a_t^{(i)}\in\{0,1\}
 \]
 where \(a=0\) keeps the current phase and \(a=1\) switches to the next SUMO phase (cyclic). This simplification improves robustness across heterogeneous intersections, but reduces expressiveness because the policy cannot jump directly to an arbitrary phase.
 
-\subsubsection{Reward Function (Queue Reduction + Switching Penalty)}
-The local reward is designed to minimize queueing while discouraging unnecessary switching:
+\subsubsection{Reward Function (Waiting Time + Queue Reduction + Switching Penalty)}
+The local reward is designed to minimize vehicle waiting time while encouraging queue clearance and discouraging unnecessary switching:
 \[
-r_t^{(i)} = -0.1\,Q_t^{(i)} + 0.05\,(Q_{t-1}^{(i)}-Q_t^{(i)}) - 0.02\cdot \mathbb{I}[a_t^{(i)}=1]
+r_t^{(i)} = -0.50\,\hat{W}_t^{(i)} + 0.35\,\Delta Q_t^{(i)} - 0.05\cdot \mathbb{I}[a_t^{(i)}=1]
 \]
-where \(Q_t^{(i)}=\sum_{\ell\in\mathcal{L}_i} q_{\ell,t}\) is the total queue on controlled lanes of traffic light \(i\).
-
-\textbf{Region-aware shaping (optional).} A region-level penalty can be added using a spatial grid over the city:
-\[
-r_t^{(i)} \leftarrow r_t^{(i)} - \lambda \cdot \overline{Q}_{\mathrm{region}(i)}
-\]
-where \(\overline{Q}_{\mathrm{region}(i)}\) is the average queued vehicles in the grid cell containing traffic light \(i\).
+where \(\hat{W}_t^{(i)} = \text{clip}(\bar{w}_t^{(i)}/200,\;0,\;1)\) is the normalized mean lane waiting time, \(\Delta Q_t^{(i)} = \text{clip}((Q_{t-1}^{(i)} - Q_t^{(i)})/10,\;-1,\;1)\) is the normalized queue reduction, and the indicator penalizes phase switches. The dominant waiting-time term directly optimizes for the primary evaluation metric.
 
 \subsection{Dueling Double DQN with \(n\)-step Returns}
 To improve stability and sample efficiency, the implemented DQN includes:
@@ -226,6 +205,8 @@ and the learning update uses \(R_t^{(n)}\) with the \(n\)-step successor state.
 
 \textbf{Replay buffer and target update.} Transitions are sampled uniformly from a replay buffer. The target network \(\theta^-\) is synchronized with the online network \(\theta\) every \(C\) updates.
 
+\textbf{Stabilization techniques.} To prevent Q-value overestimation and ensure stable training, the following techniques are applied: (i) hard target network updates every \(C=2000\) steps (replacing soft Polyak averaging); (ii) Q-target clamping to \([-2,\;2]\); (iii) gradient clipping with max norm \(0.5\); and (iv) Layer Normalization after each hidden layer of both value and advantage streams.
+
 \textbf{Exploration.} Training uses an \(\epsilon\)-greedy policy:
 \[
 a_t=
@@ -234,9 +215,9 @@ a_t=
 \arg\max_a Q_\theta(s_t,a) & \text{with probability }1-\epsilon
 \end{cases}
 \]
-with \(\epsilon\) decayed exponentially from \(\epsilon_{\text{start}}=1.0\) to \(\epsilon_{\min}=0.1\) using decay rate \(\epsilon_{\text{decay}}=0.995\) per step.
+with \(\epsilon\) annealed from \(\epsilon_{\text{start}}=1.0\) to \(\epsilon_{\min}=0.05\) over the course of training.
 
-\textbf{Network architecture.} The Q-network uses a three-layer fully-connected MLP with hidden dimensions [256, 128, 64]. All layers use ReLU activation functions, and weights are initialized using Xavier uniform initialization. The dueling architecture splits the final hidden layer into separate value and advantage streams before combining them.
+\textbf{Network architecture.} The Q-network uses a three-layer fully-connected MLP with hidden dimensions [256, 256, 128]. All layers use ReLU activation functions, and weights are initialized using Xavier uniform initialization. Layer Normalization is applied after each hidden layer to stabilize training. The dueling architecture splits the final hidden layer into separate value and advantage streams before combining them.
 
 \textbf{Key hyperparameters (to report).} Learning rate \(\alpha\), discount \(\gamma\), replay size \(N\), batch size \(B\), target update period \(C\), \(n\)-step horizon \(n\), and network architecture should be explicitly stated (Table~\ref{tab:exp_setup}) to ensure fair comparison and reproducibility.
 
@@ -280,11 +261,11 @@ Table~\ref{tab:exp_setup} summarizes the key experimental settings required to r
         \hline
         SUMO version & SUMO v1.25.0 (TraCI control) \\
         Map construction & SUMO OSM Web Wizard (OpenStreetMap import) \\
-        Evaluated maps & Vancouver (training), Cologne (generalization evaluation); \emph{single-intersection excluded} \\
-        Demand (traffic parameters) & Customized synthetic demand from Web Wizard route files (passenger/truck/bus/pedestrian trip files). \emph{Report: cars/h, trucks/h, through-traffic factor, and any manual tuning.} \\
+        Evaluated maps & Cologne (training and evaluation); \emph{single-intersection excluded} \\
+        Demand (traffic parameters) & Customized synthetic demand from Web Wizard route files (passenger/truck/bus/pedestrian trip files); demand scale \(=0.7\) (moderate congestion regime) \\
         Simulation horizon & \(T_{\text{sim}}=1200\) s per episode (evaluation); same order used during training \\
         Decision interval & \(\Delta t=5\) s between control decisions \\
-        Controlled intersections & Ratio \(=0.2\) of detected traffic lights (e.g., \(16/79\) on Cologne in the logged run); lane padding \(K=8\) lanes per traffic light \\
+        Controlled intersections & Ratio \(=0.5\) of detected traffic lights; lane padding \(K=20\) lanes per traffic light \\
         Phase safety / fairness constraints & Max-green cap \(=120\) s (OSM maps) to prevent starvation; pedestrian max-red \(\le 90\) s with enforced ped-green \(12\) s where applicable \\
         Random seeds & SUMO seed set per episode: \(\texttt{seed} + 10000\cdot \texttt{run\_id} + \texttt{episode}\) (enables independent episodes); base \(\texttt{seed}=42\) \\
         Emissions collection & SUMO native \texttt{--emission-output} enabled; totals parsed after each episode (CO\(_2\), fuel, NO\(_x\), PM\(_x\)) \\

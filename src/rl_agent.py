@@ -137,6 +137,9 @@ class TrafficState:
         self.detector_occupancy = sumo_state.get('detector_occupancy', {})
         self.current_phase = sumo_state.get('traffic_light_phase', 0)
         self.phase_remaining_time = sumo_state.get('traffic_light_remaining_time', 0.0)
+        self.extra_features = [
+            float(x) for x in sumo_state.get('extra_features', [])
+        ]
         
         # Get lane list from config or state
         if lane_list is None:
@@ -180,6 +183,9 @@ class TrafficState:
         # 6. Phase remaining time (normalized)
         normalized_time = min(1.0, max(0.0, self.phase_remaining_time / 60.0))  # Assume max 60 seconds
         state_vector.append(normalized_time)
+
+        # 7. Optional extra features for backward-compatible state extensions.
+        state_vector.extend(self.extra_features)
         
         return np.array(state_vector, dtype=np.float32)
 

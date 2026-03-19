@@ -19,6 +19,7 @@ Key simplifications (intentional):
 
 import argparse
 import os
+import random
 import time
 from typing import Dict, List, Tuple
 
@@ -35,7 +36,12 @@ except ImportError:
     traci = None
 
 
-MAX_GREEN_PHASES = 6  # fixed action dimension — pad/mask if fewer green phases
+MAX_GREEN_PHASES = 6  # kept for checkpoint metadata compatibility
+PRESSURE_FEATURE_COUNT = 4
+PRESSURE_FEATURE_SCALE = 20.0
+PRESSURE_TOTAL_QUEUE_SCALE = 40.0
+PRESSURE_REWARD_WEIGHT = 0.20
+PRESSURE_REWARD_SCALE = 15.0
 
 def get_phase_count(tl_id: str) -> int:
     """SUMO-version-safe phase count for a TLS."""
@@ -53,40 +59,126 @@ def get_phase_count(tl_id: str) -> int:
     return 1
 
 
-def get_green_phases(tl_id: str) -> List[int]:
-    """Return indices of phases that give green to at least one vehicle lane."""
+def get_phase_lane_map(tl_id: str) -> Dict:
+    """Return green phases and the lanes they serve for one TLS."""
     def _is_ped(lane_id: str) -> bool:
         if not lane_id:
             return False
         low = lane_id.lower()
         return any(k in low for k in [":w", "ped", "walk", "sidewalk", "foot", "crossing"])
 
+    result = {"green_phases": [], "phase_to_lanes": {}}
     try:
         logics = traci.trafficlight.getAllProgramLogics(tl_id)
         if not logics:
-            return list(range(max(1, get_phase_count(tl_id))))
+            phase_count = max(1, get_phase_count(tl_id))
+            result["green_phases"] = list(range(phase_count))
+            result["phase_to_lanes"] = {p: [] for p in result["green_phases"]}
+            return result
         links = traci.trafficlight.getControlledLinks(tl_id)
         phases = logics[0].phases
-        greens = []
         for p_idx, phase in enumerate(phases):
             state_str = phase.state
             has_vehicle_green = False
+            phase_lanes = set()
             for li, ch in enumerate(state_str):
                 if ch in ("G", "g"):
                     if li < len(links):
                         for link in links[li]:
                             if link and len(link) > 0 and not _is_ped(link[0]):
                                 has_vehicle_green = True
+                                phase_lanes.add(link[0])
                                 break
                     else:
                         has_vehicle_green = True
                 if has_vehicle_green:
-                    break
+                    if li >= len(links):
+                        break
             if has_vehicle_green:
-                greens.append(int(p_idx))
-        return greens if greens else list(range(max(1, len(phases))))
+                result["green_phases"].append(int(p_idx))
+            result["phase_to_lanes"][int(p_idx)] = sorted(phase_lanes)
+
+        if not result["green_phases"]:
+            result["green_phases"] = list(range(max(1, len(phases))))
+            for p_idx in result["green_phases"]:
+                result["phase_to_lanes"].setdefault(int(p_idx), [])
+        return result
     except Exception:
-        return list(range(max(1, get_phase_count(tl_id))))
+        phase_count = max(1, get_phase_count(tl_id))
+        result["green_phases"] = list(range(phase_count))
+        result["phase_to_lanes"] = {p: [] for p in result["green_phases"]}
+        return result
+
+
+def get_green_phases(tl_id: str) -> List[int]:
+    """Return indices of phases that give green to at least one vehicle lane."""
+    return list(get_phase_lane_map(tl_id).get("green_phases", []))
+
+
+def get_reference_green_phase(current_phase: int, green_phases: List[int]) -> int:
+    """Map a raw SUMO phase to the most recent vehicle-green phase."""
+    if not green_phases:
+        return int(current_phase)
+    ordered = sorted({int(p) for p in green_phases})
+    if current_phase in ordered:
+        return int(current_phase)
+    prior = [p for p in ordered if p <= int(current_phase)]
+    return int(prior[-1] if prior else ordered[-1])
+
+
+def get_next_green_phase(current_phase: int, green_phases: List[int], phase_count: int) -> int:
+    """Cycle to the next vehicle-green phase while skipping yellow/all-red phases."""
+    if not green_phases:
+        return (int(current_phase) + 1) % max(1, int(phase_count))
+    ordered = sorted({int(p) for p in green_phases})
+    if current_phase in ordered:
+        idx = ordered.index(int(current_phase))
+        return int(ordered[(idx + 1) % len(ordered)])
+    for phase in ordered:
+        if phase > int(current_phase):
+            return int(phase)
+    return int(ordered[0])
+
+
+def compute_phase_pressure(state_dict: Dict, phase_lanes: List[str]) -> float:
+    """Simple local pressure proxy based on queued vehicles on served lanes."""
+    lane_queues = state_dict.get("lane_queue_lengths", {})
+    return float(sum(float(lane_queues.get(lane_id, 0.0)) for lane_id in phase_lanes if lane_id))
+
+
+def add_pressure_features(
+    state_dict: Dict,
+    phase_to_lanes: Dict[int, List[str]],
+    green_phases: List[int],
+    phase_count: int,
+) -> Dict:
+    """Append pressure-aware features without changing legacy state fields."""
+    out = dict(state_dict)
+    current_phase = int(state_dict.get("traffic_light_phase", 0))
+    current_green = get_reference_green_phase(current_phase, green_phases)
+    next_green = get_next_green_phase(current_green, green_phases, phase_count)
+
+    current_pressure = compute_phase_pressure(state_dict, phase_to_lanes.get(current_green, []))
+    next_pressure = compute_phase_pressure(state_dict, phase_to_lanes.get(next_green, []))
+    total_queue = float(sum(state_dict.get("lane_queue_lengths", {}).values()))
+
+    out["extra_features"] = [
+        float(np.clip(current_pressure / PRESSURE_FEATURE_SCALE, 0.0, 1.0)),
+        float(np.clip(next_pressure / PRESSURE_FEATURE_SCALE, 0.0, 1.0)),
+        float(np.clip((next_pressure - current_pressure) / PRESSURE_FEATURE_SCALE, -1.0, 1.0)),
+        float(np.clip(total_queue / PRESSURE_TOTAL_QUEUE_SCALE, 0.0, 1.0)),
+    ]
+    return out
+
+
+def get_max_phase_pressure(state_dict: Dict, phase_to_lanes: Dict[int, List[str]], green_phases: List[int]) -> float:
+    """Maximum queue pressure over available vehicle-green phases."""
+    if not green_phases:
+        return float(sum(state_dict.get("lane_queue_lengths", {}).values()))
+    return float(max(
+        compute_phase_pressure(state_dict, phase_to_lanes.get(int(phase), []))
+        for phase in green_phases
+    ))
 
 
 def get_controlled_lanes_for_tl(tl_id: str) -> List[str]:
@@ -174,9 +266,16 @@ def build_local_state(tl_id: str, lane_ids_fixed: List[str]) -> Dict:
     }
 
 
-def local_reward(prev_state: Dict, curr_state: Dict, action: int,
-                  prev_action: int = 0, n_green_phases: int = 2) -> float:
-    """Reward directly targeting the metrics we're evaluated on.
+def local_reward(
+    prev_state: Dict,
+    curr_state: Dict,
+    action: int,
+    prev_action: int = 0,
+    n_green_phases: int = 2,
+    phase_to_lanes: Dict[int, List[str]] | None = None,
+    green_phases: List[int] | None = None,
+) -> float:
+    """Legacy v8-style reward targeting waiting time and queue reduction.
 
     Components:
       1. Waiting time penalty (absolute) — THE key metric baselines are measured on
@@ -219,6 +318,14 @@ def build_region_map(tls_ids: List[str], grid_size: float) -> Dict[str, Tuple[in
     return region_map
 
 
+def build_checkpoint_path(out_path: str, episode: int) -> str:
+    """Create a numbered checkpoint path alongside the latest checkpoint."""
+    root, ext = os.path.splitext(out_path)
+    if not ext:
+        ext = ".pt"
+    return f"{root}_ep{int(episode):04d}{ext}"
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, default="los_angeles", choices=["cologne", "vancouver", "los_angeles"])
@@ -249,6 +356,7 @@ def main():
         help="Grid size in meters for regional congestion (default: 500)",
     )
     parser.add_argument("--lanes-per-tl", type=int, default=20, help="Fixed lanes per TLS in observation (pad/truncate)")
+    parser.add_argument("--demand-scale", type=float, default=0.0, help="SUMO --scale for traffic demand (0=default, 0.7=70%%)")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--save-every", type=int, default=10)
     parser.add_argument("--out", type=str, default="", help="Model output path")
@@ -258,7 +366,11 @@ def main():
     if traci is None:
         raise RuntimeError("traci is not installed. Please install SUMO tools: pip install traci sumolib")
 
+    random.seed(args.seed)
     np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(args.seed)
 
     if args.controlled_lights_ratio < 0.0 or args.controlled_lights_ratio > 1.0:
         raise ValueError("--controlled-lights-ratio must be in [0.0, 1.0]")
@@ -298,18 +410,31 @@ def main():
     print(f"Output: {out_path}")
     print("=" * 78)
 
-    start_ep = None
-    total_episodes = None
+    resume_episode_count = 0
+    resume_epsilon = None
+    if args.resume and os.path.isfile(args.resume):
+        try:
+            resume_ckpt = torch.load(args.resume, map_location="cpu")
+            resume_episode_count = int(resume_ckpt.get("episode_count", 0))
+            resume_epsilon = float(resume_ckpt.get("epsilon", 1.0))
+        except Exception as exc:
+            print(f"Warning: could not read resume metadata from {args.resume}: {exc}")
 
-    ep = 0
-    while True:
+    start_ep = resume_episode_count + 1
+    total_episodes = resume_episode_count + int(args.episodes)
+    epsilon_run_start = float(resume_epsilon) if resume_epsilon is not None else 1.0
+
+    ep = start_ep - 1
+    while ep < total_episodes:
         ep += 1
-        if start_ep is not None and ep > total_episodes:
-            break
+        sumo_seed = int(args.seed) + int(ep)
         simulator = TrafficSimulator(
             use_gui=False,
             dataset=args.dataset,
             enable_sumo_emissions_output=False,
+            sumo_seed=sumo_seed,
+            controlled_lights_ratio=float(args.controlled_lights_ratio) if args.controlled_lights_ratio > 0 else None,
+            demand_scale=float(args.demand_scale) if args.demand_scale > 0 else None,
         )
         ok = simulator.start_simulation()
         if not ok or not simulator.controlled_traffic_lights:
@@ -327,15 +452,19 @@ def main():
             tls_ids = simulator.controlled_traffic_lights[: int(args.max_controlled_lights)]
         tl_lanes: Dict[str, List[str]] = {}
         tl_phase_counts: Dict[str, int] = {}
+        tl_green_phases: Dict[str, List[int]] = {}
+        tl_phase_lanes: Dict[str, Dict[int, List[str]]] = {}
         for tl_id in tls_ids:
             lanes = get_controlled_lanes_for_tl(tl_id)
             tl_lanes[tl_id] = pad_or_truncate(lanes, int(args.lanes_per_tl))
             tl_phase_counts[tl_id] = max(1, get_phase_count(tl_id))
-
-        tl_green_phases: Dict[str, List[int]] = {}
-        for tl_id in tls_ids:
-            gp = get_green_phases(tl_id)
+            phase_map = get_phase_lane_map(tl_id)
+            gp = list(phase_map.get("green_phases", [])) or list(range(tl_phase_counts[tl_id]))
             tl_green_phases[tl_id] = gp
+            tl_phase_lanes[tl_id] = {
+                int(phase): list(lanes_for_phase)
+                for phase, lanes_for_phase in phase_map.get("phase_to_lanes", {}).items()
+            }
             if agent is None:
                 print(f"  TL {tl_id}: {len(gp)} green phases {gp[:8]}")
 
@@ -344,8 +473,9 @@ def main():
             tl_regions = build_region_map(tls_ids, float(args.region_grid_size))
 
         if agent is None:
-            s0 = build_local_state(tls_ids[0], tl_lanes[tls_ids[0]])
-            state_dim = len(RLTState(s0, lane_list=tl_lanes[tls_ids[0]]).to_vector())
+            first_tl = tls_ids[0]
+            s0 = build_local_state(first_tl, tl_lanes[first_tl])
+            state_dim = len(RLTState(s0, lane_list=tl_lanes[first_tl]).to_vector())
             action_dim = 2
             print(f"Action space: {action_dim} (0=keep, 1=switch to next phase)")
             agent = RLAgent(config={
@@ -371,19 +501,26 @@ def main():
                 "controlled_lights_ratio": float(args.controlled_lights_ratio),
                 "regional_reward_weight": float(args.regional_reward_weight),
                 "region_grid_size": float(args.region_grid_size),
+                "switch_mode": "legacy_cycle",
+                "pressure_state_features": False,
+                "pressure_feature_count": 0,
             })
             if args.resume and os.path.isfile(args.resume):
-                agent.load_model(args.resume)
-                print(f"Resumed from {args.resume} (ep={agent.episode_count}, eps={agent.epsilon:.4f})")
+                try:
+                    agent.load_model(args.resume)
+                    epsilon_run_start = float(agent.epsilon)
+                    print(f"Resumed from {args.resume} (ep={agent.episode_count}, eps={agent.epsilon:.4f})")
+                except Exception as exc:
+                    simulator.close_simulation()
+                    raise RuntimeError(
+                        "Failed to resume checkpoint. v9-safe expects the legacy 2-action raw-phase model "
+                        "with the same state size as v8."
+                    ) from exc
 
-            resumed_ep = agent.episode_count if (args.resume and agent.episode_count > 0) else 0
-            start_ep = resumed_ep + 1
-            total_episodes = resumed_ep + args.episodes
-            ep = start_ep
             print(f"Training episodes {start_ep}..{total_episodes} ({args.episodes} new)")
 
             lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-                agent.optimizer, T_max=args.episodes, eta_min=1e-5
+                agent.optimizer, T_max=max(1, args.episodes), eta_min=1e-5
             )
 
         # Episode loop
@@ -400,6 +537,9 @@ def main():
         losses: List[float] = []
         ep_rewards_per_step: List[float] = []
         prev_actions: Dict[str, int] = {tl_id: 0 for tl_id in tls_ids}
+        ep_reward_sum = 0.0
+        tl_decisions = 0
+        phase_switches = 0
 
         while True:
             traci.simulationStep()
@@ -420,6 +560,7 @@ def main():
                         cur = int(traci.trafficlight.getPhase(tl_id))
                         nph = max(1, tl_phase_counts.get(tl_id, 1))
                         traci.trafficlight.setPhase(tl_id, (cur + 1) % nph)
+                        phase_switches += 1
                     except Exception:
                         pass
 
@@ -462,6 +603,8 @@ def main():
                         curr_state_obj[tl_id],
                         done
                     )
+                    ep_reward_sum += float(r)
+                    tl_decisions += 1
 
                     prev_state_dict[tl_id] = curr_state_dict[tl_id]
                     prev_state_obj[tl_id] = curr_state_obj[tl_id]
@@ -479,23 +622,40 @@ def main():
 
         n_agents = max(1, len(tls_ids))
         avg_r_per_step = float(np.mean(ep_rewards_per_step)) if ep_rewards_per_step else 0.0
-        agent.end_episode(avg_reward_override=avg_r_per_step)
+        avg_r_per_tl_step = float(ep_reward_sum / max(1, tl_decisions))
+        switch_rate = float(phase_switches / max(1, tl_decisions))
+        agent.end_episode(avg_reward_override=avg_r_per_tl_step)
+        agent.training_history.setdefault("episode_reward_sums", []).append(float(ep_reward_sum))
+        agent.training_history.setdefault("episode_reward_mean_per_tls_step", []).append(float(avg_r_per_tl_step))
+        agent.training_history.setdefault("episode_switch_rates", []).append(float(switch_rate))
 
+        progress = float(ep - start_ep + 1) / float(max(1, args.episodes))
+        progress = float(np.clip(progress, 0.0, 1.0))
         agent.epsilon = max(
             agent.config['epsilon_end'],
-            1.0 - (1.0 - agent.config['epsilon_end']) * ep / total_episodes
+            epsilon_run_start - (epsilon_run_start - agent.config['epsilon_end']) * progress
         )
-        lr_scheduler.step()
+        if losses:
+            lr_scheduler.step()
 
         simulator.close_simulation()
 
         wall = time.time() - start_wall
         avg_loss = float(np.mean(losses)) if losses else float("nan")
         current_lr = lr_scheduler.get_last_lr()[0]
-        print(f"Episode {ep:04d}/{total_episodes} | wall={wall:.2f}s | avg_reward/step={avg_r_per_step:.4f} | avg_loss={avg_loss:.4f} | epsilon={agent.epsilon:.3f} | lr={current_lr:.2e} | tls={n_agents}")
+        print(
+            f"Episode {ep:04d}/{total_episodes} | wall={wall:.2f}s | "
+            f"reward(sum)={ep_reward_sum:.2f} | reward/tl_step={avg_r_per_tl_step:.4f} | "
+            f"reward/decision={avg_r_per_step:.4f} | switch_rate={switch_rate:.3f} | "
+            f"avg_loss={avg_loss:.4f} | epsilon={agent.epsilon:.3f} | lr={current_lr:.2e} | "
+            f"tls={n_agents} | sumo_seed={sumo_seed}"
+        )
 
         if ep % int(args.save_every) == 0:
             agent.save_model(out_path)
+            snapshot_path = build_checkpoint_path(out_path, ep)
+            agent.save_model(snapshot_path)
+            print(f"Saved checkpoint snapshot: {snapshot_path}")
 
     agent.save_model(out_path)
     print(f"\nDone. MARL model saved to: {out_path}")
