@@ -659,6 +659,8 @@ class TrafficSimulator:
         marl_use_pressure_state: bool = False
         marl_pressure_feature_count: int = 0
         marl_is_n_action: bool = False
+        marl_mask_invalid_switches: bool = False
+        marl_min_green_seconds: float = 0.0
         # Cheap pedestrian support: force a pedestrian-green phase at least every N seconds
         ped_max_red: float = 90.0  # seconds (OSM maps)
         ped_min_green: float = 12.0  # seconds
@@ -753,6 +755,8 @@ class TrafficSimulator:
                     marl_switch_mode = str(ckpt_cfg.get("switch_mode", "legacy_cycle"))
                     marl_use_pressure_state = bool(ckpt_cfg.get("pressure_state_features", False))
                     marl_pressure_feature_count = int(ckpt_cfg.get("pressure_feature_count", 0))
+                    marl_mask_invalid_switches = bool(ckpt_cfg.get("mask_invalid_switches", False))
+                    marl_min_green_seconds = float(ckpt_cfg.get("min_green_seconds", 0.0))
                     marl_decision_interval = float(ckpt_cfg.get("decision_interval", marl_decision_interval))
                     marl_phase_hold_seconds = float(ckpt_cfg.get("decision_interval", marl_decision_interval))
                     marl_agent_config = dict(ckpt_cfg)
@@ -792,7 +796,8 @@ class TrafficSimulator:
             print(
                 f"MARL agents (traffic lights): {len(marl_tls_ids)} | lanes_per_tl={lanes_per_tl} | "
                 f"interval={marl_decision_interval}s | switch_mode={marl_switch_mode} | "
-                f"pressure_state={marl_use_pressure_state}"
+                f"pressure_state={marl_use_pressure_state} | masked_switch={marl_mask_invalid_switches} "
+                f"| min_green={marl_min_green_seconds:.1f}s"
             )
 
         if presslight_enabled:
@@ -972,6 +977,7 @@ class TrafficSimulator:
 
                             # Build local state per TLS and select actions (inference)
                             actions: Dict[str, int] = {}
+                            switch_allowed: Dict[str, bool] = {}
                             for tl_id in marl_tls_ids:
                                 lane_ids_fixed = marl_tl_lanes.get(tl_id, [])
                                 sim_time = float(self.simulation_time)
@@ -1001,6 +1007,13 @@ class TrafficSimulator:
                                 except Exception:
                                     phase = 0
 
+                                last_phase = self._tl_last_phase.get(tl_id)
+                                if last_phase is None or int(last_phase) != int(phase):
+                                    self._tl_last_phase[tl_id] = int(phase)
+                                    self._tl_phase_start_time[tl_id] = float(self.simulation_time)
+                                phase_start = float(self._tl_phase_start_time.get(tl_id, self.simulation_time))
+                                phase_elapsed = float(max(0.0, float(self.simulation_time) - phase_start))
+
                                 try:
                                     remaining = float(traci.trafficlight.getNextSwitch(tl_id) - sim_time)
                                     remaining = float(max(0.0, remaining))
@@ -1024,7 +1037,16 @@ class TrafficSimulator:
                                         phase_count=int(marl_tl_phase_counts.get(tl_id, 1)),
                                     )
                                 state_obj = RLTState(sumo_state, lane_list=lane_ids_fixed)
-                                actions[tl_id] = int(marl_agent.select_action(state_obj, training=False))
+                                action_mask = None
+                                can_switch = True
+                                if not marl_is_n_action:
+                                    can_switch = int(marl_tl_phase_counts.get(tl_id, 1)) > 1
+                                    if marl_mask_invalid_switches:
+                                        green_phases = phase_map.get("green_phases", []) or list(range(max(1, int(marl_tl_phase_counts.get(tl_id, 1)))))
+                                        can_switch = can_switch and (int(phase) in {int(p) for p in green_phases}) and (phase_elapsed >= marl_min_green_seconds)
+                                    action_mask = [True, bool(can_switch)]
+                                switch_allowed[tl_id] = bool(can_switch)
+                                actions[tl_id] = int(marl_agent.select_action(state_obj, training=False, action_mask=action_mask))
 
                             # Apply actions
                             for tl_id, act in actions.items():
@@ -1059,7 +1081,7 @@ class TrafficSimulator:
                                         continue
 
                                     if marl_switch_mode == "next_green":
-                                        if act == 0:
+                                        if act == 0 or not switch_allowed.get(tl_id, True):
                                             if cur_phase in green_phases:
                                                 traci.trafficlight.setPhaseDuration(tl_id, marl_phase_hold_seconds)
                                             continue
@@ -1069,7 +1091,7 @@ class TrafficSimulator:
                                         traci.trafficlight.setPhaseDuration(tl_id, marl_phase_hold_seconds)
                                         continue
 
-                                    if act != 1:
+                                    if act != 1 or not switch_allowed.get(tl_id, True):
                                         continue
                                     traci.trafficlight.setPhase(tl_id, (cur_phase + 1) % max(1, nph))
                                 except Exception:
@@ -1314,6 +1336,20 @@ class TrafficSimulator:
                                             next_phase = int(green_phases[0]) if green_phases else ((cur_phase + 1) % max(1, nph))
                                         set_duration = 30.0
 
+                                elif strategy == "RANDOM":
+                                    import random as _rng
+                                    if remaining <= 1.0 or active_time >= max_green:
+                                        if _rng.random() < 0.5 and len(green_phases) > 1:
+                                            next_phase = int(_rng.choice(green_phases))
+                                            set_duration = float(_rng.uniform(15.0, 45.0))
+                                        else:
+                                            try:
+                                                idx = green_phases.index(cur_phase)
+                                                next_phase = int(green_phases[(idx + 1) % len(green_phases)])
+                                            except ValueError:
+                                                next_phase = int(green_phases[0]) if green_phases else ((cur_phase + 1) % max(1, nph))
+                                            set_duration = float(_rng.uniform(15.0, 45.0))
+
                                 # Max-green cap: force switch even if controller would keep
                                 if active_time >= max_green:
                                     try:
@@ -1519,26 +1555,33 @@ class TrafficSimulator:
             if not closed_for_metrics:
                 self.close_simulation()
 
+    # Class-level cache: once GA finds best params for a dataset, reuse them.
+    _ga_cached_params: dict = {}
+
     def _run_ga_optimized(self, duration: Optional[int]) -> Dict:
         """
         Genetic Algorithm (GA) baseline.
 
-        We optimize two global parameters used to set green durations from pressure:
-        - base_green: base green time in seconds
-        - pressure_scale: how strongly pressure increases green time
-
-        This is a practical GA baseline for SUMO city networks that keeps the search space small
-        and computationally manageable, while still being a true optimization loop.
+        Optimizes two global parameters (base_green, pressure_scale) used to set
+        green durations from pressure.  The search runs ONCE per dataset and the
+        result is cached so subsequent evaluation episodes skip the expensive
+        inner loop and just apply the tuned parameters.
         """
         import random
 
-        eval_duration = int(min(600, duration or 600))  # short evaluation horizon per candidate
-        pop_size = 8
-        generations = 4
+        cache_key = SimulationConfig.DATASET
+        if cache_key in TrafficSimulator._ga_cached_params:
+            best_params = TrafficSimulator._ga_cached_params[cache_key]
+            print(f"GA baseline: reusing cached params for {cache_key}: {best_params}")
+            self._ga_params = best_params
+            return self.run_simulation(duration=duration, strategy="GA_INTERNAL")
+
+        eval_duration = int(min(300, duration or 300))
+        pop_size = 6
+        generations = 3
         elite_k = 2
         mutation_prob = 0.25
 
-        # Parameter bounds
         base_range = (10.0, 40.0)
         scale_range = (0.0, 4.0)
 
@@ -1565,26 +1608,23 @@ class TrafficSimulator:
             return ind
 
         def fitness(ind) -> float:
-            # Run a short headless simulation for this candidate using GA_INTERNAL strategy
             sim = TrafficSimulator(
                 use_gui=False,
                 dataset=SimulationConfig.DATASET,
-                enable_sumo_emissions_output=False
+                enable_sumo_emissions_output=False,
             )
             sim._ga_params = dict(ind)
+            sim.data_collection_interval = 50
             metrics = sim.run_simulation(duration=eval_duration, strategy="GA_INTERNAL")
-            # Fitness: lower waiting/queue is better; higher throughput is better
             wt = float(metrics.get("avg_waiting_time", 1e9) or 1e9)
             aql = float(metrics.get("avg_queue_length", 1e9) or 1e9)
             thr = float(metrics.get("throughput_per_hour", 0) or 0)
-            # Combine (tuned weights)
             return (-wt) - (0.2 * aql) + (0.001 * thr)
 
-        # Initialize population
         population = [make_individual() for _ in range(pop_size)]
         scored = []
 
-        print(f"GA baseline: optimizing on {SimulationConfig.DATASET} (eval_duration={eval_duration}s, pop={pop_size}, gens={generations})")
+        print(f"GA baseline: optimizing on {cache_key} (eval_duration={eval_duration}s, pop={pop_size}, gens={generations})")
 
         for gen in range(generations):
             scored = [(fitness(ind), ind) for ind in population]
@@ -1592,9 +1632,7 @@ class TrafficSimulator:
             best_fit, best_ind = scored[0]
             print(f"GA gen {gen+1}/{generations}: best_fitness={best_fit:.3f} params={best_ind}")
 
-            # Select elites
             elites = [dict(scored[i][1]) for i in range(min(elite_k, len(scored)))]
-            # Breed next generation
             next_pop = elites[:]
             while len(next_pop) < pop_size:
                 p1 = random.choice(elites)
@@ -1603,15 +1641,14 @@ class TrafficSimulator:
                 next_pop.append(child)
             population = next_pop
 
-        # Final best
         if not scored:
             scored = [(fitness(ind), ind) for ind in population]
             scored.sort(key=lambda x: x[0], reverse=True)
 
         best_params = dict(scored[0][1])
-        print(f"GA best params: {best_params}")
+        TrafficSimulator._ga_cached_params[cache_key] = best_params
+        print(f"GA best params (cached for future episodes): {best_params}")
 
-        # Run final simulation using tuned params (keep current GUI preference)
         self._ga_params = best_params
         return self.run_simulation(duration=duration, strategy="GA_INTERNAL")
     

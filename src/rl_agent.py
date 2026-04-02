@@ -17,7 +17,7 @@ from collections import deque, namedtuple
 import random
 import json
 import os
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Sequence, Hashable
 import time
 
 # Import configuration
@@ -119,6 +119,58 @@ class ReplayBuffer:
     def __len__(self):
         return len(self.buffer)
 
+
+class PrioritizedReplayBuffer:
+    """Proportional prioritized replay with importance-sampling weights."""
+
+    def __init__(self, capacity: int, alpha: float = 0.6, eps: float = 1e-4):
+        self.capacity = max(1, int(capacity))
+        self.alpha = float(alpha)
+        self.eps = float(eps)
+        self.buffer: List[Experience] = []
+        self.priorities = np.zeros(self.capacity, dtype=np.float32)
+        self.position = 0
+
+    def push(self, experience: Experience, priority: Optional[float] = None):
+        insert_at = self.position
+        if len(self.buffer) < self.capacity:
+            self.buffer.append(experience)
+        else:
+            self.buffer[insert_at] = experience
+
+        valid_priorities = self.priorities[:len(self.buffer)]
+        max_priority = float(valid_priorities.max()) if valid_priorities.size else 1.0
+        base_priority = max_priority if max_priority > 0.0 else 1.0
+        self.priorities[insert_at] = max(self.eps, float(base_priority if priority is None else priority))
+        self.position = (insert_at + 1) % self.capacity
+
+    def sample(self, batch_size: int, beta: float = 1.0) -> Tuple[List[Experience], np.ndarray, np.ndarray]:
+        current_size = len(self.buffer)
+        if current_size == 0:
+            raise ValueError("Cannot sample from an empty prioritized replay buffer.")
+
+        priorities = np.maximum(self.priorities[:current_size], self.eps)
+        scaled = np.power(priorities, self.alpha)
+        total = float(scaled.sum())
+        if total <= 0.0:
+            probs = np.full(current_size, 1.0 / current_size, dtype=np.float32)
+        else:
+            probs = (scaled / total).astype(np.float32)
+
+        replace = current_size < int(batch_size)
+        indices = np.random.choice(current_size, size=int(batch_size), replace=replace, p=probs)
+        weights = np.power(current_size * probs[indices], -float(beta))
+        weights = weights / max(1e-6, float(weights.max()))
+        batch = [self.buffer[int(idx)] for idx in indices]
+        return batch, indices.astype(np.int64), weights.astype(np.float32)
+
+    def update_priorities(self, indices: np.ndarray, priorities: np.ndarray):
+        for idx, priority in zip(indices, priorities):
+            self.priorities[int(idx)] = max(self.eps, float(priority))
+
+    def __len__(self):
+        return len(self.buffer)
+
 class TrafficState:
     """Traffic state"""
     
@@ -145,9 +197,12 @@ class TrafficState:
         if lane_list is None:
             lane_list = sorted(list(self.lane_vehicle_counts.keys()))
         self.lane_list = lane_list
+        self._cached_vector: Optional[np.ndarray] = None
     
     def to_vector(self) -> np.ndarray:
         """Convert to state vector with dynamic dimensionality"""
+        if self._cached_vector is not None:
+            return self._cached_vector
         state_vector = []
         
         # 1. Vehicle counts per lane (normalized to [0,1])
@@ -187,7 +242,8 @@ class TrafficState:
         # 7. Optional extra features for backward-compatible state extensions.
         state_vector.extend(self.extra_features)
         
-        return np.array(state_vector, dtype=np.float32)
+        self._cached_vector = np.array(state_vector, dtype=np.float32)
+        return self._cached_vector
 
 class RLAgent:
     """DQN reinforcement learning agent"""
@@ -224,12 +280,23 @@ class RLAgent:
             'batch_size': 64,
             'memory_size': 10000,
             'target_update_freq': 100,
+            'tau': 0.0,
             'hidden_dims': [256, 128, 64],
             'device': 'cuda' if (torch.cuda.is_available() and torch.cuda.device_count() > 0 and torch.version.cuda is not None) else 'cpu',
             # Extensions
             'double_dqn': True,   # Use Double DQN update rule
             'dueling': True,      # Use dueling network architecture
-            'n_step': 1           # n-step return (1 = standard DQN). Can be increased for multi-step learning.
+            'n_step': 1,          # n-step return (1 = standard DQN). Can be increased for multi-step learning.
+            'learning_starts': 0,
+            'gradient_clip_norm': 0.5,
+            'target_q_clip': 2.0,
+            'soft_target_updates': False,
+            'prioritized_replay': False,
+            'priority_alpha': 0.6,
+            'priority_beta_start': 0.4,
+            'priority_beta_end': 1.0,
+            'priority_beta_steps': 100000,
+            'priority_eps': 1e-4,
         }
         
         # Merge with RL config from SimulationConfig
@@ -239,7 +306,11 @@ class RLAgent:
         self.config = {**default_config, **(config or {})}
         
         # Device setup
-        self.device = torch.device(self.config['device'])
+        device_name = str(self.config.get('device', 'cpu'))
+        if device_name.startswith('cuda') and (not torch.cuda.is_available() or torch.version.cuda is None):
+            device_name = 'cpu'
+            self.config['device'] = 'cpu'
+        self.device = torch.device(device_name)
         print(f"Using device: {self.device}")
         print(f"State dimension: {self.config['state_dim']}, Action dimension: {self.config['action_dim']}")
         
@@ -266,15 +337,31 @@ class RLAgent:
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=self.config['lr'])
         
         # Experience replay
-        self.memory = ReplayBuffer(self.config['memory_size'])
+        self.prioritized_replay = bool(self.config.get('prioritized_replay', False))
+        if self.prioritized_replay:
+            self.memory = PrioritizedReplayBuffer(
+                self.config['memory_size'],
+                alpha=float(self.config.get('priority_alpha', 0.6)),
+                eps=float(self.config.get('priority_eps', 1e-4)),
+            )
+        else:
+            self.memory = ReplayBuffer(self.config['memory_size'])
 
-        # Buffer for building n-step returns
+        # Buffer for building n-step returns.
+        # In parameter-sharing MARL, transitions from different intersections
+        # must not be chained together when computing n-step returns.
         self.n_step = max(1, int(self.config.get('n_step', 1)))
-        self.n_step_buffer: deque = deque(maxlen=self.n_step)
+        self._default_trajectory_key: Hashable = "__default__"
+        self.n_step_buffers: Dict[Hashable, deque] = {
+            self._default_trajectory_key: deque(maxlen=self.n_step)
+        }
+        # Backward-compatible attribute for any legacy external access.
+        self.n_step_buffer = self.n_step_buffers[self._default_trajectory_key]
         
         # RL parameters
         self.epsilon = self.config['epsilon_start']
         self.step_count = 0
+        self.learn_step_count = 0
         self.episode_count = 0
         
         # Statistics
@@ -290,7 +377,21 @@ class RLAgent:
         self.current_episode_reward = 0.0
         self.current_episode_length = 0
     
-    def select_action(self, state: TrafficState, training: bool = True) -> int:
+    def _current_priority_beta(self) -> float:
+        if not self.prioritized_replay:
+            return 1.0
+        beta_start = float(self.config.get('priority_beta_start', 0.4))
+        beta_end = float(self.config.get('priority_beta_end', 1.0))
+        beta_steps = max(1, int(self.config.get('priority_beta_steps', 100000)))
+        progress = min(1.0, float(self.learn_step_count) / float(beta_steps))
+        return float(beta_start + (beta_end - beta_start) * progress)
+
+    def select_action(
+        self,
+        state: TrafficState,
+        training: bool = True,
+        action_mask: Optional[Sequence[bool]] = None,
+    ) -> int:
         """
         Select action
         
@@ -302,20 +403,47 @@ class RLAgent:
             int: selected action
         """
         state_vector = torch.FloatTensor(state.to_vector()).unsqueeze(0).to(self.device)
+        mask_array = None
+        valid_actions = None
+        if action_mask is not None:
+            mask_array = np.asarray(list(action_mask), dtype=bool).reshape(-1)
+            if mask_array.shape[0] != int(self.config['action_dim']) or not mask_array.any():
+                mask_array = None
+            else:
+                valid_actions = np.flatnonzero(mask_array)
         
         # ε-greedy policy
         if training and random.random() < self.epsilon:
-            action = random.randint(0, self.config['action_dim'] - 1)
+            if valid_actions is not None:
+                action = int(random.choice(valid_actions.tolist()))
+            else:
+                action = random.randint(0, self.config['action_dim'] - 1)
         else:
             with torch.no_grad():
-                q_values = self.q_network(state_vector)
-                action = q_values.argmax().item()
+                q_values = self.q_network(state_vector).squeeze(0)
+                if mask_array is not None:
+                    mask_tensor = torch.as_tensor(mask_array, dtype=torch.bool, device=self.device)
+                    q_values = q_values.masked_fill(~mask_tensor, torch.finfo(q_values.dtype).min)
+                action = int(q_values.argmax().item())
         
         self.step_count += 1
         return action
     
-    def store_experience(self, state: TrafficState, action: int, reward: float, 
-                        next_state: TrafficState, done: bool):
+    def _get_n_step_buffer(self, trajectory_id: Optional[Hashable]) -> Tuple[deque, Hashable]:
+        key = self._default_trajectory_key if trajectory_id is None else trajectory_id
+        if key not in self.n_step_buffers:
+            self.n_step_buffers[key] = deque(maxlen=self.n_step)
+        return self.n_step_buffers[key], key
+
+    def store_experience(
+        self,
+        state: TrafficState,
+        action: int,
+        reward: float,
+        next_state: TrafficState,
+        done: bool,
+        trajectory_id: Optional[Hashable] = None,
+    ):
         """
         Store experience
         
@@ -330,42 +458,48 @@ class RLAgent:
         state_vec = state.to_vector()
         next_state_vec = next_state.to_vector() if next_state else None
 
-        # Push into n-step buffer
-        self.n_step_buffer.append((state_vec, action, reward, next_state_vec, done))
+        # Push into per-trajectory n-step buffer
+        n_step_buffer, key = self._get_n_step_buffer(trajectory_id)
+        n_step_buffer.append((state_vec, action, reward, next_state_vec, done))
+        self.current_episode_reward += reward
+        self.current_episode_length += 1
 
-        # If we have not yet collected n steps and episode not done, wait
-        if len(self.n_step_buffer) < self.n_step and not done:
+        # On terminal transitions, flush the remaining tail so short suffixes are not lost.
+        if done:
+            while n_step_buffer:
+                self.memory.push(self._build_n_step_experience(n_step_buffer))
+                n_step_buffer.popleft()
+            if key != self._default_trajectory_key:
+                self.n_step_buffers.pop(key, None)
             return
 
-        # Build n-step transition from buffer
-        # state_0, a_0, r_0,..., r_{n-1}, next_state_n
+        if len(n_step_buffer) < self.n_step:
+            return
+
+        self.memory.push(self._build_n_step_experience(n_step_buffer))
+
+    def _build_n_step_experience(self, n_step_buffer: deque) -> Experience:
+        """Build one n-step transition from the current buffer contents."""
         R = 0.0
         discount = 1.0
-        for (_, _, r, _, d) in self.n_step_buffer:
+        last_next_state_vec = None
+        last_done = False
+        for (_, _, r, next_state_vec, done_flag) in n_step_buffer:
             R += discount * r
-            if d:
+            last_next_state_vec = next_state_vec
+            last_done = done_flag
+            if done_flag:
                 break
             discount *= self.config['gamma']
 
-        first_state_vec, first_action, _, _, _ = self.n_step_buffer[0]
-        last_next_state_vec = self.n_step_buffer[-1][3]
-        last_done = self.n_step_buffer[-1][4]
-
-        experience = Experience(
+        first_state_vec, first_action, _, _, _ = n_step_buffer[0]
+        return Experience(
             first_state_vec,
             first_action,
             R,
             last_next_state_vec,
             last_done
         )
-        self.memory.push(experience)
-
-        # If episode ended, clear buffer so next episode starts fresh
-        if done:
-            self.n_step_buffer.clear()
-        
-        self.current_episode_reward += reward
-        self.current_episode_length += 1
     
     def train_step(self) -> Optional[float]:
         """
@@ -374,15 +508,26 @@ class RLAgent:
         Returns:
             float: loss value, returns None if training is not possible
         """
-        if len(self.memory) < self.config['batch_size']:
+        learning_starts = int(self.config.get('learning_starts', 0) or 0)
+        min_buffer = max(int(self.config['batch_size']), learning_starts)
+        if len(self.memory) < min_buffer:
             return None
 
-        batch = self.memory.sample(self.config['batch_size'])
+        if self.prioritized_replay:
+            batch, batch_indices, sample_weights = self.memory.sample(
+                self.config['batch_size'],
+                beta=self._current_priority_beta(),
+            )
+        else:
+            batch = self.memory.sample(self.config['batch_size'])
+            batch_indices = None
+            sample_weights = np.ones(len(batch), dtype=np.float32)
 
         states = torch.FloatTensor(np.array([e.state for e in batch])).to(self.device)
         actions = torch.LongTensor([e.action for e in batch]).to(self.device)
         rewards = torch.FloatTensor([e.reward for e in batch]).to(self.device)
         dones = torch.BoolTensor([e.done for e in batch]).to(self.device)
+        importance_weights = torch.FloatTensor(sample_weights).to(self.device)
 
         has_next = torch.BoolTensor([e.next_state is not None for e in batch]).to(self.device)
         state_dim = states.shape[1]
@@ -410,18 +555,41 @@ class RLAgent:
             next_q_values[effective_nonterminal] = target_next_q[effective_nonterminal]
             gamma_n = self.config['gamma'] ** self.n_step
             target_q_values = rewards + gamma_n * next_q_values
-            target_q_values = target_q_values.clamp(-2.0, 2.0)
+            target_q_clip = self.config.get('target_q_clip', 2.0)
+            if target_q_clip is not None and float(target_q_clip) > 0.0:
+                target_q_values = target_q_values.clamp(-float(target_q_clip), float(target_q_clip))
 
-        loss = F.smooth_l1_loss(current_q_values.squeeze(), target_q_values)
+        td_errors = current_q_values.squeeze() - target_q_values
+        per_sample_loss = F.smooth_l1_loss(current_q_values.squeeze(), target_q_values, reduction='none')
+        loss = (per_sample_loss * importance_weights).mean()
 
         self.optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 0.5)
+        grad_clip = self.config.get('gradient_clip_norm', 0.5)
+        if grad_clip is not None and float(grad_clip) > 0.0:
+            torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), float(grad_clip))
         self.optimizer.step()
 
-        # Hard target update: copy online -> target every target_update_freq steps
-        if self.step_count % self.config['target_update_freq'] == 0:
-            self.target_network.load_state_dict(self.q_network.state_dict())
+        if self.prioritized_replay and batch_indices is not None:
+            priority_eps = float(self.config.get('priority_eps', 1e-4))
+            new_priorities = torch.abs(td_errors).detach().cpu().numpy() + priority_eps
+            self.memory.update_priorities(batch_indices, new_priorities)
+
+        self.learn_step_count += 1
+
+        # Soft updates improve stability for long runs; fall back to hard sync when disabled.
+        if bool(self.config.get('soft_target_updates', False)):
+            tau = float(self.config.get('tau', 0.0) or 0.0)
+            if 0.0 < tau < 1.0:
+                with torch.no_grad():
+                    for target_param, online_param in zip(self.target_network.parameters(), self.q_network.parameters()):
+                        target_param.mul_(1.0 - tau).add_(online_param, alpha=tau)
+            else:
+                self.target_network.load_state_dict(self.q_network.state_dict())
+        else:
+            update_freq = int(self.config.get('target_update_freq', 0) or 0)
+            if update_freq > 0 and self.learn_step_count % update_freq == 0:
+                self.target_network.load_state_dict(self.q_network.state_dict())
 
         self.training_history['losses'].append(loss.item())
         self.training_history['epsilon_values'].append(self.epsilon)
@@ -548,6 +716,7 @@ class RLAgent:
             'optimizer_state_dict': self.optimizer.state_dict(),
             'config': self.config,
             'step_count': self.step_count,
+            'learn_step_count': self.learn_step_count,
             'episode_count': self.episode_count,
             'epsilon': self.epsilon,
             'training_history': self.training_history
@@ -566,6 +735,7 @@ class RLAgent:
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         
         self.step_count = checkpoint.get('step_count', 0)
+        self.learn_step_count = checkpoint.get('learn_step_count', self.step_count)
         self.episode_count = checkpoint.get('episode_count', 0)
         self.epsilon = checkpoint.get('epsilon', self.config['epsilon_start'])
         self.training_history = checkpoint.get('training_history', {
@@ -574,7 +744,10 @@ class RLAgent:
         })
         
         print(f"Model loaded: {filepath}")
-        print(f"Training steps: {self.step_count}, Episode: {self.episode_count}, Epsilon: {self.epsilon:.3f}")
+        print(
+            f"Training steps: {self.step_count}, Optimizer steps: {self.learn_step_count}, "
+            f"Episode: {self.episode_count}, Epsilon: {self.epsilon:.3f}"
+        )
     
     def get_training_stats(self) -> Dict:
         """Get training statistics"""

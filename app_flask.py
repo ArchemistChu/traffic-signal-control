@@ -4,7 +4,7 @@ Flask-based Intelligent Traffic Signal Control System
 Converted from Streamlit to Flask
 """
 
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_file
 import pandas as pd
 import plotly
 import plotly.express as px
@@ -16,6 +16,8 @@ import os
 import time
 import threading
 from datetime import datetime
+from pathlib import Path
+from werkzeug.utils import secure_filename
 
 # Import signal for process termination (Unix only)
 if sys.platform != 'win32':
@@ -34,6 +36,13 @@ app.secret_key = 'traffic_signal_control_secret_key_2024'  # Change this in prod
 
 # Store large results on disk (avoid cookie-session overflow)
 WEB_RESULTS_DIR = os.path.join(SimulationConfig.OUTPUT_DIR, "web_results")
+WEB_UPLOAD_DIR = os.path.join(SimulationConfig.MODEL_DIR, "uploaded")
+ALLOWED_MODEL_EXTENSIONS = {".pt", ".pth", ".ckpt"}
+VIZ_ROOTS = [
+    Path("Report/figures/training"),
+    Path("Report/figures/statistics"),
+    Path("output/training_viz"),
+]
 
 def _ensure_dir(path: str) -> None:
     try:
@@ -47,6 +56,32 @@ def _safe_json_load(path: str):
             return json.load(f)
     except Exception:
         return None
+
+
+def _allow_model_file(filename: str) -> bool:
+    return Path(filename).suffix.lower() in ALLOWED_MODEL_EXTENSIONS
+
+
+def _list_pngs_under(root: Path) -> list[str]:
+    if not root.exists():
+        return []
+    files = sorted(root.rglob("*.png"), key=lambda p: p.stat().st_mtime, reverse=True)
+    return [str(p.resolve()) for p in files[:120]]
+
+
+def _safe_viz_path(raw_path: str) -> Path | None:
+    try:
+        target = Path(raw_path).resolve()
+    except Exception:
+        return None
+    for root in VIZ_ROOTS:
+        rr = root.resolve()
+        try:
+            target.relative_to(rr)
+            return target
+        except Exception:
+            continue
+    return None
 
 # Initialize session variables
 def init_session():
@@ -73,6 +108,12 @@ def init_session():
         session['marl_eval_results_path'] = None
     if 'marl_eval_status_path' not in session:
         session['marl_eval_status_path'] = None
+    if 'comparative_eval_running' not in session:
+        session['comparative_eval_running'] = False
+    if 'comparative_eval_status_path' not in session:
+        session['comparative_eval_status_path'] = None
+    if 'comparative_eval_results_path' not in session:
+        session['comparative_eval_results_path'] = None
 
 @app.route('/')
 def index():
@@ -84,8 +125,6 @@ def index():
         strategy_options = {
             'FIXED_TIME': '🕐 Fixed-time Control',
             'ADAPTIVE': '🧠 Adaptive Control', 
-            'GA': '🧬 Genetic Algorithm (GA) baseline',
-            'PRESSLIGHT': '📌 PressLight-inspired (pressure DQN)',
             'MAX_PRESSURE': '⚖️ MaxPressure Control',
             'SOTL': '🚦 SOTL (Self-Organizing)',
             'MARL_DQN': '🤝 Multi-Agent DQN (trained)'
@@ -106,7 +145,7 @@ def index():
 
         use_gui = session.get('use_gui', True)
         return render_template('index.html',
-                             current_dataset=session.get('current_dataset', 'custom'),
+                             current_dataset=session.get('current_dataset', 'cologne'),
                              dataset_description=current_config['description'],
                              strategy_options=strategy_options,
                              selected_strategy=session.get('selected_strategy', 'FIXED_TIME'),
@@ -125,7 +164,10 @@ def index():
 def set_dataset():
     """Change dataset"""
     data = request.get_json()
-    dataset_option = data.get('dataset', 'custom')
+    dataset_option = data.get('dataset', 'cologne')
+    allowed = {"cologne", "vancouver", "los_angeles"}
+    if dataset_option not in allowed:
+        return jsonify({'status': 'error', 'message': 'Unsupported dataset'}), 400
     
     if dataset_option != SimulationConfig.DATASET:
         session['simulation_running'] = False
@@ -331,8 +373,6 @@ def check_simulation():
                 strategy_names = {
                     'FIXED_TIME': '🕐 Fixed-time Control',
                     'ADAPTIVE': '🧠 Adaptive Control', 
-                    'GA': '🧬 Genetic Algorithm (GA) baseline',
-                    'PRESSLIGHT': '📌 PressLight-inspired (pressure DQN)',
                     'MAX_PRESSURE': '⚖️ MaxPressure Control',
                     'SOTL': '🚦 SOTL (Self-Organizing)',
                     'MARL_DQN': '🤝 Multi-Agent DQN (trained)'
@@ -1051,6 +1091,297 @@ def get_marl_evaluation_results():
     data = _safe_json_load(path)
     if data is None:
         return jsonify({'status': 'error', 'message': 'Failed to load results'})
+    return jsonify({'status': 'success', 'data': data})
+
+
+@app.route('/upload_model', methods=['POST'])
+def upload_model():
+    """Upload a model checkpoint file for evaluation."""
+    init_session()
+    if 'model_file' not in request.files:
+        return jsonify({'status': 'error', 'message': 'No file uploaded'}), 400
+    f = request.files['model_file']
+    if not f or not f.filename:
+        return jsonify({'status': 'error', 'message': 'Empty upload'}), 400
+    if not _allow_model_file(f.filename):
+        return jsonify({'status': 'error', 'message': 'Only .pt/.pth/.ckpt are allowed'}), 400
+
+    _ensure_dir(WEB_UPLOAD_DIR)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    base_name = secure_filename(f.filename)
+    out_name = f"{stamp}_{base_name}"
+    out_path = os.path.join(WEB_UPLOAD_DIR, out_name)
+    f.save(out_path)
+    return jsonify({'status': 'success', 'path': out_path, 'filename': out_name})
+
+
+@app.route('/get_visualization_files', methods=['GET'])
+def get_visualization_files():
+    """List training/statistics visualization PNG files."""
+    init_session()
+    training_roots = [
+        Path("Report/figures/training"),
+        Path("output/training_viz"),
+    ]
+    stats_roots = [
+        Path("Report/figures/statistics"),
+        Path("Report/figures"),
+        Path("output"),
+    ]
+
+    training_files: list[str] = []
+    for root in training_roots:
+        training_files.extend(_list_pngs_under(root))
+
+    stats_files: list[str] = []
+    for root in stats_roots:
+        stats_files.extend(_list_pngs_under(root))
+
+    # Keep only figure-like statistics files to avoid unrelated PNG noise from output/.
+    stats_files = [
+        p for p in stats_files
+        if any(k in Path(p).name.lower() for k in ["stat", "comparison", "metric", "eval", "nb_", "reward", "throughput", "co2", "aql", "pressure"])
+    ]
+
+    return jsonify({
+        'status': 'success',
+        'training_files': sorted(set(training_files), reverse=True)[:80],
+        'statistics_files': sorted(set(stats_files), reverse=True)[:80],
+    })
+
+
+@app.route('/viz_file', methods=['GET'])
+def viz_file():
+    """Serve visualization image files from allowed directories."""
+    raw_path = request.args.get('path', '')
+    safe_path = _safe_viz_path(raw_path)
+    if safe_path is None or not safe_path.exists():
+        return jsonify({'status': 'error', 'message': 'File not found'}), 404
+    return send_file(str(safe_path))
+
+
+def _mean_metrics_from_eval_payload(payload: dict) -> dict:
+    results = payload.get("results", []) if isinstance(payload, dict) else []
+    keys = [
+        "avg_waiting_time",
+        "avg_speed",
+        "throughput_per_hour",
+        "total_co2",
+        "total_fuel",
+        "total_nox",
+        "total_pmx",
+        "avg_queue_length",
+        "avg_pressure",
+        "congestion_index",
+    ]
+    sums = {k: 0.0 for k in keys}
+    cnts = {k: 0 for k in keys}
+    for ep in results:
+        m = (ep or {}).get("metrics", {}) or {}
+        for k in keys:
+            if k in m and m[k] is not None:
+                try:
+                    sums[k] += float(m[k])
+                    cnts[k] += 1
+                except Exception:
+                    pass
+    out = {}
+    for k in keys:
+        out[k] = (sums[k] / cnts[k]) if cnts[k] > 0 else None
+    out["episodes_counted"] = len(results)
+    return out
+
+
+@app.route('/start_comparative_evaluation', methods=['POST'])
+def start_comparative_evaluation():
+    """
+    Run model + selected baselines in one batch (same settings).
+    """
+    init_session()
+    current_status_path = session.get('comparative_eval_status_path')
+    if current_status_path and os.path.exists(current_status_path):
+        cur = _safe_json_load(current_status_path) or {}
+        if cur.get("status") == "running":
+            return jsonify({'status': 'error', 'message': 'Comparative evaluation already running'})
+
+    data = request.get_json() or {}
+    dataset = str(data.get('dataset', SimulationConfig.DATASET))
+    if dataset not in {"cologne", "vancouver", "los_angeles"}:
+        return jsonify({'status': 'error', 'message': 'Unsupported dataset'}), 400
+
+    model_path = str(data.get('model_path', '')).strip()
+    episodes = int(data.get('episodes', 10))
+    duration = int(data.get('duration', 1200))
+    decision_interval = int(data.get('decision_interval', 5))
+    ratio = float(data.get('controlled_lights_ratio', 0.5))
+    lanes_per_tl = int(data.get('lanes_per_tl', 12))
+    demand_scale = float(data.get('demand_scale', 0.0))
+    seed = int(data.get('seed', 42))
+    run_id = int(data.get('run_id', 1))
+    regional_reward_weight = float(data.get('regional_reward_weight', 0.0))
+    region_grid_size = float(data.get('region_grid_size', 500.0))
+    sumo_emissions_output = bool(data.get('sumo_emissions_output', True))
+    baselines = data.get('baselines', ["FIXED_TIME", "MAX_PRESSURE", "SOTL", "ADAPTIVE"])
+    if not isinstance(baselines, list):
+        baselines = []
+    baselines = [str(x).upper() for x in baselines if str(x).upper() in {"FIXED_TIME", "ADAPTIVE", "MAX_PRESSURE", "SOTL"}]
+
+    if episodes <= 0 or duration <= 0 or decision_interval <= 0 or ratio <= 0 or ratio > 1:
+        return jsonify({'status': 'error', 'message': 'Invalid evaluation parameters'}), 400
+    if not model_path:
+        return jsonify({'status': 'error', 'message': 'Model path is required'}), 400
+
+    _ensure_dir(WEB_RESULTS_DIR)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_dir = os.path.join(WEB_RESULTS_DIR, f"comparative_eval_{dataset}_{ts}")
+    _ensure_dir(run_dir)
+    status_path = os.path.join(run_dir, "status.json")
+    summary_path = os.path.join(run_dir, "summary.json")
+
+    def _write_status(obj: dict) -> None:
+        try:
+            with open(status_path, "w", encoding="utf-8") as f:
+                json.dump(obj, f, indent=2)
+        except Exception:
+            pass
+
+    def run_batch():
+        try:
+            outputs = {}
+            cmds = []
+
+            # 1) MARL model evaluation
+            marl_out = os.path.join(run_dir, "eval_model.json")
+            marl_cmd = [
+                sys.executable, "evaluate_marl_osm.py",
+                "--dataset", dataset,
+                "--model", model_path,
+                "--episodes", str(episodes),
+                "--duration", str(duration),
+                "--decision-interval", str(decision_interval),
+                "--controlled-lights-ratio", str(ratio),
+                "--lanes-per-tl", str(lanes_per_tl),
+                "--seed", str(seed),
+                "--run-id", str(run_id),
+                "--demand-scale", str(demand_scale),
+                "--regional-reward-weight", str(regional_reward_weight),
+                "--region-grid-size", str(region_grid_size),
+                "--out", marl_out,
+            ]
+            if sumo_emissions_output:
+                marl_cmd.append("--sumo-emissions-output")
+            cmds.append(("MARL_DQN", marl_cmd, marl_out))
+
+            # 2) Baseline evaluations
+            for strat in baselines:
+                out_path = os.path.join(run_dir, f"eval_{strat}.json")
+                cmd = [
+                    sys.executable, "evaluate_baselines_osm.py",
+                    "--dataset", dataset,
+                    "--strategy", strat,
+                    "--episodes", str(episodes),
+                    "--duration", str(duration),
+                    "--decision-interval", str(decision_interval),
+                    "--controlled-lights-ratio", str(ratio),
+                    "--seed", str(seed),
+                    "--run-id", str(run_id),
+                    "--demand-scale", str(demand_scale),
+                    "--out", out_path,
+                ]
+                if sumo_emissions_output:
+                    cmd.append("--sumo-emissions-output")
+                cmds.append((strat, cmd, out_path))
+
+            _write_status({
+                "status": "running",
+                "progress": 0,
+                "total_jobs": len(cmds),
+                "completed_jobs": 0,
+                "current": None,
+                "run_dir": run_dir,
+            })
+
+            for idx, (name, cmd, out_path) in enumerate(cmds, start=1):
+                _write_status({
+                    "status": "running",
+                    "progress": int((idx - 1) * 100 / max(1, len(cmds))),
+                    "total_jobs": len(cmds),
+                    "completed_jobs": idx - 1,
+                    "current": name,
+                    "cmd": " ".join(cmd),
+                    "run_dir": run_dir,
+                })
+                subprocess.run(cmd, check=True)
+                outputs[name] = out_path
+
+            # Build compact summary
+            summary = {
+                "dataset": dataset,
+                "episodes": episodes,
+                "duration": duration,
+                "decision_interval": decision_interval,
+                "controlled_lights_ratio": ratio,
+                "demand_scale": demand_scale,
+                "seed": seed,
+                "run_id": run_id,
+                "model_path": model_path,
+                "sumo_emissions_output": sumo_emissions_output,
+                "files": outputs,
+                "mean_metrics": {},
+            }
+            for name, path in outputs.items():
+                payload = _safe_json_load(path) or {}
+                summary["mean_metrics"][name] = _mean_metrics_from_eval_payload(payload)
+
+            with open(summary_path, "w", encoding="utf-8") as f:
+                json.dump(summary, f, indent=2)
+
+            _write_status({
+                "status": "completed",
+                "progress": 100,
+                "run_dir": run_dir,
+                "summary_path": summary_path,
+                "files": outputs,
+            })
+        except Exception as e:
+            _write_status({
+                "status": "error",
+                "message": str(e),
+                "run_dir": run_dir,
+            })
+        finally:
+            pass
+
+    session['comparative_eval_running'] = True
+    session['comparative_eval_status_path'] = status_path
+    session['comparative_eval_results_path'] = summary_path
+    session.modified = True
+    threading.Thread(target=run_batch, daemon=True).start()
+    return jsonify({'status': 'success', 'message': 'Comparative evaluation started', 'status_path': status_path})
+
+
+@app.route('/check_comparative_evaluation', methods=['GET'])
+def check_comparative_evaluation():
+    init_session()
+    status_path = session.get('comparative_eval_status_path')
+    if not status_path or not os.path.exists(status_path):
+        return jsonify({'status': 'idle'})
+    data = _safe_json_load(status_path) or {'status': 'error', 'message': 'Failed to load status'}
+    if data.get("status") in {"completed", "error"}:
+        session['comparative_eval_running'] = False
+        session.modified = True
+    return jsonify(data)
+
+
+@app.route('/get_comparative_results', methods=['GET'])
+def get_comparative_results():
+    init_session()
+    path = request.args.get('path') or session.get('comparative_eval_results_path')
+    if not path or not os.path.exists(path):
+        return jsonify({'status': 'error', 'message': 'Results summary not found'}), 404
+    data = _safe_json_load(path)
+    if data is None:
+        return jsonify({'status': 'error', 'message': 'Failed to read results'}), 500
     return jsonify({'status': 'success', 'data': data})
 
 if __name__ == '__main__':

@@ -55,7 +55,7 @@ def main():
         "--strategy",
         type=str,
         required=True,
-        choices=["FIXED_TIME", "ADAPTIVE", "MAX_PRESSURE", "SOTL", "GA", "PRESSLIGHT"],
+        choices=["FIXED_TIME", "ADAPTIVE", "MAX_PRESSURE", "SOTL", "GA", "PRESSLIGHT", "RANDOM"],
         help="Baseline strategy to evaluate",
     )
     parser.add_argument("--episodes", type=int, default=120)

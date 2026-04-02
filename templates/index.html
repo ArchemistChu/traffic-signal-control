@@ -8,7 +8,6 @@
             <div class="card-body">
                 <h5 class="card-title">Select Dataset</h5>
                 <select id="datasetSelect" class="form-select">
-                    <option value="custom" {% if current_dataset == 'custom' %}selected{% endif %}>Custom Single Intersection</option>
                     <option value="cologne" {% if current_dataset == 'cologne' %}selected{% endif %}>OSM Cologne</option>
                     <option value="vancouver" {% if current_dataset == 'vancouver' %}selected{% endif %}>OSM Vancouver</option>
                     <option value="los_angeles" {% if current_dataset == 'los_angeles' %}selected{% endif %}>OSM Los Angeles</option>
@@ -40,10 +39,6 @@
                     ⏰ Switch signals at fixed intervals<br>Suitable for regular traffic patterns
                     {% elif selected_strategy == 'ADAPTIVE' %}
                     🧠 Adjust intelligently based on vehicle counts<br>Suitable for varying traffic flows
-                    {% elif selected_strategy == 'GA' %}
-                    🧬 Genetic Algorithm baseline<br>Optimizes signal timing parameters for the chosen map
-                    {% elif selected_strategy == 'PRESSLIGHT' %}
-                    📌 PressLight-inspired baseline<br>DQN trained on pressure-state (adapted to SUMO)
                     {% elif selected_strategy == 'MAX_PRESSURE' %}
                     ⚖️ Serve the phase with the highest queued demand (MaxPressure)<br>Strong queue-based baseline for comparison
                     {% elif selected_strategy == 'SOTL' %}
@@ -74,6 +69,37 @@
                         Recommended: 300-600s (testing), 1800-3600s (experiments). 
                         <span id="durationHint">Current: 10 minutes</span>
                     </small>
+                </div>
+
+                <!-- Training Parameters (input area) -->
+                <div class="mb-3">
+                    <h6>🧪 Training Parameters (for MARL training command)</h6>
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <label class="form-label">Episodes</label>
+                            <input type="number" class="form-control" id="trainEpisodes" value="400" min="1">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Decision Int (s)</label>
+                            <input type="number" class="form-control" id="trainDecisionInterval" value="5" min="1">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">TLS Ratio</label>
+                            <input type="number" class="form-control" id="trainTlsRatio" value="0.5" min="0.01" max="1.0" step="0.01">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Learning Rate</label>
+                            <input type="number" class="form-control" id="trainLr" value="1.5e-4" step="0.00001">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Model Output Path</label>
+                            <input type="text" class="form-control" id="trainOutPath" value="models/marl_cologne_shared_dqn_regionaware_v14_stable_fixedratio_scale07.pt">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Demand Scale</label>
+                            <input type="number" class="form-control" id="trainDemandScale" value="0.7" min="0.0" max="2.0" step="0.05">
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Start Button and Restore Button -->
@@ -111,7 +137,12 @@
         <div class="row g-3">
             <div class="col-md-6">
                 <label class="form-label">Model Path (.pt)</label>
-                <input type="text" class="form-control" id="marlModelPath" placeholder="models/marl_vancouver_shared_dqn.pt">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="marlModelPath" placeholder="models/marl_vancouver_shared_dqn.pt">
+                    <button class="btn btn-outline-secondary" type="button" onclick="browseModelPath('marlModelPath', 'marlModelHint')">📂 Browse</button>
+                </div>
+                <input type="file" id="hiddenModelPicker" accept=".pt,.pth,.ckpt" style="display:none;">
+                <small id="marlModelHint" class="form-text text-muted">Choose local checkpoint file from your explorer.</small>
             </div>
             <div class="col-md-2">
                 <label class="form-label">Episodes</label>
@@ -151,6 +182,116 @@
         </div>
         <div id="marlEvalStatus" class="mt-3 alert alert-light">Status: idle</div>
         <div id="marlEvalSummary" class="mt-2"></div>
+    </div>
+</div>
+
+<!-- Comparative Evaluation -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">⚔️ Comparative Evaluation (Model + Baselines)</h5>
+        <p class="text-muted mb-3">Upload a model checkpoint and evaluate it with selected baselines under the same settings.</p>
+        <div class="row g-3">
+            <div class="col-md-5">
+                <label class="form-label">Upload Model (.pt/.pth/.ckpt)</label>
+                <input type="file" class="form-control" id="modelUploadInput" accept=".pt,.pth,.ckpt">
+                <button class="btn btn-outline-secondary btn-sm mt-2" onclick="uploadModel()">📤 Upload Model</button>
+                <div class="form-text" id="uploadedModelHint">No uploaded model selected.</div>
+            </div>
+            <div class="col-md-7">
+                <label class="form-label">Model Path (uploaded or existing)</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="compareModelPath" placeholder="models/your_model.pt">
+                    <button class="btn btn-outline-secondary" type="button" onclick="browseModelPath('compareModelPath', 'uploadedModelHint')">📂 Browse</button>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Episodes</label>
+                <input type="number" class="form-control" id="compareEpisodes" value="20" min="1" max="300">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Duration (s)</label>
+                <input type="number" class="form-control" id="compareDuration" value="1200" min="60" max="7200" step="60">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Decision Int</label>
+                <input type="number" class="form-control" id="compareDecisionInterval" value="5" min="1" max="60">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">TLS Ratio</label>
+                <input type="number" class="form-control" id="compareTlsRatio" value="0.5" min="0.01" max="1.0" step="0.01">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Lanes/TL</label>
+                <input type="number" class="form-control" id="compareLanesPerTl" value="12" min="1" max="32">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Demand Scale</label>
+                <input type="number" class="form-control" id="compareDemandScale" value="0.7" min="0.0" max="2.0" step="0.05">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Seed</label>
+                <input type="number" class="form-control" id="compareSeed" value="42" min="1" max="999999">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Run ID</label>
+                <input type="number" class="form-control" id="compareRunId" value="1" min="1" max="999">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Regional Weight</label>
+                <input type="number" class="form-control" id="compareRegionalWeight" value="0.001" min="0" max="0.1" step="0.001">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Region Grid (m)</label>
+                <input type="number" class="form-control" id="compareRegionGrid" value="500" min="50" max="2000" step="50">
+            </div>
+            <div class="col-md-12">
+                <label class="form-label d-block">Baselines</label>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input compare-baseline" type="checkbox" value="FIXED_TIME" checked id="bFix">
+                    <label class="form-check-label" for="bFix">FIXED_TIME</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input compare-baseline" type="checkbox" value="ADAPTIVE" checked id="bAdaptive">
+                    <label class="form-check-label" for="bAdaptive">ADAPTIVE</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input compare-baseline" type="checkbox" value="MAX_PRESSURE" checked id="bMaxP">
+                    <label class="form-check-label" for="bMaxP">MAX_PRESSURE</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input compare-baseline" type="checkbox" value="SOTL" checked id="bSotl">
+                    <label class="form-check-label" for="bSotl">SOTL</label>
+                </div>
+            </div>
+            <div class="col-md-4 d-flex align-items-center">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="compareEmissions" checked>
+                    <label class="form-check-label" for="compareEmissions">Enable SUMO emissions output</label>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <button class="btn btn-primary w-100" id="compareEvalBtn" onclick="startComparativeEvaluation()">
+                    ▶️ Start Comparative Evaluation
+                </button>
+            </div>
+        </div>
+        <div id="compareEvalStatus" class="mt-3 alert alert-light">Status: idle</div>
+        <div id="compareEvalSummary" class="mt-2"></div>
+    </div>
+</div>
+
+<!-- Visualization Switcher -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">🖼️ Visualization Hub</h5>
+        <p class="text-muted mb-3">Switch between outputs from <code>visualize_training</code> and <code>visualize_statistics</code>.</p>
+        <div class="btn-group mb-3" role="group">
+            <button class="btn btn-outline-primary active" id="btnVizTraining" onclick="switchVisualizationMode('training')">Training Visualizations</button>
+            <button class="btn btn-outline-primary" id="btnVizStats" onclick="switchVisualizationMode('statistics')">Statistics Visualizations</button>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm mb-2" onclick="loadVisualizationFiles()">🔄 Load Visualizations</button>
+        <div id="vizStatus" class="small text-muted mb-2">No images loaded by default. Click "Load Visualizations".</div>
+        <div id="vizGallery" class="row g-3"></div>
     </div>
 </div>
 
@@ -402,6 +543,9 @@
 <script>
 let checkInterval = null;
 let marlEvalInterval = null;
+let compareEvalInterval = null;
+let vizMode = 'training';
+let vizFilesCache = { training_files: [], statistics_files: [] };
 
 // Update strategy description when selection changes
 $('#strategySelect').on('change', function() {
@@ -409,8 +553,6 @@ $('#strategySelect').on('change', function() {
     const descriptions = {
         'FIXED_TIME': '⏰ Switch signals at fixed intervals<br>Suitable for regular traffic patterns',
         'ADAPTIVE': '🧠 Adjust intelligently based on vehicle counts<br>Suitable for varying traffic flows',
-        'GA': '🧬 Genetic Algorithm baseline<br>Optimizes signal timing parameters for the chosen map',
-        'PRESSLIGHT': '📌 PressLight-inspired baseline<br>DQN trained on pressure-state (adapted to SUMO)',
         'MAX_PRESSURE': '⚖️ Serve the phase with the highest queued demand (MaxPressure)<br>Strong queue-based baseline for comparison',
         'SOTL': '🚦 Threshold-based self-organizing control (SOTL)<br>Switch when queues exceed a threshold',
         'MARL_DQN': '🤝 Multi-Agent DQN (trained)<br>Controls multiple traffic lights at once using a trained shared policy'
@@ -620,6 +762,225 @@ function loadMarlEvalSummary() {
         },
         error: function() {
             $('#marlEvalSummary').html('<div class="text-danger">Failed to load results.</div>');
+        }
+    });
+}
+
+function uploadModel() {
+    const input = document.getElementById('modelUploadInput');
+    if (!input || !input.files || input.files.length === 0) {
+        alert('Please choose a model file first.');
+        return;
+    }
+    const fd = new FormData();
+    fd.append('model_file', input.files[0]);
+    $('#uploadedModelHint').text('Uploading...');
+    $.ajax({
+        url: '/upload_model',
+        method: 'POST',
+        data: fd,
+        processData: false,
+        contentType: false,
+        success: function(resp) {
+            if (resp.status === 'success') {
+                $('#compareModelPath').val(resp.path);
+                $('#uploadedModelHint').text('Uploaded: ' + resp.filename);
+            } else {
+                $('#uploadedModelHint').text('Upload failed: ' + (resp.message || 'Unknown error'));
+            }
+        },
+        error: function(xhr) {
+            const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Upload failed';
+            $('#uploadedModelHint').text(msg);
+        }
+    });
+}
+
+function browseModelPath(targetInputId, hintId) {
+    const picker = document.getElementById('hiddenModelPicker');
+    if (!picker) return;
+    picker.dataset.targetInputId = targetInputId;
+    picker.dataset.hintId = hintId || '';
+    picker.click();
+}
+
+function uploadSelectedFileToTarget(file, targetInputId, hintId) {
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('model_file', file);
+    if (hintId) {
+        $('#' + hintId).text('Uploading...');
+    }
+    $.ajax({
+        url: '/upload_model',
+        method: 'POST',
+        data: fd,
+        processData: false,
+        contentType: false,
+        success: function(resp) {
+            if (resp.status === 'success') {
+                $('#' + targetInputId).val(resp.path);
+                if (hintId) {
+                    $('#' + hintId).text('Uploaded: ' + resp.filename);
+                }
+            } else if (hintId) {
+                $('#' + hintId).text('Upload failed: ' + (resp.message || 'Unknown error'));
+            }
+        },
+        error: function(xhr) {
+            if (hintId) {
+                const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Upload failed';
+                $('#' + hintId).text(msg);
+            }
+        }
+    });
+}
+
+function startComparativeEvaluation() {
+    const baselines = $('.compare-baseline:checked').map(function() { return $(this).val(); }).get();
+    const payload = {
+        dataset: $('#datasetSelect').val(),
+        model_path: $('#compareModelPath').val().trim(),
+        episodes: parseInt($('#compareEpisodes').val()) || 10,
+        duration: parseInt($('#compareDuration').val()) || 1200,
+        decision_interval: parseInt($('#compareDecisionInterval').val()) || 5,
+        controlled_lights_ratio: parseFloat($('#compareTlsRatio').val()) || 0.5,
+        lanes_per_tl: parseInt($('#compareLanesPerTl').val()) || 12,
+        demand_scale: parseFloat($('#compareDemandScale').val()) || 0.0,
+        seed: parseInt($('#compareSeed').val()) || 42,
+        run_id: parseInt($('#compareRunId').val()) || 1,
+        regional_reward_weight: parseFloat($('#compareRegionalWeight').val()) || 0.0,
+        region_grid_size: parseFloat($('#compareRegionGrid').val()) || 500.0,
+        sumo_emissions_output: $('#compareEmissions').is(':checked'),
+        baselines: baselines
+    };
+
+    if (!payload.model_path) {
+        alert('Please upload a model or provide a model path.');
+        return;
+    }
+
+    $('#compareEvalBtn').prop('disabled', true).text('Starting...');
+    $('#compareEvalStatus').removeClass('alert-danger alert-success').addClass('alert-light').text('Status: starting...');
+    $('#compareEvalSummary').empty();
+
+    $.ajax({
+        url: '/start_comparative_evaluation',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(payload),
+        timeout: 10000,
+        success: function(resp) {
+            if (resp.status === 'success') {
+                $('#compareEvalStatus').text('Status: running...');
+                if (compareEvalInterval) clearInterval(compareEvalInterval);
+                compareEvalInterval = setInterval(checkComparativeEvaluation, 3000);
+            } else {
+                $('#compareEvalStatus').addClass('alert-danger').text('Error: ' + resp.message);
+                $('#compareEvalBtn').prop('disabled', false).text('▶️ Start Comparative Evaluation');
+            }
+        },
+        error: function(xhr) {
+            const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to start comparative evaluation';
+            $('#compareEvalStatus').addClass('alert-danger').text('Error: ' + msg);
+            $('#compareEvalBtn').prop('disabled', false).text('▶️ Start Comparative Evaluation');
+        }
+    });
+}
+
+function checkComparativeEvaluation() {
+    $.ajax({
+        url: '/check_comparative_evaluation',
+        method: 'GET',
+        timeout: 5000,
+        success: function(resp) {
+            if (resp.status === 'running') {
+                const msg = `Status: running... ${resp.completed_jobs || 0}/${resp.total_jobs || '?'} (${resp.current || 'starting'})`;
+                $('#compareEvalStatus').text(msg);
+            } else if (resp.status === 'completed') {
+                if (compareEvalInterval) clearInterval(compareEvalInterval);
+                $('#compareEvalStatus').removeClass('alert-light alert-danger').addClass('alert-success').text('Status: completed');
+                $('#compareEvalBtn').prop('disabled', false).text('▶️ Start Comparative Evaluation');
+                loadComparativeResults();
+            } else if (resp.status === 'error') {
+                if (compareEvalInterval) clearInterval(compareEvalInterval);
+                $('#compareEvalStatus').removeClass('alert-light').addClass('alert-danger').text('Error: ' + (resp.message || 'unknown'));
+                $('#compareEvalBtn').prop('disabled', false).text('▶️ Start Comparative Evaluation');
+            }
+        }
+    });
+}
+
+function loadComparativeResults() {
+    $.ajax({
+        url: '/get_comparative_results',
+        method: 'GET',
+        timeout: 8000,
+        success: function(resp) {
+            if (resp.status !== 'success') {
+                $('#compareEvalSummary').html('<div class="text-danger">Failed to load comparative summary.</div>');
+                return;
+            }
+            const data = resp.data || {};
+            const mm = data.mean_metrics || {};
+            let html = '<div class="table-responsive"><table class="table table-sm table-striped">';
+            html += '<thead><tr><th>Method</th><th>Waiting</th><th>Speed</th><th>Throughput/h</th><th>CO2</th><th>Fuel</th><th>AQL</th></tr></thead><tbody>';
+            Object.keys(mm).forEach(name => {
+                const m = mm[name] || {};
+                const f = (v, d=3) => (v === null || v === undefined || Number.isNaN(v)) ? 'n/a' : Number(v).toFixed(d);
+                html += `<tr><td>${name}</td><td>${f(m.avg_waiting_time,2)}</td><td>${f(m.avg_speed,2)}</td><td>${f(m.throughput_per_hour,1)}</td><td>${f(m.total_co2,1)}</td><td>${f(m.total_fuel,1)}</td><td>${f(m.avg_queue_length,2)}</td></tr>`;
+            });
+            html += '</tbody></table></div>';
+            $('#compareEvalSummary').html(html);
+        },
+        error: function() {
+            $('#compareEvalSummary').html('<div class="text-danger">Failed to load comparative summary.</div>');
+        }
+    });
+}
+
+function switchVisualizationMode(mode) {
+    vizMode = mode === 'statistics' ? 'statistics' : 'training';
+    $('#btnVizTraining').toggleClass('active', vizMode === 'training');
+    $('#btnVizStats').toggleClass('active', vizMode === 'statistics');
+    renderVisualizationGallery();
+}
+
+function renderVisualizationGallery() {
+    const files = (vizMode === 'training') ? (vizFilesCache.training_files || []) : (vizFilesCache.statistics_files || []);
+    if (!files.length) {
+        $('#vizStatus').text('No visualization files found for this mode yet.');
+        $('#vizGallery').html('');
+        return;
+    }
+    $('#vizStatus').text(`Showing ${files.length} ${vizMode} figure(s).`);
+    let html = '';
+    files.forEach((p, idx) => {
+        const src = '/viz_file?path=' + encodeURIComponent(p);
+        html += `<div class="col-md-4"><div class="card"><img src="${src}" class="card-img-top" alt="viz-${idx}" loading="lazy"><div class="card-body p-2"><small class="text-muted">${p.split(/[\\\\/]/).pop()}</small></div></div></div>`;
+    });
+    $('#vizGallery').html(html);
+}
+
+function loadVisualizationFiles() {
+    $('#vizStatus').text('Loading visualizations...');
+    $.ajax({
+        url: '/get_visualization_files',
+        method: 'GET',
+        timeout: 8000,
+        success: function(resp) {
+            if (resp.status === 'success') {
+                vizFilesCache = {
+                    training_files: resp.training_files || [],
+                    statistics_files: resp.statistics_files || []
+                };
+                renderVisualizationGallery();
+            } else {
+                $('#vizStatus').text('Failed to load visualizations.');
+            }
+        },
+        error: function() {
+            $('#vizStatus').text('Failed to load visualizations.');
         }
     });
 }
@@ -885,6 +1246,16 @@ $(document).ready(function() {
     if (hasComparisonResults) {
         loadComparisonCharts();
     }
+
+    // Model file picker for "Browse" buttons
+    $('#hiddenModelPicker').on('change', function() {
+        const file = this.files && this.files[0] ? this.files[0] : null;
+        const targetInputId = this.dataset.targetInputId || 'compareModelPath';
+        const hintId = this.dataset.hintId || 'uploadedModelHint';
+        uploadSelectedFileToTarget(file, targetInputId, hintId);
+        // reset so selecting same file again triggers change event
+        this.value = '';
+    });
 });
 </script>
 {% endblock %}

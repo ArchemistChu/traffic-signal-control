@@ -136,6 +136,8 @@ def add_pressure_features(
     phase_to_lanes: Dict[int, List[str]],
     green_phases: List[int],
     phase_count: int,
+    feature_scale: float = PRESSURE_FEATURE_SCALE,
+    total_queue_scale: float = PRESSURE_TOTAL_QUEUE_SCALE,
 ) -> Dict:
     """Append pressure-aware features without changing legacy state fields."""
     out = dict(state_dict)
@@ -148,10 +150,10 @@ def add_pressure_features(
     total_queue = float(sum(state_dict.get("lane_queue_lengths", {}).values()))
 
     out["extra_features"] = [
-        float(np.clip(current_pressure / PRESSURE_FEATURE_SCALE, 0.0, 1.0)),
-        float(np.clip(next_pressure / PRESSURE_FEATURE_SCALE, 0.0, 1.0)),
-        float(np.clip((next_pressure - current_pressure) / PRESSURE_FEATURE_SCALE, -1.0, 1.0)),
-        float(np.clip(total_queue / PRESSURE_TOTAL_QUEUE_SCALE, 0.0, 1.0)),
+        float(np.clip(current_pressure / max(1e-6, float(feature_scale)), 0.0, 1.0)),
+        float(np.clip(next_pressure / max(1e-6, float(feature_scale)), 0.0, 1.0)),
+        float(np.clip((next_pressure - current_pressure) / max(1e-6, float(feature_scale)), -1.0, 1.0)),
+        float(np.clip(total_queue / max(1e-6, float(total_queue_scale)), 0.0, 1.0)),
     ]
     return out
 
@@ -258,6 +260,11 @@ def local_reward(
     n_green_phases: int = 2,
     phase_to_lanes: Dict[int, List[str]] | None = None,
     green_phases: List[int] | None = None,
+    wait_penalty_weight: float = 0.50,
+    wait_penalty_scale: float = 200.0,
+    queue_reward_weight: float = 0.35,
+    queue_reward_scale: float = 10.0,
+    switch_penalty: float = 0.05,
     pressure_reward_weight: float = PRESSURE_REWARD_WEIGHT,
     pressure_reward_scale: float = PRESSURE_REWARD_SCALE,
 ) -> float:
@@ -267,9 +274,9 @@ def local_reward(
     prev_q = sum(prev_state.get("lane_queue_lengths", {}).values())
     queue_change = prev_q - curr_q
 
-    r_wait = -0.50 * np.clip(curr_wait / 200.0, 0.0, 1.0)
-    r_queue = 0.35 * np.clip(queue_change / 10.0, -1.0, 1.0)
-    r_switch = -0.05 if action == 1 else 0.0
+    r_wait = -float(wait_penalty_weight) * np.clip(curr_wait / max(1e-6, float(wait_penalty_scale)), 0.0, 1.0)
+    r_queue = float(queue_reward_weight) * np.clip(queue_change / max(1e-6, float(queue_reward_scale)), -1.0, 1.0)
+    r_switch = -float(switch_penalty) if action == 1 else 0.0
     r_pressure = 0.0
     if phase_to_lanes and green_phases:
         prev_max_pressure = get_max_phase_pressure(prev_state, phase_to_lanes, green_phases)
@@ -303,6 +310,39 @@ def build_region_map(tls_ids: List[str], grid_size: float) -> Dict[str, Tuple[in
         except Exception:
             region_map[tl_id] = (0, 0)
     return region_map
+
+
+def sync_phase_timer(
+    tl_id: str,
+    current_phase: int,
+    sim_t: float,
+    tl_last_phase: Dict[str, int],
+    tl_phase_start_time: Dict[str, float],
+) -> float:
+    """Track how long the current raw SUMO phase has been active."""
+    last_phase = tl_last_phase.get(tl_id)
+    if last_phase is None or int(last_phase) != int(current_phase):
+        tl_last_phase[tl_id] = int(current_phase)
+        tl_phase_start_time[tl_id] = float(sim_t)
+    phase_start = float(tl_phase_start_time.get(tl_id, sim_t))
+    return float(max(0.0, float(sim_t) - phase_start))
+
+
+def build_switch_action_mask(
+    current_phase: int,
+    phase_elapsed: float,
+    green_phases: List[int],
+    phase_count: int,
+    *,
+    mask_invalid_switches: bool,
+    min_green_seconds: float,
+) -> List[bool]:
+    """Mask the switch action unless it is actually meaningful to take."""
+    can_switch = int(phase_count) > 1
+    if mask_invalid_switches:
+        green_set = {int(phase) for phase in green_phases}
+        can_switch = can_switch and (int(current_phase) in green_set) and (float(phase_elapsed) >= float(min_green_seconds))
+    return [True, bool(can_switch)]
 
 
 def _to_json_safe(obj):
@@ -420,6 +460,16 @@ def main():
     use_pressure_state_features = False
     pressure_reward_weight_local = PRESSURE_REWARD_WEIGHT
     pressure_reward_scale_local = PRESSURE_REWARD_SCALE
+    pressure_feature_scale_local = PRESSURE_FEATURE_SCALE
+    pressure_total_queue_scale_local = PRESSURE_TOTAL_QUEUE_SCALE
+    wait_penalty_weight_local = 0.50
+    wait_penalty_scale_local = 200.0
+    queue_reward_weight_local = 0.35
+    queue_reward_scale_local = 10.0
+    switch_penalty_local = 0.05
+    regional_penalty_clip_local = 0.3
+    mask_invalid_switches = False
+    min_green_seconds = 0.0
 
     print("=" * 78)
     print(f"MARL evaluation: {args.dataset} | model={model_path}")
@@ -498,8 +548,28 @@ def main():
             use_pressure_state_features = bool(ckpt_cfg.get("pressure_state_features", False))
             pressure_reward_weight_local = float(ckpt_cfg.get("pressure_reward_weight", PRESSURE_REWARD_WEIGHT))
             pressure_reward_scale_local = float(ckpt_cfg.get("pressure_reward_scale", PRESSURE_REWARD_SCALE))
+            pressure_feature_scale_local = float(ckpt_cfg.get("pressure_feature_scale", PRESSURE_FEATURE_SCALE))
+            pressure_total_queue_scale_local = float(ckpt_cfg.get("pressure_total_queue_scale", PRESSURE_TOTAL_QUEUE_SCALE))
+            wait_penalty_weight_local = float(ckpt_cfg.get("wait_penalty_weight", 0.50))
+            wait_penalty_scale_local = float(ckpt_cfg.get("wait_penalty_scale", 200.0))
+            queue_reward_weight_local = float(ckpt_cfg.get("queue_reward_weight", 0.35))
+            queue_reward_scale_local = float(ckpt_cfg.get("queue_reward_scale", 10.0))
+            switch_penalty_local = float(ckpt_cfg.get("switch_penalty", 0.05))
+            regional_penalty_clip_local = float(ckpt_cfg.get("regional_penalty_clip", 0.3))
+            mask_invalid_switches = bool(ckpt_cfg.get("mask_invalid_switches", False))
+            min_green_seconds = float(ckpt_cfg.get("min_green_seconds", 0.0))
             mode_label = "N-action" if is_n_action else ("2-action next-green" if switch_mode == "next_green" else "legacy 2-action")
-            print(f"Model action_dim={ckpt_action_dim} ({mode_label}) | pressure_state={use_pressure_state_features}")
+            print(
+                f"Model action_dim={ckpt_action_dim} ({mode_label}) | pressure_state={use_pressure_state_features} "
+                f"| masked_switch={mask_invalid_switches} | min_green={min_green_seconds:.1f}s"
+            )
+            print(
+                "Reward config: "
+                f"wait=-{wait_penalty_weight_local:.2f}*clip(wait/{wait_penalty_scale_local:.1f}) "
+                f"queue=+{queue_reward_weight_local:.2f}*clip(dq/{queue_reward_scale_local:.1f}) "
+                f"switch=-{switch_penalty_local:.2f} "
+                f"region_clip={regional_penalty_clip_local:.2f}"
+            )
 
             first_tl = tls_ids[0]
             s0 = build_local_state(first_tl, tl_lanes[first_tl])
@@ -509,20 +579,13 @@ def main():
                     tl_phase_lanes[first_tl],
                     tl_green_phases[first_tl],
                     tl_phase_counts[first_tl],
+                    feature_scale=pressure_feature_scale_local,
+                    total_queue_scale=pressure_total_queue_scale_local,
                 )
             state_dim = len(RLTState(s0, lane_list=tl_lanes[tls_ids[0]]).to_vector())
-            agent_config = {
-                "state_dim": state_dim,
-                "action_dim": ckpt_action_dim,
-                "lr": 1e-4,
-                "gamma": 0.95,
-                "batch_size": 64,
-                "memory_size": 100000,
-                "target_update_freq": 500,
-                "dueling": True,
-                "double_dqn": True,
-                "n_step": 1,
-            }
+            agent_config = dict(ckpt_cfg)
+            agent_config["state_dim"] = state_dim
+            agent_config["action_dim"] = ckpt_action_dim
             if args.force_cpu:
                 agent_config["device"] = "cpu"
             agent = RLAgent(config=agent_config)
@@ -533,6 +596,14 @@ def main():
         ep_reward = 0.0
         decisions = 0
         prev_actions: Dict[str, int] = {tl_id: 0 for tl_id in tls_ids}
+        tl_last_phase: Dict[str, int] = {}
+        tl_phase_start_time: Dict[str, float] = {}
+        for tl_id in tls_ids:
+            try:
+                tl_last_phase[tl_id] = int(traci.trafficlight.getPhase(tl_id))
+            except Exception:
+                tl_last_phase[tl_id] = 0
+            tl_phase_start_time[tl_id] = float(simulator.simulation_time)
 
         prev_state_dict: Dict[str, Dict] = {}
         for tl_id in tls_ids:
@@ -543,6 +614,8 @@ def main():
                     tl_phase_lanes[tl_id],
                     tl_green_phases[tl_id],
                     tl_phase_counts[tl_id],
+                    feature_scale=pressure_feature_scale_local,
+                    total_queue_scale=pressure_total_queue_scale_local,
                 )
             prev_state_dict[tl_id] = state_dict
         prev_state_obj: Dict[str, RLTState] = {
@@ -559,8 +632,35 @@ def main():
                 last_decision_t = sim_t
 
                 actions: Dict[str, int] = {}
+                action_masks: Dict[str, List[bool]] = {}
                 for tl_id in tls_ids:
-                    actions[tl_id] = agent.select_action(prev_state_obj[tl_id], training=False)
+                    try:
+                        current_phase = int(traci.trafficlight.getPhase(tl_id))
+                    except Exception:
+                        current_phase = 0
+                    phase_elapsed = sync_phase_timer(
+                        tl_id,
+                        current_phase,
+                        sim_t,
+                        tl_last_phase,
+                        tl_phase_start_time,
+                    )
+                    action_mask = None
+                    if not is_n_action:
+                        action_mask = build_switch_action_mask(
+                            current_phase,
+                            phase_elapsed,
+                            tl_green_phases.get(tl_id, []),
+                            tl_phase_counts.get(tl_id, 1),
+                            mask_invalid_switches=mask_invalid_switches,
+                            min_green_seconds=min_green_seconds,
+                        )
+                    action_masks[tl_id] = action_mask or [True] * int(agent.config.get("action_dim", 2))
+                    actions[tl_id] = agent.select_action(
+                        prev_state_obj[tl_id],
+                        training=False,
+                        action_mask=action_mask,
+                    )
 
                 # Apply actions — support legacy 2-action, next-green 2-action, and N-action.
                 for tl_id, action in actions.items():
@@ -583,7 +683,7 @@ def main():
                             cur = int(traci.trafficlight.getPhase(tl_id))
                             gp = tl_green_phases.get(tl_id, [])
                             nph = int(tl_phase_counts.get(tl_id, 1))
-                            if action == 0:
+                            if action == 0 or not action_masks.get(tl_id, [True, True])[1]:
                                 if cur in gp:
                                     traci.trafficlight.setPhaseDuration(tl_id, float(args.decision_interval))
                                 continue
@@ -594,7 +694,7 @@ def main():
                         except Exception:
                             pass
                     else:
-                        if action == 0:
+                        if action == 0 or not action_masks.get(tl_id, [True, True])[1]:
                             continue
                         try:
                             cur = int(traci.trafficlight.getPhase(tl_id))
@@ -613,6 +713,8 @@ def main():
                             tl_phase_lanes[tl_id],
                             tl_green_phases[tl_id],
                             tl_phase_counts[tl_id],
+                            feature_scale=pressure_feature_scale_local,
+                            total_queue_scale=pressure_total_queue_scale_local,
                         )
                     curr_state_dict[tl_id] = curr_dict
                     curr_state_obj[tl_id] = RLTState(curr_dict, lane_list=tl_lanes[tl_id])
@@ -634,6 +736,11 @@ def main():
                         n_green_phases=len(gp),
                         phase_to_lanes=tl_phase_lanes.get(tl_id, {}) if use_pressure_state_features else None,
                         green_phases=gp if use_pressure_state_features else None,
+                        wait_penalty_weight=wait_penalty_weight_local,
+                        wait_penalty_scale=wait_penalty_scale_local,
+                        queue_reward_weight=queue_reward_weight_local,
+                        queue_reward_scale=queue_reward_scale_local,
+                        switch_penalty=switch_penalty_local,
                         pressure_reward_weight=pressure_reward_weight_local,
                         pressure_reward_scale=pressure_reward_scale_local,
                     )
@@ -641,7 +748,11 @@ def main():
                         region = tl_regions.get(tl_id, (0, 0))
                         denom = max(1, region_cnt.get(region, 1))
                         region_avg_q = region_sum.get(region, 0.0) / float(denom)
-                        r += -float(args.regional_reward_weight) * region_avg_q
+                        regional_penalty = -float(args.regional_reward_weight) * region_avg_q
+                        if regional_penalty_clip_local > 0.0:
+                            r += float(np.clip(regional_penalty, -regional_penalty_clip_local, 0.0))
+                        else:
+                            r += float(regional_penalty)
                     ep_reward += float(r)
                     decisions += 1
 

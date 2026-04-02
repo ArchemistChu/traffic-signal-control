@@ -13,8 +13,8 @@ def main():
     print("=" * 45)
     print("🎯 Interface highlights:")
     print("  • Select strategy → Click Start → Watch simulation → View results")
-    print("  • Academic experiments with statistical analysis")
-    print("  • Multiple datasets (Custom, Cologne, Vancouver, Los Angeles)")
+    print("  • Comparative evaluation: uploaded model vs baselines")
+    print("  • Multiple datasets (Cologne, Vancouver, Los Angeles)")
     print("  • SUMO GUI starts automatically")
     print("=" * 45)
     

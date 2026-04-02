@@ -135,6 +135,11 @@ def main() -> None:
         default="Report/figures/training",
         help="Primary output directory for training figures",
     )
+    parser.add_argument(
+        "--skip-report-root",
+        action="store_true",
+        help="Do not also save figures into Report/figures",
+    )
     args = parser.parse_args()
 
     root = Path(".").resolve()
@@ -145,8 +150,9 @@ def main() -> None:
         out_dir,
         out_dir / "png",
         out_dir / "pdf",
-        report_fig_dir,
     ]
+    if not args.skip_report_root:
+        output_roots.append(report_fig_dir)
 
     setup_style()
 
@@ -306,6 +312,72 @@ def main() -> None:
         )
         ax.legend(loc="best")
         save_figure(fig, "training_reward_sum_curve", output_roots)
+
+    # --- Curriculum / Plateau Recovery multi-panel figure ---
+    curriculum_start = config.get("curriculum_ratio_start", 0.25)
+    curriculum_target = config.get("controlled_lights_ratio", 0.5)
+    curriculum_ramp = config.get("curriculum_ramp_episodes", 100)
+
+    if curriculum_start > 0 or curriculum_ramp > 0:
+        ratio_curve = np.array([
+            min(curriculum_target,
+                curriculum_start + (curriculum_target - curriculum_start)
+                * min(1.0, max(0.0, (ep - 1) / max(1, curriculum_ramp - 1))))
+            for ep in range(1, n_episodes + 1)
+        ])
+    else:
+        ratio_curve = np.full(n_episodes, curriculum_target)
+
+    episode_epsilon = approximate_episode_series(epsilon_values, n_episodes)
+    ep_eps_diff = np.diff(episode_epsilon)
+    plateau_mask = ep_eps_diff > 0.008
+    plateau_episodes = np.where(plateau_mask)[0] + 2  # +2: 0-indexed diff -> 1-indexed episode
+
+    reward_ma = moving_average(reward_mean, 20)
+
+    fig, axes = plt.subplots(1, 3, figsize=(14, 3.8))
+
+    # (a) Curriculum ratio ramp
+    axes[0].plot(episodes, ratio_curve * 100, color="#E63946", linewidth=2.0)
+    axes[0].axhline(curriculum_target * 100, color="#999", linestyle="--", linewidth=0.8, alpha=0.6)
+    axes[0].axvline(curriculum_ramp, color="#999", linestyle=":", linewidth=0.8, alpha=0.6)
+    axes[0].set_title("(a) Controlled-Intersection Ratio")
+    axes[0].set_xlabel("Episode")
+    axes[0].set_ylabel("Controlled ratio (%)")
+    axes[0].set_ylim(0, curriculum_target * 100 + 15)
+    axes[0].grid(True, alpha=0.3)
+
+    # (b) Per-TL reward MA with plateau markers
+    axes[1].plot(episodes, reward_mean, color=COLOR_RAW, linewidth=0.5, alpha=0.7, label="Per-episode")
+    axes[1].plot(episodes, reward_ma, color=COLOR_REWARD, linewidth=2.0, label="MA-20")
+    for pe in plateau_episodes:
+        if 1 <= pe <= n_episodes:
+            axes[1].axvline(pe, color="#F4A261", linewidth=0.9, alpha=0.6, linestyle="--")
+    if len(plateau_episodes):
+        axes[1].axvline(plateau_episodes[0], color="#F4A261", linewidth=0.9, alpha=0.6,
+                        linestyle="--", label="Plateau recovery")
+    axes[1].set_title("(b) Reward per TL-Step (MA-20)")
+    axes[1].set_xlabel("Episode")
+    axes[1].set_ylabel("Reward")
+    axes[1].legend(loc="best", fontsize=7.5)
+    axes[1].grid(True, alpha=0.3)
+
+    # (c) Epsilon with plateau bumps
+    axes[2].plot(episodes, episode_epsilon, color=COLOR_EPS, linewidth=1.6, label="$\\epsilon$")
+    for pe in plateau_episodes:
+        if 1 <= pe <= n_episodes:
+            axes[2].axvline(pe, color="#F4A261", linewidth=0.9, alpha=0.6, linestyle="--")
+    if len(plateau_episodes):
+        axes[2].axvline(plateau_episodes[0], color="#F4A261", linewidth=0.9, alpha=0.6,
+                        linestyle="--", label="Plateau bump")
+    axes[2].set_title("(c) Exploration Rate ($\\epsilon$)")
+    axes[2].set_xlabel("Episode")
+    axes[2].set_ylabel("$\\epsilon$")
+    axes[2].legend(loc="best", fontsize=7.5)
+    axes[2].grid(True, alpha=0.3)
+
+    fig.tight_layout()
+    save_figure(fig, "training_curriculum_plateau", output_roots)
 
     print("Saved training figures to:")
     for root_dir in output_roots:

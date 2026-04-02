@@ -151,6 +151,8 @@ def add_pressure_features(
     phase_to_lanes: Dict[int, List[str]],
     green_phases: List[int],
     phase_count: int,
+    feature_scale: float = PRESSURE_FEATURE_SCALE,
+    total_queue_scale: float = PRESSURE_TOTAL_QUEUE_SCALE,
 ) -> Dict:
     """Append pressure-aware features without changing legacy state fields."""
     out = dict(state_dict)
@@ -163,10 +165,10 @@ def add_pressure_features(
     total_queue = float(sum(state_dict.get("lane_queue_lengths", {}).values()))
 
     out["extra_features"] = [
-        float(np.clip(current_pressure / PRESSURE_FEATURE_SCALE, 0.0, 1.0)),
-        float(np.clip(next_pressure / PRESSURE_FEATURE_SCALE, 0.0, 1.0)),
-        float(np.clip((next_pressure - current_pressure) / PRESSURE_FEATURE_SCALE, -1.0, 1.0)),
-        float(np.clip(total_queue / PRESSURE_TOTAL_QUEUE_SCALE, 0.0, 1.0)),
+        float(np.clip(current_pressure / max(1e-6, float(feature_scale)), 0.0, 1.0)),
+        float(np.clip(next_pressure / max(1e-6, float(feature_scale)), 0.0, 1.0)),
+        float(np.clip((next_pressure - current_pressure) / max(1e-6, float(feature_scale)), -1.0, 1.0)),
+        float(np.clip(total_queue / max(1e-6, float(total_queue_scale)), 0.0, 1.0)),
     ]
     return out
 
@@ -206,7 +208,14 @@ def get_controlled_lanes_for_tl(tl_id: str) -> List[str]:
 
 
 def get_lane_waiting_time(lane_id: str) -> float:
-    """Sum of waiting times of all vehicles on a lane."""
+    """Lane-level waiting time with a fast TraCI path first."""
+    if not lane_id:
+        return 0.0
+    try:
+        if hasattr(traci.lane, "getWaitingTime"):
+            return float(traci.lane.getWaitingTime(lane_id))
+    except Exception:
+        pass
     try:
         total = 0.0
         for veh_id in traci.lane.getLastStepVehicleIDs(lane_id):
@@ -270,26 +279,19 @@ def local_reward(
     prev_state: Dict,
     curr_state: Dict,
     action: int,
-    prev_action: int = 0,
-    n_green_phases: int = 2,
-    phase_to_lanes: Dict[int, List[str]] | None = None,
-    green_phases: List[int] | None = None,
+    wait_penalty_scale: float = 200.0,
+    queue_reward_scale: float = 10.0,
+    switch_penalty: float = 0.05,
 ) -> float:
-    """Legacy v8-style reward targeting waiting time and queue reduction.
-
-    Components:
-      1. Waiting time penalty (absolute) — THE key metric baselines are measured on
-      2. Queue reduction (delta)         — encourages clearing queues
-      3. Phase-switch penalty            — discourages rapid oscillation
-    """
+    """Simple 3-term reward: waiting time penalty + queue delta + switch penalty."""
     curr_wait = sum(curr_state.get("lane_waiting_times", {}).values())
     curr_q = sum(curr_state.get("lane_queue_lengths", {}).values())
     prev_q = sum(prev_state.get("lane_queue_lengths", {}).values())
     queue_change = prev_q - curr_q
 
-    r_wait = -0.50 * np.clip(curr_wait / 200.0, 0.0, 1.0)
-    r_queue = 0.35 * np.clip(queue_change / 10.0, -1.0, 1.0)
-    r_switch = -0.05 if action == 1 else 0.0
+    r_wait = -0.50 * np.clip(curr_wait / wait_penalty_scale, 0.0, 1.0)
+    r_queue = 0.35 * np.clip(queue_change / queue_reward_scale, -1.0, 1.0)
+    r_switch = -switch_penalty if action == 1 else 0.0
 
     return float(r_wait + r_queue + r_switch)
 
@@ -326,6 +328,39 @@ def build_checkpoint_path(out_path: str, episode: int) -> str:
     return f"{root}_ep{int(episode):04d}{ext}"
 
 
+def sync_phase_timer(
+    tl_id: str,
+    current_phase: int,
+    sim_t: float,
+    tl_last_phase: Dict[str, int],
+    tl_phase_start_time: Dict[str, float],
+) -> float:
+    """Track how long the current raw SUMO phase has been active."""
+    last_phase = tl_last_phase.get(tl_id)
+    if last_phase is None or int(last_phase) != int(current_phase):
+        tl_last_phase[tl_id] = int(current_phase)
+        tl_phase_start_time[tl_id] = float(sim_t)
+    phase_start = float(tl_phase_start_time.get(tl_id, sim_t))
+    return float(max(0.0, float(sim_t) - phase_start))
+
+
+def build_switch_action_mask(
+    current_phase: int,
+    phase_elapsed: float,
+    green_phases: List[int],
+    phase_count: int,
+    *,
+    mask_invalid_switches: bool,
+    min_green_seconds: float,
+) -> List[bool]:
+    """Mask the switch action unless it is actually meaningful to take."""
+    can_switch = int(phase_count) > 1
+    if mask_invalid_switches:
+        green_set = {int(phase) for phase in green_phases}
+        can_switch = can_switch and (int(current_phase) in green_set) and (float(phase_elapsed) >= float(min_green_seconds))
+    return [True, bool(can_switch)]
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, default="los_angeles", choices=["cologne", "vancouver", "los_angeles"])
@@ -337,7 +372,7 @@ def main():
         "--controlled-lights-ratio",
         type=float,
         default=0.0,
-        help="If >0, use this ratio of total TLS (overrides --max-controlled-lights). Example: 0.2 for 20%",
+        help="If >0, use this ratio of total TLS (overrides --max-controlled-lights). Example: 0.2 for 20%%",
     )
     parser.add_argument(
         "--regional-reward-weight",
@@ -356,12 +391,160 @@ def main():
         help="Grid size in meters for regional congestion (default: 500)",
     )
     parser.add_argument("--lanes-per-tl", type=int, default=20, help="Fixed lanes per TLS in observation (pad/truncate)")
-    parser.add_argument("--demand-scale", type=float, default=0.0, help="SUMO --scale for traffic demand (0=default, 0.7=70%%)")
+    parser.add_argument("--demand-scale", type=float, default=0.0, help="SUMO --scale for traffic demand (0=default, 1.0=100%%)")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--save-every", type=int, default=10)
     parser.add_argument("--out", type=str, default="", help="Model output path")
     parser.add_argument("--resume", type=str, default="", help="Path to checkpoint to resume training from")
+    parser.add_argument(
+        "--aggressive-upgrade",
+        action="store_true",
+        help="Enable the higher-upside preset without auto-enabling prioritized replay",
+    )
+    parser.add_argument("--lr", type=float, default=5e-5)
+    parser.add_argument("--lr-min", type=float, default=1e-5, help="Minimum learning rate for cosine scheduling")
+    parser.add_argument("--constant-lr", action="store_true", help="Disable LR scheduling and keep a fixed learning rate")
+    parser.add_argument("--gamma", type=float, default=0.90)
+    parser.add_argument("--batch-size", type=int, default=128)
+    parser.add_argument("--memory-size", type=int, default=200000)
+    parser.add_argument("--target-update-freq", type=int, default=2000)
+    parser.add_argument("--tau", type=float, default=0.005)
+    parser.add_argument("--n-step", type=int, default=1)
+    parser.add_argument("--learning-starts", type=int, default=0)
+    parser.add_argument("--epsilon-end", type=float, default=0.05)
+    parser.add_argument(
+        "--epsilon-decay-episodes",
+        type=int,
+        default=0,
+        help=(
+            "If >0, epsilon reaches epsilon_end after this many episodes "
+            "(instead of decaying over the full run).  Recommended: 40-60%% of total episodes."
+        ),
+    )
+    parser.add_argument("--gradient-clip-norm", type=float, default=0.5)
+    parser.add_argument("--target-q-clip", type=float, default=2.0)
+    parser.add_argument("--soft-target-updates", action="store_true")
+    parser.add_argument("--prioritized-replay", action="store_true")
+    parser.add_argument("--priority-alpha", type=float, default=0.6)
+    parser.add_argument("--priority-beta-start", type=float, default=0.4)
+    parser.add_argument("--priority-beta-end", type=float, default=1.0)
+    parser.add_argument("--priority-beta-steps", type=int, default=100000)
+    parser.add_argument("--use-pressure-state-features", action="store_true")
+    parser.add_argument("--pressure-feature-scale", type=float, default=PRESSURE_FEATURE_SCALE)
+    parser.add_argument("--pressure-total-queue-scale", type=float, default=PRESSURE_TOTAL_QUEUE_SCALE)
+    parser.add_argument("--mask-invalid-switches", action="store_true")
+    parser.add_argument("--min-green-seconds", type=float, default=0.0)
+    parser.add_argument("--wait-penalty-scale", type=float, default=200.0)
+    parser.add_argument("--queue-reward-scale", type=float, default=10.0)
+    parser.add_argument("--switch-penalty", type=float, default=0.05)
+    parser.add_argument(
+        "--regional-penalty-clip",
+        type=float,
+        default=0.3,
+        help="Maximum magnitude of the negative regional penalty added each step (0 disables clipping).",
+    )
+    parser.add_argument(
+        "--curriculum-ratio-start",
+        type=float,
+        default=0.0,
+        help=(
+            "If >0 and < controlled ratio, linearly ramp controlled_lights_ratio from this value "
+            "to --controlled-lights-ratio over --curriculum-ramp-episodes."
+        ),
+    )
+    parser.add_argument(
+        "--curriculum-ramp-episodes",
+        type=int,
+        default=120,
+        help="Episodes used to ramp ratio curriculum (when enabled).",
+    )
+    parser.add_argument("--plateau-window", type=int, default=20, help="MA window for plateau detection.")
+    parser.add_argument("--plateau-patience", type=int, default=15, help="Episodes with no MA improvement before recovery.")
+    parser.add_argument("--plateau-min-delta", type=float, default=1e-3, help="Minimum MA improvement to count as progress.")
+    parser.add_argument("--plateau-lr-decay", type=float, default=0.7, help="Multiply LR by this factor on plateau.")
+    parser.add_argument("--plateau-min-lr", type=float, default=5e-5, help="LR floor for plateau recovery.")
+    parser.add_argument("--plateau-epsilon-boost", type=float, default=0.03, help="Temporary epsilon boost on plateau.")
+    parser.add_argument(
+        "--auto-scale-for-ratio",
+        action="store_true",
+        help=(
+            "Automatically adjust gamma, n_step, and enable pressure state features "
+            "based on controlled-lights-ratio."
+        ),
+    )
     args = parser.parse_args()
+
+    # --- Auto-scaling for high controlled-lights-ratio ---
+    if args.auto_scale_for_ratio and args.controlled_lights_ratio >= 0.25:
+        ratio = float(args.controlled_lights_ratio)
+        scale_factor = ratio / 0.2
+
+        if args.target_q_clip == 2.0:
+            args.target_q_clip = min(10.0, 2.0 * scale_factor)
+
+        if args.memory_size == 200000:
+            args.memory_size = int(min(800000, 200000 * scale_factor))
+
+        if args.learning_starts == 0:
+            args.learning_starts = int(min(50000, 5000 * scale_factor))
+
+        if args.regional_penalty_clip == 0.15 or args.regional_penalty_clip == 0.3:
+            args.regional_penalty_clip = float(
+                np.clip(args.regional_penalty_clip / scale_factor, 0.02, 0.15)
+            )
+
+        if args.regional_reward_weight > 0:
+            args.regional_reward_weight = float(
+                np.clip(args.regional_reward_weight / scale_factor, 1e-4, 0.01)
+            )
+
+        if args.curriculum_ratio_start == 0.0 and ratio > 0.3:
+            args.curriculum_ratio_start = 0.2
+            if args.curriculum_ramp_episodes == 120:
+                args.curriculum_ramp_episodes = min(int(args.episodes // 5), 80)
+
+        if args.epsilon_decay_episodes == 0:
+            args.epsilon_decay_episodes = max(60, int(args.episodes * 0.45))
+
+        if not args.use_pressure_state_features:
+            args.use_pressure_state_features = True
+
+        if args.gamma <= 0.90:
+            args.gamma = 0.97
+
+        if args.n_step == 1:
+            args.n_step = 3
+
+    if args.aggressive_upgrade:
+        args.use_pressure_state_features = True
+        args.mask_invalid_switches = True
+        args.soft_target_updates = True
+        if args.lr == 5e-5:
+            args.lr = 2e-4
+        if args.lr_min == 1e-5:
+            args.lr_min = 5e-5
+        if args.gamma == 0.90:
+            args.gamma = 0.97
+        if args.memory_size == 200000:
+            args.memory_size = 300000
+        if args.n_step == 1:
+            args.n_step = 3
+        if args.learning_starts == 0:
+            args.learning_starts = 10000
+        if args.epsilon_end == 0.05:
+            args.epsilon_end = 0.02
+        if args.gradient_clip_norm == 0.5:
+            args.gradient_clip_norm = 1.0
+        if args.target_q_clip == 2.0:
+            args.target_q_clip = 4.0
+        if args.tau == 0.005:
+            args.tau = 0.003
+        if args.priority_beta_steps == 100000:
+            args.priority_beta_steps = 200000
+        if args.min_green_seconds <= 0.0:
+            args.min_green_seconds = max(10.0, float(args.decision_interval) * 2.0)
+        if args.wait_penalty_scale == 200.0:
+            args.wait_penalty_scale = max(1000.0, float(args.lanes_per_tl) * 100.0)
 
     if traci is None:
         raise RuntimeError("traci is not installed. Please install SUMO tools: pip install traci sumolib")
@@ -377,15 +560,11 @@ def main():
 
     SimulationConfig.set_dataset(args.dataset)
     if args.controlled_lights_ratio and args.controlled_lights_ratio > 0.0:
-        # Use a large cap so we can compute ratio from full TLS list.
         SimulationConfig.CONFIGS[args.dataset]["max_controlled_lights"] = 10**9
     else:
         SimulationConfig.CONFIGS[args.dataset]["max_controlled_lights"] = int(args.max_controlled_lights)
     SimulationConfig.create_output_dirs()
 
-    # Default output model path:
-    # - keep backward-compatible name when regional_reward_weight==0
-    # - otherwise, avoid overwriting the non-region-aware model by adding a suffix
     suffix = ""
     try:
         if float(args.regional_reward_weight or 0.0) > 0.0:
@@ -407,6 +586,26 @@ def main():
         print(f"Agents(TLS)={args.max_controlled_lights} lanes_per_tl={args.lanes_per_tl}")
     if args.regional_reward_weight and args.regional_reward_weight > 0.0:
         print(f"Regional reward: weight={args.regional_reward_weight} grid={args.region_grid_size}m")
+    if args.use_pressure_state_features:
+        print("Pressure state features: ON")
+    if args.mask_invalid_switches:
+        print(f"Action masking: ON (min_green={args.min_green_seconds}s)")
+    if args.auto_scale_for_ratio:
+        print("Auto-scale for ratio: ON")
+    if args.curriculum_ratio_start > 0.0:
+        print(
+            f"Curriculum: ratio {args.curriculum_ratio_start:.2f} -> "
+            f"{args.controlled_lights_ratio:.2f} over {args.curriculum_ramp_episodes} episodes"
+        )
+    eps_decay_ep = int(args.epsilon_decay_episodes) if args.epsilon_decay_episodes > 0 else int(args.episodes)
+    print(
+        f"Epsilon schedule: 1.0 -> {args.epsilon_end:.2f} over {eps_decay_ep} episodes "
+        f"({'accelerated' if args.epsilon_decay_episodes > 0 else 'full-run'})"
+    )
+    print(f"Hyperparams: gamma={args.gamma} n_step={args.n_step} lr={args.lr}")
+    print(f"Reward: wait_scale={args.wait_penalty_scale} queue_scale={args.queue_reward_scale} switch_pen={args.switch_penalty}")
+    if args.demand_scale > 0:
+        print(f"Demand scale: {args.demand_scale}")
     print(f"Output: {out_path}")
     print("=" * 78)
 
@@ -423,17 +622,30 @@ def main():
     start_ep = resume_episode_count + 1
     total_episodes = resume_episode_count + int(args.episodes)
     epsilon_run_start = float(resume_epsilon) if resume_epsilon is not None else 1.0
+    target_ratio = float(args.controlled_lights_ratio) if args.controlled_lights_ratio > 0 else 0.0
+    curriculum_enabled = (
+        target_ratio > 0.0
+        and args.curriculum_ratio_start > 0.0
+        and args.curriculum_ratio_start < target_ratio
+    )
+    best_reward_ma = float("-inf")
+    episodes_without_improve = 0
 
     ep = start_ep - 1
     while ep < total_episodes:
         ep += 1
         sumo_seed = int(args.seed) + int(ep)
+        run_ratio = target_ratio
+        if curriculum_enabled:
+            ramp_progress = float(ep - start_ep) / float(max(1, int(args.curriculum_ramp_episodes) - 1))
+            ramp_progress = float(np.clip(ramp_progress, 0.0, 1.0))
+            run_ratio = float(args.curriculum_ratio_start) + (target_ratio - float(args.curriculum_ratio_start)) * ramp_progress
         simulator = TrafficSimulator(
             use_gui=False,
             dataset=args.dataset,
             enable_sumo_emissions_output=False,
             sumo_seed=sumo_seed,
-            controlled_lights_ratio=float(args.controlled_lights_ratio) if args.controlled_lights_ratio > 0 else None,
+            controlled_lights_ratio=run_ratio if run_ratio > 0 else None,
             demand_scale=float(args.demand_scale) if args.demand_scale > 0 else None,
         )
         ok = simulator.start_simulation()
@@ -441,13 +653,13 @@ def main():
             simulator.close_simulation()
             raise RuntimeError("Failed to start SUMO or no traffic lights detected.")
 
-        if args.controlled_lights_ratio and args.controlled_lights_ratio > 0.0:
+        if run_ratio > 0.0:
             total_tls = len(simulator.traffic_lights) if simulator.traffic_lights else len(simulator.controlled_traffic_lights)
-            desired = int(round(total_tls * float(args.controlled_lights_ratio)))
+            desired = int(round(total_tls * float(run_ratio)))
             desired = max(1, min(total_tls, desired))
             tls_ids = (simulator.traffic_lights or simulator.controlled_traffic_lights)[:desired]
             if agent is None:
-                print(f"Computed TLS count: {desired}/{total_tls} ({args.controlled_lights_ratio:.2f})")
+                print(f"Computed TLS count: {desired}/{total_tls} ({run_ratio:.2f})")
         else:
             tls_ids = simulator.controlled_traffic_lights[: int(args.max_controlled_lights)]
         tl_lanes: Dict[str, List[str]] = {}
@@ -472,27 +684,58 @@ def main():
         if args.regional_reward_weight and args.regional_reward_weight > 0.0:
             tl_regions = build_region_map(tls_ids, float(args.region_grid_size))
 
+        tl_last_phase: Dict[str, int] = {}
+        tl_phase_start_time: Dict[str, float] = {}
+        current_sim_t = float(traci.simulation.getTime())
+        for tl_id in tls_ids:
+            try:
+                tl_last_phase[tl_id] = int(traci.trafficlight.getPhase(tl_id))
+            except Exception:
+                tl_last_phase[tl_id] = 0
+            tl_phase_start_time[tl_id] = float(current_sim_t)
+
         if agent is None:
             first_tl = tls_ids[0]
             s0 = build_local_state(first_tl, tl_lanes[first_tl])
-            state_dim = len(RLTState(s0, lane_list=tl_lanes[first_tl]).to_vector())
+            if args.use_pressure_state_features:
+                s0 = add_pressure_features(
+                    s0,
+                    tl_phase_lanes[first_tl],
+                    tl_green_phases[first_tl],
+                    tl_phase_counts[first_tl],
+                    feature_scale=float(args.pressure_feature_scale),
+                    total_queue_scale=float(args.pressure_total_queue_scale),
+                )
+            s0_vec = RLTState(s0, lane_list=tl_lanes[first_tl]).to_vector()
+            state_dim = len(s0_vec)
             action_dim = 2
-            print(f"Action space: {action_dim} (0=keep, 1=switch to next phase)")
+            print(f"State dim: {state_dim} (lanes={args.lanes_per_tl}x3 + phase_onehot=16 + remaining=1"
+                  f"{f' + pressure={PRESSURE_FEATURE_COUNT}' if args.use_pressure_state_features else ''})")
+            print(f"Action space: {action_dim} (0=keep, 1=switch to next green phase)")
             agent = RLAgent(config={
                 "state_dim": state_dim,
                 "action_dim": action_dim,
-                "lr": 5e-5,
-                "gamma": 0.90,
+                "lr": float(args.lr),
+                "gamma": float(args.gamma),
                 "epsilon_start": 1.0,
-                "epsilon_end": 0.05,
+                "epsilon_end": float(args.epsilon_end),
                 "epsilon_decay": 1.0,
-                "batch_size": 128,
-                "memory_size": 200000,
-                "target_update_freq": 2000,
-                "tau": 0.005,
+                "batch_size": int(args.batch_size),
+                "memory_size": int(args.memory_size),
+                "target_update_freq": int(args.target_update_freq),
+                "tau": float(args.tau),
                 "dueling": True,
                 "double_dqn": True,
-                "n_step": 1,
+                "n_step": int(args.n_step),
+                "learning_starts": int(args.learning_starts),
+                "gradient_clip_norm": float(args.gradient_clip_norm),
+                "target_q_clip": float(args.target_q_clip),
+                "soft_target_updates": bool(args.soft_target_updates),
+                "prioritized_replay": bool(args.prioritized_replay),
+                "priority_alpha": float(args.priority_alpha),
+                "priority_beta_start": float(args.priority_beta_start),
+                "priority_beta_end": float(args.priority_beta_end),
+                "priority_beta_steps": int(args.priority_beta_steps),
                 "max_green_phases": MAX_GREEN_PHASES,
                 "dataset": args.dataset,
                 "lanes_per_tl": int(args.lanes_per_tl),
@@ -502,8 +745,17 @@ def main():
                 "regional_reward_weight": float(args.regional_reward_weight),
                 "region_grid_size": float(args.region_grid_size),
                 "switch_mode": "legacy_cycle",
-                "pressure_state_features": False,
-                "pressure_feature_count": 0,
+                "pressure_state_features": bool(args.use_pressure_state_features),
+                "pressure_feature_count": PRESSURE_FEATURE_COUNT if args.use_pressure_state_features else 0,
+                "pressure_feature_scale": float(args.pressure_feature_scale),
+                "pressure_total_queue_scale": float(args.pressure_total_queue_scale),
+                "wait_penalty_scale": float(args.wait_penalty_scale),
+                "queue_reward_scale": float(args.queue_reward_scale),
+                "switch_penalty": float(args.switch_penalty),
+                "regional_penalty_clip": float(args.regional_penalty_clip),
+                "mask_invalid_switches": bool(args.mask_invalid_switches),
+                "min_green_seconds": float(args.min_green_seconds),
+                "aggressive_upgrade": bool(args.aggressive_upgrade),
             })
             if args.resume and os.path.isfile(args.resume):
                 try:
@@ -513,53 +765,105 @@ def main():
                 except Exception as exc:
                     simulator.close_simulation()
                     raise RuntimeError(
-                        "Failed to resume checkpoint. v9-safe expects the legacy 2-action raw-phase model "
-                        "with the same state size as v8."
+                        "Failed to resume checkpoint. Resume requires the same state/action configuration "
+                        "(dataset, lanes_per_tl, pressure-state setting, and switch semantics)."
                     ) from exc
 
             print(f"Training episodes {start_ep}..{total_episodes} ({args.episodes} new)")
 
-            lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-                agent.optimizer, T_max=max(1, args.episodes), eta_min=1e-5
-            )
+            if not args.constant_lr:
+                lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                    agent.optimizer,
+                    T_max=max(1, args.episodes),
+                    eta_min=float(args.lr_min),
+                )
+            else:
+                lr_scheduler = None
 
         # Episode loop
         start_wall = time.time()
         last_decision_t = 0.0
+        decision_interval_s = max(1.0, float(args.decision_interval))
 
-        prev_state_dict: Dict[str, Dict] = {
-            tl_id: build_local_state(tl_id, tl_lanes[tl_id]) for tl_id in tls_ids
-        }
+        prev_state_dict: Dict[str, Dict] = {}
+        for tl_id in tls_ids:
+            init_state = build_local_state(tl_id, tl_lanes[tl_id])
+            if args.use_pressure_state_features:
+                init_state = add_pressure_features(
+                    init_state,
+                    tl_phase_lanes[tl_id],
+                    tl_green_phases[tl_id],
+                    tl_phase_counts[tl_id],
+                    feature_scale=float(args.pressure_feature_scale),
+                    total_queue_scale=float(args.pressure_total_queue_scale),
+                )
+            prev_state_dict[tl_id] = init_state
         prev_state_obj: Dict[str, RLTState] = {
             tl_id: RLTState(prev_state_dict[tl_id], lane_list=tl_lanes[tl_id]) for tl_id in tls_ids
         }
 
         losses: List[float] = []
         ep_rewards_per_step: List[float] = []
-        prev_actions: Dict[str, int] = {tl_id: 0 for tl_id in tls_ids}
         ep_reward_sum = 0.0
         tl_decisions = 0
         phase_switches = 0
 
         while True:
-            traci.simulationStep()
+            target_t = min(float(args.duration), float(last_decision_t + decision_interval_s))
+            traci.simulationStep(target_t)
             sim_t = float(traci.simulation.getTime())
             done = sim_t >= float(args.duration)
 
-            if done or (sim_t - last_decision_t) >= float(args.decision_interval):
+            if done or (sim_t - last_decision_t) >= decision_interval_s:
                 last_decision_t = sim_t
 
                 actions: Dict[str, int] = {}
+                action_masks: Dict[str, List[bool]] = {}
+                current_phases: Dict[str, int] = {}
                 for tl_id in tls_ids:
-                    actions[tl_id] = agent.select_action(prev_state_obj[tl_id], training=True)
-
-                for tl_id, action in actions.items():
-                    if action == 0:
-                        continue
                     try:
-                        cur = int(traci.trafficlight.getPhase(tl_id))
+                        current_phase = int(traci.trafficlight.getPhase(tl_id))
+                    except Exception:
+                        current_phase = 0
+                    current_phases[tl_id] = current_phase
+                    phase_elapsed = sync_phase_timer(
+                        tl_id,
+                        current_phase,
+                        sim_t,
+                        tl_last_phase,
+                        tl_phase_start_time,
+                    )
+                    action_mask = build_switch_action_mask(
+                        current_phase,
+                        phase_elapsed,
+                        tl_green_phases.get(tl_id, []),
+                        tl_phase_counts.get(tl_id, 1),
+                        mask_invalid_switches=bool(args.mask_invalid_switches),
+                        min_green_seconds=float(args.min_green_seconds),
+                    )
+                    action_masks[tl_id] = action_mask
+
+                    actions[tl_id] = agent.select_action(
+                        prev_state_obj[tl_id],
+                        training=True,
+                        action_mask=action_mask,
+                    )
+
+                # Execute actions with setPhaseDuration to hold the decision
+                for tl_id, action in actions.items():
+                    try:
+                        cur = int(current_phases.get(tl_id, 0))
+                        gp = tl_green_phases.get(tl_id, [])
                         nph = max(1, tl_phase_counts.get(tl_id, 1))
-                        traci.trafficlight.setPhase(tl_id, (cur + 1) % nph)
+
+                        if action == 0 or not action_masks.get(tl_id, [True, True])[1]:
+                            traci.trafficlight.setPhaseDuration(tl_id, decision_interval_s)
+                            continue
+
+                        target_phase = get_next_green_phase(cur, gp, nph)
+                        if target_phase != cur:
+                            traci.trafficlight.setPhase(tl_id, target_phase)
+                        traci.trafficlight.setPhaseDuration(tl_id, decision_interval_s)
                         phase_switches += 1
                     except Exception:
                         pass
@@ -568,6 +872,15 @@ def main():
                 curr_state_obj: Dict[str, RLTState] = {}
                 for tl_id in tls_ids:
                     curr_dict = build_local_state(tl_id, tl_lanes[tl_id])
+                    if args.use_pressure_state_features:
+                        curr_dict = add_pressure_features(
+                            curr_dict,
+                            tl_phase_lanes[tl_id],
+                            tl_green_phases[tl_id],
+                            tl_phase_counts[tl_id],
+                            feature_scale=float(args.pressure_feature_scale),
+                            total_queue_scale=float(args.pressure_total_queue_scale),
+                        )
                     curr_state_dict[tl_id] = curr_dict
                     curr_state_obj[tl_id] = RLTState(curr_dict, lane_list=tl_lanes[tl_id])
 
@@ -582,18 +895,22 @@ def main():
 
                 step_rewards: List[float] = []
                 for tl_id in tls_ids:
-                    gp = tl_green_phases.get(tl_id, [])
                     r = local_reward(
                         prev_state_dict[tl_id], curr_state_dict[tl_id],
-                        actions[tl_id], prev_actions.get(tl_id, 0),
-                        n_green_phases=len(gp),
+                        actions[tl_id],
+                        wait_penalty_scale=float(args.wait_penalty_scale),
+                        queue_reward_scale=float(args.queue_reward_scale),
+                        switch_penalty=float(args.switch_penalty),
                     )
                     if tl_regions:
                         region = tl_regions.get(tl_id, (0, 0))
                         denom = max(1, region_cnt.get(region, 1))
                         region_avg_q = region_sum.get(region, 0.0) / float(denom)
                         regional_penalty = -float(args.regional_reward_weight) * region_avg_q
-                        r += float(np.clip(regional_penalty, -0.3, 0.0))
+                        if float(args.regional_penalty_clip) > 0.0:
+                            r += float(np.clip(regional_penalty, -float(args.regional_penalty_clip), 0.0))
+                        else:
+                            r += float(regional_penalty)
 
                     step_rewards.append(r)
                     agent.store_experience(
@@ -601,15 +918,14 @@ def main():
                         actions[tl_id],
                         r,
                         curr_state_obj[tl_id],
-                        done
+                        done,
+                        trajectory_id=tl_id,
                     )
                     ep_reward_sum += float(r)
                     tl_decisions += 1
 
                     prev_state_dict[tl_id] = curr_state_dict[tl_id]
                     prev_state_obj[tl_id] = curr_state_obj[tl_id]
-
-                prev_actions = dict(actions)
 
                 loss = agent.train_step()
                 if loss is not None:
@@ -629,26 +945,58 @@ def main():
         agent.training_history.setdefault("episode_reward_mean_per_tls_step", []).append(float(avg_r_per_tl_step))
         agent.training_history.setdefault("episode_switch_rates", []).append(float(switch_rate))
 
-        progress = float(ep - start_ep + 1) / float(max(1, args.episodes))
+        eps_decay_over = int(args.epsilon_decay_episodes) if args.epsilon_decay_episodes > 0 else int(args.episodes)
+        progress = float(ep - start_ep + 1) / float(max(1, eps_decay_over))
         progress = float(np.clip(progress, 0.0, 1.0))
         agent.epsilon = max(
             agent.config['epsilon_end'],
             epsilon_run_start - (epsilon_run_start - agent.config['epsilon_end']) * progress
         )
-        if losses:
+        if losses and lr_scheduler is not None:
             lr_scheduler.step()
 
         simulator.close_simulation()
 
         wall = time.time() - start_wall
         avg_loss = float(np.mean(losses)) if losses else float("nan")
-        current_lr = lr_scheduler.get_last_lr()[0]
+        current_lr = float(agent.optimizer.param_groups[0]["lr"])
+        recent_tl_rewards = agent.training_history.get("episode_reward_mean_per_tls_step", [])
+        reward_tl_ma20 = float(np.mean(recent_tl_rewards[-20:])) if recent_tl_rewards else float("nan")
+        plateau_window = max(5, int(args.plateau_window))
+        reward_tl_ma = float(np.mean(recent_tl_rewards[-plateau_window:])) if recent_tl_rewards else float("nan")
+
+        if np.isfinite(reward_tl_ma):
+            min_delta = float(args.plateau_min_delta)
+            if reward_tl_ma > (best_reward_ma + min_delta):
+                best_reward_ma = reward_tl_ma
+                episodes_without_improve = 0
+                best_root, best_ext = os.path.splitext(out_path)
+                best_model_path = f"{best_root}_best_reward{best_ext or '.pt'}"
+                best_path = build_checkpoint_path(best_model_path, ep)
+                agent.save_model(best_path)
+            else:
+                episodes_without_improve += 1
+
+            if episodes_without_improve >= max(1, int(args.plateau_patience)):
+                old_lr = float(agent.optimizer.param_groups[0]["lr"])
+                new_lr = max(float(args.plateau_min_lr), old_lr * float(args.plateau_lr_decay))
+                for group in agent.optimizer.param_groups:
+                    group["lr"] = new_lr
+                agent.epsilon = min(
+                    max(0.20, float(agent.config["epsilon_end"])),
+                    float(agent.epsilon) + float(args.plateau_epsilon_boost),
+                )
+                episodes_without_improve = 0
+                print(f"Plateau recovery: lr {old_lr:.2e}->{new_lr:.2e}, epsilon boosted to {agent.epsilon:.3f}")
+
         print(
             f"Episode {ep:04d}/{total_episodes} | wall={wall:.2f}s | "
             f"reward(sum)={ep_reward_sum:.2f} | reward/tl_step={avg_r_per_tl_step:.4f} | "
-            f"reward/decision={avg_r_per_step:.4f} | switch_rate={switch_rate:.3f} | "
+            f"reward/tl_step_ma20={reward_tl_ma20:.4f} | "
+            f"reward/decision={avg_r_per_step:.4f} | "
+            f"switch_rate={switch_rate:.3f} | "
             f"avg_loss={avg_loss:.4f} | epsilon={agent.epsilon:.3f} | lr={current_lr:.2e} | "
-            f"tls={n_agents} | sumo_seed={sumo_seed}"
+            f"tls={n_agents} | ratio={run_ratio:.3f} | sumo_seed={sumo_seed}"
         )
 
         if ep % int(args.save_every) == 0:
@@ -663,4 +1011,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -41,12 +41,12 @@ venv.bak/
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# PyTorch models and checkpoints (allow models folder)
+# PyTorch models and checkpoints (keep *.pt/*.pth out of repo by default — ~hundreds of MB)
 *.pth
 *.pt
 *.ckpt
-!models/*.pt
-!models/*.pth
+models/*.pt
+models/*.pth
 *.h5
 
 # SUMO output files
