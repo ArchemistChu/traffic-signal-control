@@ -41,12 +41,12 @@ venv.bak/
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# PyTorch models and checkpoints (keep *.pt/*.pth out of repo by default — ~hundreds of MB)
+# PyTorch checkpoints: ignore *.pt by default; only these report checkpoints are tracked
 *.pth
 *.pt
 *.ckpt
-models/*.pt
-models/*.pth
+!models/marl_cologne_shared_dqn_regionaware_v8_scale07.pt
+!models/marl_cologne_shared_dqn_regionaware_v16_demand085_di10.pt
 *.h5
 
 # SUMO output files
