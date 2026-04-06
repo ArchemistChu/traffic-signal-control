@@ -55,7 +55,7 @@ def main():
         "--controlled-lights-ratio",
         type=float,
         default=0.0,
-        help="If >0, use this ratio of total TLS (overrides --max-controlled-lights). Example: 0.2 for 20%",
+        help="If >0, use this ratio of total TLS (overrides --max-controlled-lights). Example: 0.2 for 20%%",
     )
     parser.add_argument(
         "--regional-reward-weight",

@@ -123,11 +123,11 @@ def index():
         current_config = SimulationConfig.get_current_config()
         
         strategy_options = {
-            'FIXED_TIME': '🕐 Fixed-time Control',
-            'ADAPTIVE': '🧠 Adaptive Control', 
-            'MAX_PRESSURE': '⚖️ MaxPressure Control',
-            'SOTL': '🚦 SOTL (Self-Organizing)',
-            'MARL_DQN': '🤝 Multi-Agent DQN (trained)'
+            "FIXED_TIME": "Fixed-time",
+            "ADAPTIVE": "Adaptive",
+            "MAX_PRESSURE": "MaxPressure",
+            "SOTL": "SOTL",
+            "MARL_DQN": "MARL DQN (trained)",
         }
         
         # Render-time results: load from disk (not session cookie)
@@ -371,11 +371,11 @@ def check_simulation():
                 
                 # Save into all strategies' results
                 strategy_names = {
-                    'FIXED_TIME': '🕐 Fixed-time Control',
-                    'ADAPTIVE': '🧠 Adaptive Control', 
-                    'MAX_PRESSURE': '⚖️ MaxPressure Control',
-                    'SOTL': '🚦 SOTL (Self-Organizing)',
-                    'MARL_DQN': '🤝 Multi-Agent DQN (trained)'
+                    "FIXED_TIME": "Fixed-time",
+                    "ADAPTIVE": "Adaptive",
+                    "MAX_PRESSURE": "MaxPressure",
+                    "SOTL": "SOTL",
+                    "MARL_DQN": "MARL DQN",
                 }
                 strategy_display_name = strategy_names.get(current_strategy, current_strategy)
                 
@@ -632,205 +632,8 @@ def get_comparison_charts():
         comparison_data['Pressure'].append(float(results_data.get('avg_pressure', 0) or 0))
     
     df_comparison = pd.DataFrame(comparison_data)
-    
-    # Debug: print the data to verify
-    print(f"Comparison data: {comparison_data}")
-    print(f"DataFrame:\n{df_comparison}")
-    
-    # Get actual values for proper scaling
-    waiting_times = df_comparison['Waiting Time'].tolist()
-    throughputs = df_comparison['Throughput'].tolist()
-    
-    # Create charts using graph_objects for better control
-    # For waiting time chart
-    waiting_text = [f"{val:.2f}s" for val in waiting_times]
-    strategies = df_comparison['Strategy'].tolist()
-    
-    # Create bar trace with explicit values
-    fig_waiting = go.Figure(data=[
-        go.Bar(
-            x=strategies,
-            y=waiting_times,
-            text=waiting_text,
-            textposition='outside',
-            textfont=dict(size=12, color='black'),
-            marker=dict(
-                color=['#667eea', '#764ba2', '#f093fb', '#f5576c'][:len(strategies)],
-                line=dict(color='rgba(0,0,0,0.5)', width=1)
-            ),
-            name='Waiting Time'
-        )
-    ])
-    
-    # Set proper Y-axis range
-    max_wait = max(waiting_times) if waiting_times else 1
-    min_wait = min(waiting_times) if waiting_times else 0
-    y_range_wait = [min(0, min_wait * 0.9), max_wait * 1.2] if max_wait > 0 else [0, 1]
-    
-    fig_waiting.update_layout(
-        title="Average waiting time comparison (lower is better)",
-        xaxis_title="Strategy",
-        yaxis_title="Waiting Time (seconds)",
-        yaxis=dict(range=y_range_wait),
-        showlegend=False,
-        height=400,
-        plot_bgcolor='white',
-        paper_bgcolor='white'
-    )
-    
-    # For throughput chart
-    throughput_text = [f"{int(val)}" for val in throughputs]
-    
-    fig_throughput = go.Figure(data=[
-        go.Bar(
-            x=strategies,
-            y=throughputs,
-            text=throughput_text,
-            textposition='outside',
-            textfont=dict(size=12, color='black'),
-            marker=dict(
-                color=['#667eea', '#764ba2', '#f093fb', '#f5576c'][:len(strategies)],
-                line=dict(color='rgba(0,0,0,0.5)', width=1)
-            ),
-            name='Throughput'
-        )
-    ])
-    
-    # Set proper Y-axis range
-    max_throughput = max(throughputs) if throughputs else 1
-    min_throughput = min(throughputs) if throughputs else 0
-    y_range_throughput = [min(0, min_throughput * 0.9), max_throughput * 1.1] if max_throughput > 0 else [0, 1]
-    
-    fig_throughput.update_layout(
-        title="System throughput comparison (higher is better)",
-        xaxis_title="Strategy",
-        yaxis_title="Throughput (vehicles/hour)",
-        yaxis=dict(range=y_range_throughput),
-        showlegend=False,
-        height=400,
-        plot_bgcolor='white',
-        paper_bgcolor='white'
-    )
-    
-    waiting_chart = json.dumps(fig_waiting, cls=plotly.utils.PlotlyJSONEncoder)
-    throughput_chart = json.dumps(fig_throughput, cls=plotly.utils.PlotlyJSONEncoder)
-
-    # --- Emissions chart (CO2 + Fuel) ---
-    co2_g = df_comparison['CO2_g'].tolist()
-    fuel_l = df_comparison['Fuel_L'].tolist()
-
-    fig_emissions = go.Figure()
-    fig_emissions.add_trace(go.Bar(
-        x=strategies,
-        y=co2_g,
-        name='Total CO₂ (g)',
-        marker=dict(color='#2b6cb0'),
-        text=[f"{v:.1f}g" for v in co2_g],
-        textposition='outside'
-    ))
-    fig_emissions.add_trace(go.Bar(
-        x=strategies,
-        y=fuel_l,
-        name='Total Fuel (L)',
-        marker=dict(color='#c05621'),
-        text=[f"{v:.2f}L" for v in fuel_l],
-        textposition='outside',
-        yaxis='y2'
-    ))
-
-    max_co2 = max(co2_g) if co2_g else 1
-    max_fuel = max(fuel_l) if fuel_l else 1
-    fig_emissions.update_layout(
-        title="Emissions comparison (lower is better)",
-        xaxis_title="Strategy",
-        yaxis=dict(title="CO₂ (g)", range=[0, max_co2 * 1.2 if max_co2 > 0 else 1]),
-        yaxis2=dict(
-            title="Fuel (L)",
-            overlaying='y',
-            side='right',
-            range=[0, max_fuel * 1.2 if max_fuel > 0 else 1]
-        ),
-        barmode='group',
-        height=420,
-        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
-        plot_bgcolor='white',
-        paper_bgcolor='white'
-    )
-
-    emissions_chart = json.dumps(fig_emissions, cls=plotly.utils.PlotlyJSONEncoder)
-
-    # --- AQL chart ---
-    aql_vals = df_comparison['AQL'].tolist()
-    fig_aql = go.Figure(data=[
-        go.Bar(
-            x=strategies,
-            y=aql_vals,
-            text=[f"{v:.2f}" for v in aql_vals],
-            textposition='outside',
-            marker=dict(color='#38a169'),
-            name='AQL'
-        )
-    ])
-    max_aql = max(aql_vals) if aql_vals else 1
-    fig_aql.update_layout(
-        title="Average queue length (AQL) comparison (lower is better)",
-        xaxis_title="Strategy",
-        yaxis_title="AQL (vehicles)",
-        yaxis=dict(range=[0, max_aql * 1.2 if max_aql > 0 else 1]),
-        showlegend=False,
-        height=400,
-        plot_bgcolor='white',
-        paper_bgcolor='white'
-    )
-    aql_chart = json.dumps(fig_aql, cls=plotly.utils.PlotlyJSONEncoder)
-
-    # --- Pressure chart ---
-    p_vals = df_comparison['Pressure'].tolist()
-    fig_pressure = go.Figure(data=[
-        go.Bar(
-            x=strategies,
-            y=p_vals,
-            text=[f"{v:.2f}" for v in p_vals],
-            textposition='outside',
-            marker=dict(color='#805ad5'),
-            name='Pressure'
-        )
-    ])
-    max_p = max(p_vals) if p_vals else 1
-    fig_pressure.update_layout(
-        title="Average pressure comparison (lower is better)",
-        xaxis_title="Strategy",
-        yaxis_title="Pressure (weighted queued vehicles)",
-        yaxis=dict(range=[0, max_p * 1.2 if max_p > 0 else 1]),
-        showlegend=False,
-        height=400,
-        plot_bgcolor='white',
-        paper_bgcolor='white'
-    )
-    pressure_chart = json.dumps(fig_pressure, cls=plotly.utils.PlotlyJSONEncoder)
-    
-    # Convert comparison_data to ensure JSON serializable format
-    # Convert numpy types to native Python types
-    serializable_data = {
-        'Strategy': comparison_data['Strategy'],
-        'Waiting Time': [float(x) for x in comparison_data['Waiting Time']],
-        'Speed': [float(x) for x in comparison_data['Speed']],
-        'Throughput': [float(x) for x in comparison_data['Throughput']],
-        'CO2_g': [float(x) for x in comparison_data['CO2_g']],
-        'Fuel_L': [float(x) for x in comparison_data['Fuel_L']],
-        'AQL': [float(x) for x in comparison_data['AQL']],
-        'Pressure': [float(x) for x in comparison_data['Pressure']]
-    }
-    
-    return jsonify({
-        'status': 'success',
-        'waiting_chart': waiting_chart,
-        'throughput_chart': throughput_chart,
-        'emissions_chart': emissions_chart,
-        'aql_chart': aql_chart,
-        'pressure_chart': pressure_chart,
-        'comparison_data': serializable_data
-    })
+    chart_payload = _charts_payload_from_dataframe(df_comparison)
+    return jsonify({"status": "success", **chart_payload})
 
 @app.route('/academic_experiments')
 def academic_experiments():
@@ -1160,6 +963,240 @@ def viz_file():
     return send_file(str(safe_path))
 
 
+STRATEGY_DISPLAY = {
+    "FIXED_TIME": "Fixed-Time",
+    "ADAPTIVE": "Adaptive",
+    "MAX_PRESSURE": "MaxPressure",
+    "SOTL": "SOTL",
+    "MARL_DQN": "MARL DQN",
+}
+
+
+def _dataframe_from_mean_metrics(mean_metrics: dict) -> pd.DataFrame | None:
+    """Build comparison DataFrame from comparative-eval summary mean_metrics."""
+    if not mean_metrics:
+        return None
+    rows = {
+        "Strategy": [],
+        "Waiting Time": [],
+        "Speed": [],
+        "Throughput": [],
+        "CO2_g": [],
+        "Fuel_L": [],
+        "AQL": [],
+        "Pressure": [],
+    }
+    for key, m in mean_metrics.items():
+        if not isinstance(m, dict):
+            continue
+        name = STRATEGY_DISPLAY.get(key, key.replace("_", " "))
+        rows["Strategy"].append(name)
+        rows["Waiting Time"].append(float(m.get("avg_waiting_time") or 0))
+        rows["Speed"].append(float(m.get("avg_speed") or 0))
+        rows["Throughput"].append(float(m.get("throughput_per_hour") or 0))
+        total_co2_mg = float(m.get("total_co2") or 0)
+        total_fuel_ml = float(m.get("total_fuel") or 0)
+        rows["CO2_g"].append(total_co2_mg / 1000.0)
+        rows["Fuel_L"].append(total_fuel_ml / 1000.0)
+        rows["AQL"].append(float(m.get("avg_queue_length") or 0))
+        rows["Pressure"].append(float(m.get("avg_pressure") or 0))
+    if not rows["Strategy"]:
+        return None
+    return pd.DataFrame(rows)
+
+
+def _charts_payload_from_dataframe(df_comparison: pd.DataFrame) -> dict:
+    """Plotly JSON strings + serializable comparison_data (same shape as get_comparison_charts)."""
+    waiting_times = df_comparison["Waiting Time"].tolist()
+    throughputs = df_comparison["Throughput"].tolist()
+    strategies = df_comparison["Strategy"].tolist()
+
+    waiting_text = [f"{val:.2f}s" for val in waiting_times]
+    fig_waiting = go.Figure(
+        data=[
+            go.Bar(
+                x=strategies,
+                y=waiting_times,
+                text=waiting_text,
+                textposition="outside",
+                textfont=dict(size=12, color="black"),
+                marker=dict(
+                    color=["#0f766e", "#0e7490", "#1d4ed8", "#6d28d9", "#b45309"][: len(strategies)],
+                    line=dict(color="rgba(0,0,0,0.35)", width=1),
+                ),
+                name="Waiting Time",
+            )
+        ]
+    )
+    max_wait = max(waiting_times) if waiting_times else 1
+    min_wait = min(waiting_times) if waiting_times else 0
+    y_range_wait = [min(0, min_wait * 0.9), max_wait * 1.2] if max_wait > 0 else [0, 1]
+    fig_waiting.update_layout(
+        title="Average waiting time (s) — lower is better",
+        xaxis_title="Method",
+        yaxis_title="Seconds",
+        yaxis=dict(range=y_range_wait),
+        showlegend=False,
+        height=400,
+        plot_bgcolor="#fafafa",
+        paper_bgcolor="white",
+        font=dict(family="Segoe UI, Roboto, sans-serif", size=12),
+        margin=dict(t=48, b=48),
+    )
+
+    throughput_text = [f"{int(val)}" for val in throughputs]
+    fig_throughput = go.Figure(
+        data=[
+            go.Bar(
+                x=strategies,
+                y=throughputs,
+                text=throughput_text,
+                textposition="outside",
+                textfont=dict(size=12, color="black"),
+                marker=dict(
+                    color=["#0f766e", "#0e7490", "#1d4ed8", "#6d28d9", "#b45309"][: len(strategies)],
+                    line=dict(color="rgba(0,0,0,0.35)", width=1),
+                ),
+                name="Throughput",
+            )
+        ]
+    )
+    max_throughput = max(throughputs) if throughputs else 1
+    min_throughput = min(throughputs) if throughputs else 0
+    y_range_tp = [min(0, min_throughput * 0.9), max_throughput * 1.1] if max_throughput > 0 else [0, 1]
+    fig_throughput.update_layout(
+        title="Throughput (veh/h) — higher is better",
+        xaxis_title="Method",
+        yaxis_title="Vehicles / hour",
+        yaxis=dict(range=y_range_tp),
+        showlegend=False,
+        height=400,
+        plot_bgcolor="#fafafa",
+        paper_bgcolor="white",
+        font=dict(family="Segoe UI, Roboto, sans-serif", size=12),
+        margin=dict(t=48, b=48),
+    )
+
+    co2_g = df_comparison["CO2_g"].tolist()
+    fuel_l = df_comparison["Fuel_L"].tolist()
+    fig_emissions = go.Figure()
+    fig_emissions.add_trace(
+        go.Bar(
+            x=strategies,
+            y=co2_g,
+            name="Total CO₂ (g)",
+            marker=dict(color="#0369a1"),
+            text=[f"{v:.1f}g" for v in co2_g],
+            textposition="outside",
+        )
+    )
+    fig_emissions.add_trace(
+        go.Bar(
+            x=strategies,
+            y=fuel_l,
+            name="Total fuel (L)",
+            marker=dict(color="#c2410c"),
+            text=[f"{v:.2f}L" for v in fuel_l],
+            textposition="outside",
+            yaxis="y2",
+        )
+    )
+    max_co2 = max(co2_g) if co2_g else 1
+    max_fuel = max(fuel_l) if fuel_l else 1
+    fig_emissions.update_layout(
+        title="Emissions (episode means) — lower is better",
+        xaxis_title="Method",
+        yaxis=dict(title="CO₂ (g)", range=[0, max_co2 * 1.2 if max_co2 > 0 else 1]),
+        yaxis2=dict(
+            title="Fuel (L)",
+            overlaying="y",
+            side="right",
+            range=[0, max_fuel * 1.2 if max_fuel > 0 else 1],
+        ),
+        barmode="group",
+        height=420,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        plot_bgcolor="#fafafa",
+        paper_bgcolor="white",
+        font=dict(family="Segoe UI, Roboto, sans-serif", size=12),
+        margin=dict(t=48, b=48),
+    )
+
+    aql_vals = df_comparison["AQL"].tolist()
+    fig_aql = go.Figure(
+        data=[
+            go.Bar(
+                x=strategies,
+                y=aql_vals,
+                text=[f"{v:.2f}" for v in aql_vals],
+                textposition="outside",
+                marker=dict(color="#047857"),
+                name="AQL",
+            )
+        ]
+    )
+    max_aql = max(aql_vals) if aql_vals else 1
+    fig_aql.update_layout(
+        title="Average queue length — lower is better",
+        xaxis_title="Method",
+        yaxis_title="Vehicles",
+        yaxis=dict(range=[0, max_aql * 1.2 if max_aql > 0 else 1]),
+        showlegend=False,
+        height=400,
+        plot_bgcolor="#fafafa",
+        paper_bgcolor="white",
+        font=dict(family="Segoe UI, Roboto, sans-serif", size=12),
+        margin=dict(t=48, b=48),
+    )
+
+    p_vals = df_comparison["Pressure"].tolist()
+    fig_pressure = go.Figure(
+        data=[
+            go.Bar(
+                x=strategies,
+                y=p_vals,
+                text=[f"{v:.2f}" for v in p_vals],
+                textposition="outside",
+                marker=dict(color="#5b21b6"),
+                name="Pressure",
+            )
+        ]
+    )
+    max_p = max(p_vals) if p_vals else 1
+    fig_pressure.update_layout(
+        title="Average pressure — lower is better",
+        xaxis_title="Method",
+        yaxis_title="Pressure",
+        yaxis=dict(range=[0, max_p * 1.2 if max_p > 0 else 1]),
+        showlegend=False,
+        height=400,
+        plot_bgcolor="#fafafa",
+        paper_bgcolor="white",
+        font=dict(family="Segoe UI, Roboto, sans-serif", size=12),
+        margin=dict(t=48, b=48),
+    )
+
+    comparison_data = {
+        "Strategy": df_comparison["Strategy"].tolist(),
+        "Waiting Time": [float(x) for x in df_comparison["Waiting Time"]],
+        "Speed": [float(x) for x in df_comparison["Speed"]],
+        "Throughput": [float(x) for x in df_comparison["Throughput"]],
+        "CO2_g": [float(x) for x in df_comparison["CO2_g"]],
+        "Fuel_L": [float(x) for x in df_comparison["Fuel_L"]],
+        "AQL": [float(x) for x in df_comparison["AQL"]],
+        "Pressure": [float(x) for x in df_comparison["Pressure"]],
+    }
+
+    return {
+        "waiting_chart": json.dumps(fig_waiting, cls=plotly.utils.PlotlyJSONEncoder),
+        "throughput_chart": json.dumps(fig_throughput, cls=plotly.utils.PlotlyJSONEncoder),
+        "emissions_chart": json.dumps(fig_emissions, cls=plotly.utils.PlotlyJSONEncoder),
+        "aql_chart": json.dumps(fig_aql, cls=plotly.utils.PlotlyJSONEncoder),
+        "pressure_chart": json.dumps(fig_pressure, cls=plotly.utils.PlotlyJSONEncoder),
+        "comparison_data": comparison_data,
+    }
+
+
 def _mean_metrics_from_eval_payload(payload: dict) -> dict:
     results = payload.get("results", []) if isinstance(payload, dict) else []
     keys = [
@@ -1382,7 +1419,14 @@ def get_comparative_results():
     data = _safe_json_load(path)
     if data is None:
         return jsonify({'status': 'error', 'message': 'Failed to read results'}), 500
-    return jsonify({'status': 'success', 'data': data})
+    want_charts = str(request.args.get("include_charts", "")).lower() in ("1", "true", "yes")
+    out: dict = {"status": "success", "data": data}
+    if want_charts:
+        mm = data.get("mean_metrics") if isinstance(data, dict) else None
+        df = _dataframe_from_mean_metrics(mm or {})
+        if df is not None and not df.empty:
+            out.update(_charts_payload_from_dataframe(df))
+    return jsonify(out)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

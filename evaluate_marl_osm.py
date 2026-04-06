@@ -381,7 +381,7 @@ def main():
         "--controlled-lights-ratio",
         type=float,
         default=0.0,
-        help="If >0, use this ratio of total TLS (overrides --max-controlled-lights). Example: 0.2 for 20%",
+        help="If >0, use this ratio of total TLS (overrides --max-controlled-lights). Example: 0.2 for 20%%",
     )
     parser.add_argument("--lanes-per-tl", type=int, default=20)
     parser.add_argument("--demand-scale", type=float, default=0.0, help="SUMO --scale for traffic demand (0=default, 0.7=70%%)")

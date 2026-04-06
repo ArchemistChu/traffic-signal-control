@@ -12,8 +12,8 @@
                     <option value="vancouver" {% if current_dataset == 'vancouver' %}selected{% endif %}>OSM Vancouver</option>
                     <option value="los_angeles" {% if current_dataset == 'los_angeles' %}selected{% endif %}>OSM Los Angeles</option>
                 </select>
-                <div class="alert alert-info mt-3 mb-0">
-                    <strong>📍 Current Dataset:</strong> {{ dataset_description }}
+                <div class="alert alert-secondary mt-3 mb-0 py-2 small">
+                    <strong>Dataset:</strong> {{ dataset_description }}
                 </div>
             </div>
         </div>
@@ -21,7 +21,7 @@
     <div class="col-md-8">
         <div class="card">
             <div class="card-body">
-                <h5 class="card-title">🎛️ Control Panel</h5>
+                <h5 class="card-title">Simulation</h5>
                 
                 <!-- Strategy Selection -->
                 <div class="mb-3">
@@ -36,15 +36,15 @@
                 <!-- Strategy Description -->
                 <div id="strategyDescription" class="alert alert-info">
                     {% if selected_strategy == 'FIXED_TIME' %}
-                    ⏰ Switch signals at fixed intervals<br>Suitable for regular traffic patterns
+                    Fixed cycle lengths; baseline for comparison.
                     {% elif selected_strategy == 'ADAPTIVE' %}
-                    🧠 Adjust intelligently based on vehicle counts<br>Suitable for varying traffic flows
+                    Actuated-style extensions from queue pressure.
                     {% elif selected_strategy == 'MAX_PRESSURE' %}
-                    ⚖️ Serve the phase with the highest queued demand (MaxPressure)<br>Strong queue-based baseline for comparison
+                    Greedy phase choice by upstream queue pressure.
                     {% elif selected_strategy == 'SOTL' %}
-                    🚦 Threshold-based self-organizing control (SOTL)<br>Switch when queues exceed a threshold
+                    Threshold-based self-organizing logic.
                     {% else %}
-                    🤖 AI learns optimal control strategies<br>Suitable for complex traffic conditions
+                    Shared multi-agent DQN (requires checkpoint for live run).
                     {% endif %}
                 </div>
                 
@@ -53,7 +53,7 @@
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" id="useGuiCheck" checked>
                         <label class="form-check-label" for="useGuiCheck">
-                            🖥️ Use SUMO GUI (uncheck for faster execution on large maps)
+                            SUMO GUI (disable for faster runs on large networks)
                         </label>
                     </div>
                     <small id="guiOptionHint" class="form-text text-muted">
@@ -63,7 +63,7 @@
                 
                 <!-- Simulation Duration -->
                 <div class="mb-3">
-                    <label for="durationInput" class="form-label">⏱️ Simulation Duration (seconds)</label>
+                    <label for="durationInput" class="form-label">Duration (seconds)</label>
                     <input type="number" class="form-control" id="durationInput" value="600" min="60" max="7200" step="60">
                     <small class="form-text text-muted">
                         Recommended: 300-600s (testing), 1800-3600s (experiments). 
@@ -73,7 +73,7 @@
 
                 <!-- Training Parameters (input area) -->
                 <div class="mb-3">
-                    <h6>🧪 Training Parameters (for MARL training command)</h6>
+                    <h6 class="text-muted small text-uppercase">Training command (reference)</h6>
                     <div class="row g-2">
                         <div class="col-md-3">
                             <label class="form-label">Episodes</label>
@@ -93,7 +93,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Model Output Path</label>
-                            <input type="text" class="form-control" id="trainOutPath" value="models/marl_cologne_shared_dqn_regionaware_v14_stable_fixedratio_scale07.pt">
+                            <input type="text" class="form-control" id="trainOutPath" value="models/marl_cologne_shared_dqn_regionaware_v8_scale07.pt">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Demand Scale</label>
@@ -106,21 +106,21 @@
                 <div id="controlButtons">
                     {% if not simulation_running %}
                     <button id="startBtn" class="btn btn-primary btn-lg w-100 mb-2" onclick="startSimulation()">
-                        🚀 Start Simulation
+                        Start simulation
                     </button>
-                    <button class="btn btn-outline-secondary btn-sm w-100" onclick="restoreWebInterface()" title="Reset and restore the web interface">
-                        🔄 Restore Interface
+                    <button class="btn btn-outline-secondary btn-sm w-100" onclick="restoreWebInterface()" title="Reset session">
+                        Reset session
                     </button>
                     {% else %}
                     <div class="status-running">
-                        <p><strong>⏳ Simulation is running, please wait...</strong></p>
-                        <p id="guiStatus">🖥️ SUMO GUI window is open; you can watch the traffic simulation</p>
-                        <p id="durationStatus">⏱️ The simulation will run for the specified duration; please wait</p>
+                        <p><strong>Simulation running…</strong></p>
+                        <p id="guiStatus">SUMO GUI status will update here.</p>
+                        <p id="durationStatus">Wait for the configured duration.</p>
                         <div class="mt-2">
-                            <button class="btn btn-warning me-2" onclick="cancelSimulation()">⏹️ Cancel Simulation</button>
-                            <button class="btn btn-secondary" onclick="resetSimulation()">🔄 Reset State</button>
+                            <button class="btn btn-warning me-2" onclick="cancelSimulation()">Cancel</button>
+                            <button class="btn btn-secondary" onclick="resetSimulation()">Reset</button>
                         </div>
-                        <p class="text-muted small mt-2">If the simulation appears stuck, click "Reset State" to clear the session</p>
+                        <p class="text-muted small mt-2">If the run appears stuck, use Reset to clear the session.</p>
                     </div>
                     {% endif %}
                 </div>
@@ -132,14 +132,14 @@
 <!-- MARL Evaluation -->
 <div class="card mb-4">
     <div class="card-body">
-        <h5 class="card-title">🧪 MARL Evaluation (Batch)</h5>
-        <p class="text-muted mb-3">Run evaluation with a trained MARL model and save metrics to JSON.</p>
+        <h5 class="card-title">MARL evaluation</h5>
+        <p class="section-lead mb-3">Batch evaluation of a checkpoint; metrics written to <code>output/web_results/</code>.</p>
         <div class="row g-3">
             <div class="col-md-6">
                 <label class="form-label">Model Path (.pt)</label>
                 <div class="input-group">
-                    <input type="text" class="form-control" id="marlModelPath" placeholder="models/marl_vancouver_shared_dqn.pt">
-                    <button class="btn btn-outline-secondary" type="button" onclick="browseModelPath('marlModelPath', 'marlModelHint')">📂 Browse</button>
+                    <input type="text" class="form-control" id="marlModelPath" value="models/marl_cologne_shared_dqn_regionaware_v8_scale07.pt" placeholder="models/...pt">
+                    <button class="btn btn-outline-secondary" type="button" onclick="browseModelPath('marlModelPath', 'marlModelHint')">Browse</button>
                 </div>
                 <input type="file" id="hiddenModelPicker" accept=".pt,.pth,.ckpt" style="display:none;">
                 <small id="marlModelHint" class="form-text text-muted">Choose local checkpoint file from your explorer.</small>
@@ -176,7 +176,7 @@
             </div>
             <div class="col-md-4">
                 <button class="btn btn-outline-primary w-100" id="marlEvalBtn" onclick="startMarlEvaluation()">
-                    ▶️ Start MARL Evaluation
+                    Run MARL evaluation
                 </button>
             </div>
         </div>
@@ -188,20 +188,20 @@
 <!-- Comparative Evaluation -->
 <div class="card mb-4">
     <div class="card-body">
-        <h5 class="card-title">⚔️ Comparative Evaluation (Model + Baselines)</h5>
-        <p class="text-muted mb-3">Upload a model checkpoint and evaluate it with selected baselines under the same settings.</p>
+        <h5 class="card-title">Comparative evaluation</h5>
+        <p class="section-lead mb-3">Run the selected checkpoint and baselines under identical settings. Charts below reflect <strong>only the latest completed run</strong>.</p>
         <div class="row g-3">
             <div class="col-md-5">
                 <label class="form-label">Upload Model (.pt/.pth/.ckpt)</label>
                 <input type="file" class="form-control" id="modelUploadInput" accept=".pt,.pth,.ckpt">
-                <button class="btn btn-outline-secondary btn-sm mt-2" onclick="uploadModel()">📤 Upload Model</button>
+                <button class="btn btn-outline-secondary btn-sm mt-2" onclick="uploadModel()">Upload</button>
                 <div class="form-text" id="uploadedModelHint">No uploaded model selected.</div>
             </div>
             <div class="col-md-7">
                 <label class="form-label">Model Path (uploaded or existing)</label>
                 <div class="input-group">
-                    <input type="text" class="form-control" id="compareModelPath" placeholder="models/your_model.pt">
-                    <button class="btn btn-outline-secondary" type="button" onclick="browseModelPath('compareModelPath', 'uploadedModelHint')">📂 Browse</button>
+                    <input type="text" class="form-control" id="compareModelPath" value="models/marl_cologne_shared_dqn_regionaware_v8_scale07.pt" placeholder="models/...pt">
+                    <button class="btn btn-outline-secondary" type="button" onclick="browseModelPath('compareModelPath', 'uploadedModelHint')">Browse</button>
                 </div>
             </div>
             <div class="col-md-2">
@@ -271,63 +271,58 @@
             </div>
             <div class="col-md-4">
                 <button class="btn btn-primary w-100" id="compareEvalBtn" onclick="startComparativeEvaluation()">
-                    ▶️ Start Comparative Evaluation
+                    Run comparative evaluation
                 </button>
             </div>
         </div>
-        <div id="compareEvalStatus" class="mt-3 alert alert-light">Status: idle</div>
-        <div id="compareEvalSummary" class="mt-2"></div>
-    </div>
-</div>
-
-<!-- Visualization Switcher -->
-<div class="card mb-4">
-    <div class="card-body">
-        <h5 class="card-title">🖼️ Visualization Hub</h5>
-        <p class="text-muted mb-3">Switch between outputs from <code>visualize_training</code> and <code>visualize_statistics</code>.</p>
-        <div class="btn-group mb-3" role="group">
-            <button class="btn btn-outline-primary active" id="btnVizTraining" onclick="switchVisualizationMode('training')">Training Visualizations</button>
-            <button class="btn btn-outline-primary" id="btnVizStats" onclick="switchVisualizationMode('statistics')">Statistics Visualizations</button>
+        <div id="compareEvalStatus" class="mt-3 alert alert-light border">Status: idle</div>
+        <div id="compareEvalSummary" class="mt-3"></div>
+        <div id="compareEvalCharts" class="mt-4 d-none">
+            <h6 class="fw-semibold border-bottom pb-2 mb-3">Results — current run</h6>
+            <div class="row g-3">
+                <div class="col-md-6"><div id="cmpWait" class="comparison-chart"></div></div>
+                <div class="col-md-6"><div id="cmpTp" class="comparison-chart"></div></div>
+                <div class="col-12"><div id="cmpEm" class="comparison-chart"></div></div>
+                <div class="col-md-6"><div id="cmpAql" class="comparison-chart"></div></div>
+                <div class="col-md-6"><div id="cmpPress" class="comparison-chart"></div></div>
+            </div>
         </div>
-        <button class="btn btn-outline-secondary btn-sm mb-2" onclick="loadVisualizationFiles()">🔄 Load Visualizations</button>
-        <div id="vizStatus" class="small text-muted mb-2">No images loaded by default. Click "Load Visualizations".</div>
-        <div id="vizGallery" class="row g-3"></div>
     </div>
 </div>
 
 <!-- Simulation Status -->
 <div id="simulationStatus" class="card">
     <div class="card-body">
-        <h5 class="card-title">📊 Simulation Status</h5>
+        <h5 class="card-title">Simulation status</h5>
         <div id="statusContent">
             {% if simulation_running %}
             <div class="status-running">
-                <p><strong>🔄 Simulation is running...</strong></p>
+                <p><strong>Simulation running…</strong></p>
                 {% if use_gui %}
-                <p>🖥️ SUMO GUI window is open; you can watch the traffic simulation</p>
+                <p>SUMO GUI is open.</p>
                 {% else %}
-                <p>⚡ Running in headless mode (faster execution, no GUI window)</p>
+                <p>Headless mode (no GUI).</p>
                 {% endif %}
-                <p>⏱️ The simulation will run for 2 minutes; please wait</p>
+                <p>Wait for the configured duration to finish.</p>
                 <div class="mt-2">
-                    <button class="btn btn-warning btn-sm me-2" onclick="cancelSimulation()">⏹️ Cancel</button>
-                    <button class="btn btn-secondary btn-sm" onclick="resetSimulation()">🔄 Reset State</button>
+                    <button class="btn btn-warning btn-sm me-2" onclick="cancelSimulation()">Cancel</button>
+                    <button class="btn btn-secondary btn-sm" onclick="resetSimulation()">Reset</button>
                 </div>
             </div>
             {% elif simulation_results %}
             <div class="status-completed">
-                <p><strong>✅ Simulation completed!</strong></p>
+                <p><strong>Simulation completed.</strong></p>
             </div>
             {% else %}
             <div class="alert alert-light">
-                <h6>🎯 Steps</h6>
+                <h6>Steps</h6>
                 <ol>
                     <li><strong>Select a strategy</strong> - choose from the dropdown above</li>
                     <li><strong>Start simulation</strong> - click the "Start Simulation" button</li>
                     <li><strong>Watch</strong> - SUMO GUI window will open automatically</li>
                     <li><strong>View results</strong> - data will appear here after completion</li>
                 </ol>
-                <h6 class="mt-3">💡 Tips</h6>
+                <h6 class="mt-3">Tips</h6>
                 <ul>
                     <li>During the simulation you will see vehicles moving through an intersection</li>
                     <li>Observe how signals change under different strategies</li>
@@ -347,10 +342,10 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-9">
-                    <h5 class="card-title">🗂️ Simulation history management</h5>
+                    <h5 class="card-title">Run history</h5>
                     {% if all_strategy_results %}
                     <div class="alert alert-success">
-                        <strong>✅ Number of executed strategies:</strong> {{ all_strategy_results|length }}
+                        <strong>Runs recorded:</strong> {{ all_strategy_results|length }}
                         <ul class="mt-2 mb-0">
                             {% for key, data in all_strategy_results.items() %}
                             <li>{{ data.display_name }} (Run at: {{ data.timestamp }})</li>
@@ -359,7 +354,7 @@
                     </div>
                     {% else %}
                     <div class="alert alert-info">
-                        📝 No strategies have been executed yet
+                        No completed runs yet.
                     </div>
                     {% endif %}
                 </div>
@@ -373,7 +368,7 @@
     <!-- Current Results -->
     <div class="card">
         <div class="card-body">
-            <h5 class="card-title">📈 Current simulation results</h5>
+            <h5 class="card-title">Latest simulation metrics</h5>
             
             <!-- Key Metrics -->
             <div class="row">
@@ -404,7 +399,7 @@
             </div>
             
             <!-- Detailed Metrics Table -->
-            <h6 class="mt-4">📋 Detailed metrics</h6>
+            <h6 class="mt-4">Detailed metrics</h6>
             <div class="table-responsive">
                 <table class="table table-striped">
                     <thead>
@@ -463,10 +458,10 @@
     <!-- Strategy Comparison -->
     <div class="card">
         <div class="card-body">
-            <h5 class="card-title">📊 Real strategy comparison</h5>
+            <h5 class="card-title">Strategy comparison</h5>
             {% if all_strategy_results|length < 2 %}
             <div class="alert alert-info">
-                <strong>📝 More data needed for comparison</strong><br>
+                <strong>More data needed</strong><br>
                 Currently only {{ all_strategy_results|length }} strategy result(s). To see comparisons:<br>
                 1. Select another strategy (Fixed-time, Adaptive, DQN)<br>
                 2. Click "Start Simulation" to run<br>
@@ -474,7 +469,7 @@
             </div>
             {% else %}
             <div class="alert alert-success">
-                <strong>✅ Real data comparison</strong> - based on {{ all_strategy_results|length }} executed strategies
+                Comparison uses {{ all_strategy_results|length }} completed runs.
             </div>
             
             <div id="comparisonCharts" class="row">
@@ -511,24 +506,24 @@
     <!-- Conclusion -->
     <div class="card">
         <div class="card-body">
-            <h5 class="card-title">🎯 Conclusion</h5>
+            <h5 class="card-title">Summary</h5>
             {% if simulation_results.avg_waiting_time|default(0) < 30 %}
             <div class="alert alert-success">
-                ✅ Excellent! Short waiting time and smooth traffic flow
+                Low average waiting time for this run.
             </div>
             {% elif simulation_results.avg_waiting_time|default(0) < 45 %}
             <div class="alert alert-warning">
-                🔶 Good! Moderate waiting time, room for improvement
+                Moderate average waiting time.
             </div>
             {% else %}
             <div class="alert alert-danger">
-                🔻 Needs improvement! Long waiting time, consider optimizing strategy
+                High average waiting time for this run.
             </div>
             {% endif %}
             
-            <div class="alert alert-info mt-3">
-                <strong>📁 Detailed data</strong><br>
-                🗂️ Full simulation data saved to the `output/` directory, including:<br>
+            <div class="alert alert-secondary mt-3 small">
+                <strong>Outputs</strong><br>
+                Additional logs may appear under <code>output/</code>:<br>
                 - Vehicle trajectory data (CSV)<br>
                 - Traffic light state data (CSV)<br>
                 - Performance metrics report (JSON)
@@ -544,18 +539,55 @@
 let checkInterval = null;
 let marlEvalInterval = null;
 let compareEvalInterval = null;
-let vizMode = 'training';
-let vizFilesCache = { training_files: [], statistics_files: [] };
+
+function clearComparativeChartDivs() {
+    const ids = ['cmpWait', 'cmpTp', 'cmpEm', 'cmpAql', 'cmpPress'];
+    ids.forEach(function (id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        try {
+            if (window.Plotly) Plotly.purge(el);
+        } catch (e) { /* ignore */ }
+        el.innerHTML = '';
+    });
+    $('#compareEvalCharts').addClass('d-none');
+}
+
+function renderComparativeChartsFromResponse(response) {
+    if (!response.waiting_chart || !response.throughput_chart) return;
+    const cfg = { displayModeBar: true, responsive: true };
+    try {
+        const w = JSON.parse(response.waiting_chart);
+        const t = JSON.parse(response.throughput_chart);
+        Plotly.newPlot('cmpWait', w.data, w.layout, cfg);
+        Plotly.newPlot('cmpTp', t.data, t.layout, cfg);
+        if (response.emissions_chart) {
+            const e = JSON.parse(response.emissions_chart);
+            Plotly.newPlot('cmpEm', e.data, e.layout, cfg);
+        }
+        if (response.aql_chart) {
+            const a = JSON.parse(response.aql_chart);
+            Plotly.newPlot('cmpAql', a.data, a.layout, cfg);
+        }
+        if (response.pressure_chart) {
+            const p = JSON.parse(response.pressure_chart);
+            Plotly.newPlot('cmpPress', p.data, p.layout, cfg);
+        }
+        $('#compareEvalCharts').removeClass('d-none');
+    } catch (err) {
+        console.error('Chart render failed', err);
+    }
+}
 
 // Update strategy description when selection changes
 $('#strategySelect').on('change', function() {
     const strategy = $(this).val();
     const descriptions = {
-        'FIXED_TIME': '⏰ Switch signals at fixed intervals<br>Suitable for regular traffic patterns',
-        'ADAPTIVE': '🧠 Adjust intelligently based on vehicle counts<br>Suitable for varying traffic flows',
-        'MAX_PRESSURE': '⚖️ Serve the phase with the highest queued demand (MaxPressure)<br>Strong queue-based baseline for comparison',
-        'SOTL': '🚦 Threshold-based self-organizing control (SOTL)<br>Switch when queues exceed a threshold',
-        'MARL_DQN': '🤝 Multi-Agent DQN (trained)<br>Controls multiple traffic lights at once using a trained shared policy'
+        'FIXED_TIME': 'Fixed cycle lengths; baseline for comparison.',
+        'ADAPTIVE': 'Actuated-style extensions from queue pressure.',
+        'MAX_PRESSURE': 'Greedy phase choice by upstream queue pressure.',
+        'SOTL': 'Threshold-based self-organizing logic.',
+        'MARL_DQN': 'Shared multi-agent DQN (requires checkpoint for live run).'
     };
     $('#strategyDescription').html(descriptions[strategy] || '');
 });
@@ -643,13 +675,13 @@ function startSimulation() {
                 }, 300);
             } else {
                 alert('Error: ' + response.message);
-                $('#startBtn').prop('disabled', false).text('🚀 Start Simulation');
+                $('#startBtn').prop('disabled', false).text('Start simulation');
             }
         },
         error: function(xhr, status, error) {
             console.error('Error starting simulation:', error);
             alert('Failed to start simulation: ' + error);
-            $('#startBtn').prop('disabled', false).text('🚀 Start Simulation');
+            $('#startBtn').prop('disabled', false).text('Start simulation');
         }
     });
 }
@@ -668,7 +700,7 @@ function startMarlEvaluation() {
         calc_metrics: $('#marlCalcMetrics').is(':checked')
     };
 
-    $('#marlEvalBtn').prop('disabled', true).text('Starting...');
+    $('#marlEvalBtn').prop('disabled', true).text('Starting…');
     $('#marlEvalStatus').removeClass('alert-danger alert-success').addClass('alert-light')
         .text('Status: starting...');
 
@@ -685,12 +717,12 @@ function startMarlEvaluation() {
                 marlEvalInterval = setInterval(checkMarlEvaluationStatus, 3000);
             } else {
                 $('#marlEvalStatus').addClass('alert-danger').text('Error: ' + resp.message);
-                $('#marlEvalBtn').prop('disabled', false).text('▶️ Start MARL Evaluation');
+                $('#marlEvalBtn').prop('disabled', false).text('Run MARL evaluation');
             }
         },
         error: function(xhr, status, error) {
             $('#marlEvalStatus').addClass('alert-danger').text('Error: ' + error);
-            $('#marlEvalBtn').prop('disabled', false).text('▶️ Start MARL Evaluation');
+            $('#marlEvalBtn').prop('disabled', false).text('Run MARL evaluation');
         }
     });
 }
@@ -707,13 +739,13 @@ function checkMarlEvaluationStatus() {
                 clearInterval(marlEvalInterval);
                 $('#marlEvalStatus').removeClass('alert-light alert-danger').addClass('alert-success')
                     .text('Status: completed. Loading summary...');
-                $('#marlEvalBtn').prop('disabled', false).text('▶️ Start MARL Evaluation');
+                $('#marlEvalBtn').prop('disabled', false).text('Run MARL evaluation');
                 loadMarlEvalSummary();
             } else if (resp.status === 'error') {
                 clearInterval(marlEvalInterval);
                 $('#marlEvalStatus').removeClass('alert-light').addClass('alert-danger')
                     .text('Error: ' + resp.message);
-                $('#marlEvalBtn').prop('disabled', false).text('▶️ Start MARL Evaluation');
+                $('#marlEvalBtn').prop('disabled', false).text('Run MARL evaluation');
             }
         },
         error: function() {
@@ -860,9 +892,10 @@ function startComparativeEvaluation() {
         return;
     }
 
-    $('#compareEvalBtn').prop('disabled', true).text('Starting...');
+    $('#compareEvalBtn').prop('disabled', true).text('Starting…');
     $('#compareEvalStatus').removeClass('alert-danger alert-success').addClass('alert-light').text('Status: starting...');
     $('#compareEvalSummary').empty();
+    clearComparativeChartDivs();
 
     $.ajax({
         url: '/start_comparative_evaluation',
@@ -877,13 +910,13 @@ function startComparativeEvaluation() {
                 compareEvalInterval = setInterval(checkComparativeEvaluation, 3000);
             } else {
                 $('#compareEvalStatus').addClass('alert-danger').text('Error: ' + resp.message);
-                $('#compareEvalBtn').prop('disabled', false).text('▶️ Start Comparative Evaluation');
+                $('#compareEvalBtn').prop('disabled', false).text('Run comparative evaluation');
             }
         },
         error: function(xhr) {
             const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to start comparative evaluation';
             $('#compareEvalStatus').addClass('alert-danger').text('Error: ' + msg);
-            $('#compareEvalBtn').prop('disabled', false).text('▶️ Start Comparative Evaluation');
+            $('#compareEvalBtn').prop('disabled', false).text('Run comparative evaluation');
         }
     });
 }
@@ -900,12 +933,12 @@ function checkComparativeEvaluation() {
             } else if (resp.status === 'completed') {
                 if (compareEvalInterval) clearInterval(compareEvalInterval);
                 $('#compareEvalStatus').removeClass('alert-light alert-danger').addClass('alert-success').text('Status: completed');
-                $('#compareEvalBtn').prop('disabled', false).text('▶️ Start Comparative Evaluation');
+                $('#compareEvalBtn').prop('disabled', false).text('Run comparative evaluation');
                 loadComparativeResults();
             } else if (resp.status === 'error') {
                 if (compareEvalInterval) clearInterval(compareEvalInterval);
                 $('#compareEvalStatus').removeClass('alert-light').addClass('alert-danger').text('Error: ' + (resp.message || 'unknown'));
-                $('#compareEvalBtn').prop('disabled', false).text('▶️ Start Comparative Evaluation');
+                $('#compareEvalBtn').prop('disabled', false).text('Run comparative evaluation');
             }
         }
     });
@@ -913,9 +946,9 @@ function checkComparativeEvaluation() {
 
 function loadComparativeResults() {
     $.ajax({
-        url: '/get_comparative_results',
+        url: '/get_comparative_results?include_charts=1',
         method: 'GET',
-        timeout: 8000,
+        timeout: 15000,
         success: function(resp) {
             if (resp.status !== 'success') {
                 $('#compareEvalSummary').html('<div class="text-danger">Failed to load comparative summary.</div>');
@@ -923,64 +956,19 @@ function loadComparativeResults() {
             }
             const data = resp.data || {};
             const mm = data.mean_metrics || {};
-            let html = '<div class="table-responsive"><table class="table table-sm table-striped">';
-            html += '<thead><tr><th>Method</th><th>Waiting</th><th>Speed</th><th>Throughput/h</th><th>CO2</th><th>Fuel</th><th>AQL</th></tr></thead><tbody>';
+            let html = '<div class="table-responsive"><table class="table table-sm table-striped align-middle">';
+            html += '<thead class="table-light"><tr><th>Method</th><th>Waiting (s)</th><th>Speed (m/s)</th><th>Throughput / h</th><th>CO₂</th><th>Fuel</th><th>AQL</th></tr></thead><tbody>';
             Object.keys(mm).forEach(name => {
                 const m = mm[name] || {};
                 const f = (v, d=3) => (v === null || v === undefined || Number.isNaN(v)) ? 'n/a' : Number(v).toFixed(d);
-                html += `<tr><td>${name}</td><td>${f(m.avg_waiting_time,2)}</td><td>${f(m.avg_speed,2)}</td><td>${f(m.throughput_per_hour,1)}</td><td>${f(m.total_co2,1)}</td><td>${f(m.total_fuel,1)}</td><td>${f(m.avg_queue_length,2)}</td></tr>`;
+                html += `<tr><td><code>${name}</code></td><td>${f(m.avg_waiting_time,2)}</td><td>${f(m.avg_speed,2)}</td><td>${f(m.throughput_per_hour,1)}</td><td>${f(m.total_co2,1)}</td><td>${f(m.total_fuel,1)}</td><td>${f(m.avg_queue_length,2)}</td></tr>`;
             });
             html += '</tbody></table></div>';
             $('#compareEvalSummary').html(html);
+            renderComparativeChartsFromResponse(resp);
         },
         error: function() {
             $('#compareEvalSummary').html('<div class="text-danger">Failed to load comparative summary.</div>');
-        }
-    });
-}
-
-function switchVisualizationMode(mode) {
-    vizMode = mode === 'statistics' ? 'statistics' : 'training';
-    $('#btnVizTraining').toggleClass('active', vizMode === 'training');
-    $('#btnVizStats').toggleClass('active', vizMode === 'statistics');
-    renderVisualizationGallery();
-}
-
-function renderVisualizationGallery() {
-    const files = (vizMode === 'training') ? (vizFilesCache.training_files || []) : (vizFilesCache.statistics_files || []);
-    if (!files.length) {
-        $('#vizStatus').text('No visualization files found for this mode yet.');
-        $('#vizGallery').html('');
-        return;
-    }
-    $('#vizStatus').text(`Showing ${files.length} ${vizMode} figure(s).`);
-    let html = '';
-    files.forEach((p, idx) => {
-        const src = '/viz_file?path=' + encodeURIComponent(p);
-        html += `<div class="col-md-4"><div class="card"><img src="${src}" class="card-img-top" alt="viz-${idx}" loading="lazy"><div class="card-body p-2"><small class="text-muted">${p.split(/[\\\\/]/).pop()}</small></div></div></div>`;
-    });
-    $('#vizGallery').html(html);
-}
-
-function loadVisualizationFiles() {
-    $('#vizStatus').text('Loading visualizations...');
-    $.ajax({
-        url: '/get_visualization_files',
-        method: 'GET',
-        timeout: 8000,
-        success: function(resp) {
-            if (resp.status === 'success') {
-                vizFilesCache = {
-                    training_files: resp.training_files || [],
-                    statistics_files: resp.statistics_files || []
-                };
-                renderVisualizationGallery();
-            } else {
-                $('#vizStatus').text('Failed to load visualizations.');
-            }
-        },
-        error: function() {
-            $('#vizStatus').text('Failed to load visualizations.');
         }
     });
 }
@@ -1166,7 +1154,7 @@ function loadComparisonCharts() {
                 }
                 
                 // Create comparison table
-                let tableHTML = '<h6>📋 Detailed comparison data</h6><div class="table-responsive"><table class="table table-striped"><thead><tr><th>Strategy</th><th>Waiting time (s)</th><th>Average speed (m/s)</th><th>Throughput (veh/h)</th><th>CO₂ (g)</th><th>Fuel (L)</th><th>AQL (veh)</th><th>Pressure</th></tr></thead><tbody>';
+                let tableHTML = '<h6 class="mt-3">Comparison table</h6><div class="table-responsive"><table class="table table-striped table-sm"><thead class="table-light"><tr><th>Strategy</th><th>Waiting time (s)</th><th>Average speed (m/s)</th><th>Throughput (veh/h)</th><th>CO₂ (g)</th><th>Fuel (L)</th><th>AQL (veh)</th><th>Pressure</th></tr></thead><tbody>';
                 response.comparison_data.Strategy.forEach((strategy, index) => {
                     const co2g = (response.comparison_data.CO2_g && response.comparison_data.CO2_g[index] != null) ? response.comparison_data.CO2_g[index] : 0;
                     const fuelL = (response.comparison_data.Fuel_L && response.comparison_data.Fuel_L[index] != null) ? response.comparison_data.Fuel_L[index] : 0;
@@ -1186,10 +1174,10 @@ function loadComparisonCharts() {
                 const bestThroughputIdx = throughputs.indexOf(Math.max(...throughputs));
                 const bestSpeedIdx = speeds.indexOf(Math.max(...speeds));
                 
-                let analysisHTML = '<h6>🎯 Performance analysis</h6><div class="row">';
-                analysisHTML += `<div class="col-md-4"><div class="alert alert-success"><strong>🏆 Shortest waiting time</strong><br>${response.comparison_data.Strategy[bestWaitIdx]}<br>${waitingTimes[bestWaitIdx].toFixed(1)}s</div></div>`;
-                analysisHTML += `<div class="col-md-4"><div class="alert alert-success"><strong>🚀 Highest throughput</strong><br>${response.comparison_data.Strategy[bestThroughputIdx]}<br>${throughputs[bestThroughputIdx].toFixed(0)} veh/h</div></div>`;
-                analysisHTML += `<div class="col-md-4"><div class="alert alert-success"><strong>⚡ Fastest speed</strong><br>${response.comparison_data.Strategy[bestSpeedIdx]}<br>${speeds[bestSpeedIdx].toFixed(1)}m/s</div></div>`;
+                let analysisHTML = '<h6 class="mt-3">Highlights</h6><div class="row">';
+                analysisHTML += `<div class="col-md-4"><div class="alert alert-light border"><strong>Lowest waiting time</strong><br>${response.comparison_data.Strategy[bestWaitIdx]}<br>${waitingTimes[bestWaitIdx].toFixed(1)} s</div></div>`;
+                analysisHTML += `<div class="col-md-4"><div class="alert alert-light border"><strong>Highest throughput</strong><br>${response.comparison_data.Strategy[bestThroughputIdx]}<br>${throughputs[bestThroughputIdx].toFixed(0)} veh/h</div></div>`;
+                analysisHTML += `<div class="col-md-4"><div class="alert alert-light border"><strong>Highest mean speed</strong><br>${response.comparison_data.Strategy[bestSpeedIdx]}<br>${speeds[bestSpeedIdx].toFixed(1)} m/s</div></div>`;
                 analysisHTML += '</div>';
                 $('#performanceAnalysis').html(analysisHTML);
             }
@@ -1216,7 +1204,7 @@ function updateDurationHint() {
     // If simulation is running, update the visible status line (control panel)
     const durationStatus = document.getElementById('durationStatus');
     if (durationStatus) {
-        durationStatus.textContent = `⏱️ The simulation will run for ${minutes} minute${minutes !== 1 ? 's' : ''}; please wait`;
+        durationStatus.textContent = `Scheduled duration: ${minutes} minute${minutes !== 1 ? 's' : ''}`;
     }
 }
 
