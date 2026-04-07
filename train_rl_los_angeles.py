@@ -162,9 +162,11 @@ def main():
     print(f"Model output: {out_path}")
     print("=" * 70)
 
+    base_traci_port = 8813
     for ep in range(1, args.episodes + 1):
         simulator = TrafficSimulator(
             use_gui=False,
+            port=base_traci_port + ep - 1,
             dataset="los_angeles",
             enable_sumo_emissions_output=False,  # IMPORTANT: don't generate huge emission XML during training
         )
@@ -253,6 +255,7 @@ def main():
 
         agent.end_episode()
         simulator.close_simulation()
+        time.sleep(0.35)
 
         wall = time.time() - start_wall
         avg_loss = float(np.mean(losses)) if losses else float("nan")

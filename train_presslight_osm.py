@@ -123,8 +123,14 @@ def main():
 
     fake_lanes = [f"p{i}" for i in range(int(args.k))]
 
+    base_traci_port = 8813
     for ep in range(1, args.episodes + 1):
-        sim = TrafficSimulator(use_gui=False, dataset=args.dataset, enable_sumo_emissions_output=False)
+        sim = TrafficSimulator(
+            use_gui=False,
+            port=base_traci_port + ep - 1,
+            dataset=args.dataset,
+            enable_sumo_emissions_output=False,
+        )
         ok = sim.start_simulation()
         if not ok or not sim.controlled_traffic_lights:
             sim.close_simulation()
@@ -279,6 +285,7 @@ def main():
 
         agent.end_episode()
         sim.close_simulation()
+        time.sleep(0.35)
 
         avg_loss = float(np.mean(losses)) if losses else float("nan")
         ep_reward = agent.training_history["episode_rewards"][-1] if agent.training_history["episode_rewards"] else 0.0

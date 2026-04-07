@@ -10,6 +10,8 @@ import plotly
 import plotly.express as px
 import plotly.graph_objects as go
 import json
+import logging
+import re
 import subprocess
 import sys
 import os
@@ -33,6 +35,33 @@ from src.traffic_simulator import TrafficSimulator
 
 app = Flask(__name__)
 app.secret_key = 'traffic_signal_control_secret_key_2024'  # Change this in production
+
+
+class _SuppressStatusPollLogsFilter(logging.Filter):
+    """Stops the dev-server console from spamming one line every few seconds for UI polling."""
+
+    _PATH_FRAGMENTS = (
+        "/check_comparative_evaluation",
+        "/check_marl_evaluation",
+        "/check_simulation",
+    )
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            msg = record.getMessage()
+        except Exception:
+            return True
+        if "GET" not in msg:
+            return True
+        for frag in self._PATH_FRAGMENTS:
+            if frag in msg:
+                return False
+        return True
+
+
+_poll_log_filter = _SuppressStatusPollLogsFilter()
+for _wl in ("werkzeug", "werkzeug.serving"):
+    logging.getLogger(_wl).addFilter(_poll_log_filter)
 
 # Store large results on disk (avoid cookie-session overflow)
 WEB_RESULTS_DIR = os.path.join(SimulationConfig.OUTPUT_DIR, "web_results")
@@ -205,6 +234,8 @@ def start_simulation():
     strategy = data.get('strategy', 'FIXED_TIME')
     use_gui_option = data.get('use_gui', None)  # Optional: allow user to override
     requested_duration = int(data.get('duration', 600))  # Get duration from request, default 600s
+    marl_model_path = (data.get('marl_model_path') or "").strip()
+    marl_run_kw = f", marl_model_path={json.dumps(marl_model_path)}" if marl_model_path else ""
     
     if session.get('simulation_running', False):
         return jsonify({'status': 'error', 'message': 'Simulation already running'})
@@ -274,7 +305,7 @@ simulator = TrafficSimulator(use_gui={use_gui}, dataset="{dataset}")
 duration = {requested_duration}
 print(f"Running simulation for {{duration}} seconds ({requested_duration/60:.1f} minutes)...")
 
-metrics = simulator.run_simulation(duration=duration, strategy="{strategy}")
+metrics = simulator.run_simulation(duration=duration, strategy="{strategy}"{marl_run_kw})
 
 import json
 
@@ -520,6 +551,17 @@ def check_simulation():
         traceback.print_exc()
         return jsonify({'status': 'error', 'message': str(e)})
 
+def _clear_background_eval_session():
+    """Drop MARL/comparative eval pointers so a new run can start (fixes stale status.json)."""
+    session['marl_eval_running'] = False
+    session['marl_eval_results_path'] = None
+    session['marl_eval_status_path'] = None
+    session['comparative_eval_running'] = False
+    session['comparative_eval_status_path'] = None
+    session['comparative_eval_results_path'] = None
+    session.modified = True
+
+
 @app.route('/clear_history', methods=['POST'])
 def clear_history():
     """Clear simulation history"""
@@ -582,7 +624,8 @@ def reset_simulation():
     session['simulation_results_path'] = None
     session['simulation_process_id'] = None
     session['simulation_start_time'] = None
-    
+    _clear_background_eval_session()
+
     # Clean up temporary files
     for temp_file in ["temp_simulation.py", "temp_results.json"]:
         if os.path.exists(temp_file):
@@ -1235,13 +1278,28 @@ def start_comparative_evaluation():
     Run model + selected baselines in one batch (same settings).
     """
     init_session()
+    data = request.get_json() or {}
+    force_restart = bool(data.get("force", False))
+    if force_restart:
+        _clear_background_eval_session()
+
     current_status_path = session.get('comparative_eval_status_path')
-    if current_status_path and os.path.exists(current_status_path):
+    if (
+        not force_restart
+        and session.get("comparative_eval_running")
+        and current_status_path
+        and os.path.exists(current_status_path)
+    ):
         cur = _safe_json_load(current_status_path) or {}
         if cur.get("status") == "running":
-            return jsonify({'status': 'error', 'message': 'Comparative evaluation already running'})
+            return jsonify({
+                'status': 'error',
+                'message': (
+                    'Comparative evaluation already running. '
+                    'Wait for it to finish, or enable “Force restart” below, or use Reset session.'
+                ),
+            })
 
-    data = request.get_json() or {}
     dataset = str(data.get('dataset', SimulationConfig.DATASET))
     if dataset not in {"cologne", "vancouver", "los_angeles"}:
         return jsonify({'status': 'error', 'message': 'Unsupported dataset'}), 400
@@ -1268,6 +1326,20 @@ def start_comparative_evaluation():
     if not model_path:
         return jsonify({'status': 'error', 'message': 'Model path is required'}), 400
 
+    proj_root = os.path.dirname(os.path.abspath(__file__))
+    resolved_model = model_path
+    if not os.path.isabs(resolved_model):
+        resolved_model = os.path.normpath(os.path.join(proj_root, resolved_model))
+    if not os.path.isfile(resolved_model):
+        return jsonify({
+            'status': 'error',
+            'message': (
+                f'Model file not found. Checked: {resolved_model}. '
+                f'Use a path under the project (e.g. models/your.pt) or upload again.'
+            ),
+        }), 400
+    model_path = resolved_model
+
     _ensure_dir(WEB_RESULTS_DIR)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     run_dir = os.path.join(WEB_RESULTS_DIR, f"comparative_eval_{dataset}_{ts}")
@@ -1282,119 +1354,136 @@ def start_comparative_evaluation():
         except Exception:
             pass
 
-    def run_batch():
+    job_payload = {
+        "dataset": dataset,
+        "model_path": model_path,
+        "episodes": episodes,
+        "duration": duration,
+        "decision_interval": decision_interval,
+        "controlled_lights_ratio": ratio,
+        "lanes_per_tl": lanes_per_tl,
+        "demand_scale": demand_scale,
+        "seed": seed,
+        "run_id": run_id,
+        "regional_reward_weight": regional_reward_weight,
+        "region_grid_size": region_grid_size,
+        "sumo_emissions_output": sumo_emissions_output,
+        "baselines": baselines,
+    }
+    try:
+        with open(os.path.join(run_dir, "job.json"), "w", encoding="utf-8") as jf:
+            json.dump(job_payload, jf, indent=2)
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Failed to write job file: {e}'}), 500
+
+    _write_status({
+        "status": "running",
+        "progress": 0,
+        "total_jobs": 1 + len(baselines),
+        "completed_jobs": 0,
+        "current": "starting_worker",
+        "run_dir": run_dir,
+        "worker": "subprocess",
+    })
+
+    worker_script = os.path.join(proj_root, "run_comparative_eval_worker.py")
+    if not os.path.isfile(worker_script):
+        _write_status({
+            "status": "error",
+            "message": f"Missing worker script: {worker_script}",
+            "run_dir": run_dir,
+        })
+        return jsonify({'status': 'error', 'message': 'Server misconfiguration: comparative worker script missing'}), 500
+
+    log_path = os.path.join(run_dir, "worker.log")
+    popen_kw: dict = {
+        "args": [sys.executable, worker_script, run_dir],
+        "cwd": proj_root,
+        "stdin": subprocess.DEVNULL,
+    }
+    log_f = None
+    try:
+        log_f = open(log_path, "ab", buffering=0)
         try:
-            outputs = {}
-            cmds = []
-
-            # 1) MARL model evaluation
-            marl_out = os.path.join(run_dir, "eval_model.json")
-            marl_cmd = [
-                sys.executable, "evaluate_marl_osm.py",
-                "--dataset", dataset,
-                "--model", model_path,
-                "--episodes", str(episodes),
-                "--duration", str(duration),
-                "--decision-interval", str(decision_interval),
-                "--controlled-lights-ratio", str(ratio),
-                "--lanes-per-tl", str(lanes_per_tl),
-                "--seed", str(seed),
-                "--run-id", str(run_id),
-                "--demand-scale", str(demand_scale),
-                "--regional-reward-weight", str(regional_reward_weight),
-                "--region-grid-size", str(region_grid_size),
-                "--out", marl_out,
-            ]
-            if sumo_emissions_output:
-                marl_cmd.append("--sumo-emissions-output")
-            cmds.append(("MARL_DQN", marl_cmd, marl_out))
-
-            # 2) Baseline evaluations
-            for strat in baselines:
-                out_path = os.path.join(run_dir, f"eval_{strat}.json")
-                cmd = [
-                    sys.executable, "evaluate_baselines_osm.py",
-                    "--dataset", dataset,
-                    "--strategy", strat,
-                    "--episodes", str(episodes),
-                    "--duration", str(duration),
-                    "--decision-interval", str(decision_interval),
-                    "--controlled-lights-ratio", str(ratio),
-                    "--seed", str(seed),
-                    "--run-id", str(run_id),
-                    "--demand-scale", str(demand_scale),
-                    "--out", out_path,
-                ]
-                if sumo_emissions_output:
-                    cmd.append("--sumo-emissions-output")
-                cmds.append((strat, cmd, out_path))
-
-            _write_status({
-                "status": "running",
-                "progress": 0,
-                "total_jobs": len(cmds),
-                "completed_jobs": 0,
-                "current": None,
-                "run_dir": run_dir,
-            })
-
-            for idx, (name, cmd, out_path) in enumerate(cmds, start=1):
-                _write_status({
-                    "status": "running",
-                    "progress": int((idx - 1) * 100 / max(1, len(cmds))),
-                    "total_jobs": len(cmds),
-                    "completed_jobs": idx - 1,
-                    "current": name,
-                    "cmd": " ".join(cmd),
-                    "run_dir": run_dir,
-                })
-                subprocess.run(cmd, check=True)
-                outputs[name] = out_path
-
-            # Build compact summary
-            summary = {
-                "dataset": dataset,
-                "episodes": episodes,
-                "duration": duration,
-                "decision_interval": decision_interval,
-                "controlled_lights_ratio": ratio,
-                "demand_scale": demand_scale,
-                "seed": seed,
-                "run_id": run_id,
-                "model_path": model_path,
-                "sumo_emissions_output": sumo_emissions_output,
-                "files": outputs,
-                "mean_metrics": {},
-            }
-            for name, path in outputs.items():
-                payload = _safe_json_load(path) or {}
-                summary["mean_metrics"][name] = _mean_metrics_from_eval_payload(payload)
-
-            with open(summary_path, "w", encoding="utf-8") as f:
-                json.dump(summary, f, indent=2)
-
-            _write_status({
-                "status": "completed",
-                "progress": 100,
-                "run_dir": run_dir,
-                "summary_path": summary_path,
-                "files": outputs,
-            })
-        except Exception as e:
-            _write_status({
-                "status": "error",
-                "message": str(e),
-                "run_dir": run_dir,
-            })
-        finally:
+            log_f.write(b"\n--- comparative eval worker ---\n")
+        except Exception:
             pass
+        popen_kw["stdout"] = log_f
+        popen_kw["stderr"] = subprocess.STDOUT
+        subprocess.Popen(**popen_kw)
+    except Exception as e:
+        if log_f is not None:
+            try:
+                log_f.close()
+            except Exception:
+                pass
+        _write_status({
+            "status": "error",
+            "message": f"Failed to start worker process: {e}",
+            "run_dir": run_dir,
+        })
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
     session['comparative_eval_running'] = True
     session['comparative_eval_status_path'] = status_path
     session['comparative_eval_results_path'] = summary_path
     session.modified = True
-    threading.Thread(target=run_batch, daemon=True).start()
-    return jsonify({'status': 'success', 'message': 'Comparative evaluation started', 'status_path': status_path})
+    return jsonify({
+        'status': 'success',
+        'message': 'Comparative evaluation started',
+        'status_path': status_path,
+        'run_dir': run_dir,
+        'log_path': log_path,
+    })
+
+
+def _comparative_run_dir_allowed(run_dir: str) -> bool:
+    """Only allow reading logs under output/web_results (comparative eval runs)."""
+    try:
+        root = os.path.realpath(WEB_RESULTS_DIR)
+        rd = os.path.realpath(run_dir)
+        if os.path.commonpath([root, rd]) != root:
+            return False
+        return os.path.isdir(rd)
+    except (ValueError, OSError):
+        return False
+
+
+def _worker_log_insights(run_dir: str, *, tail_max_bytes: int = 49152, tail_max_lines: int = 80) -> tuple:
+    """
+    Read worker.log tail once. Returns (live_progress_dict, log_tail_for_ui).
+    Evaluation stdout goes here — not the Flask terminal.
+    """
+    live: dict = {}
+    log_tail = ""
+    if not _comparative_run_dir_allowed(run_dir):
+        return live, log_tail
+    log_path = os.path.join(run_dir, "worker.log")
+    if not os.path.isfile(log_path):
+        return live, log_tail
+    try:
+        with open(log_path, "rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            f.seek(max(0, size - tail_max_bytes))
+            chunk = f.read().decode("utf-8", errors="replace")
+        lines = chunk.splitlines()
+        tail_lines = lines[-tail_max_lines:] if len(lines) > tail_max_lines else lines
+        log_tail = "\n".join(tail_lines)
+        tail = chunk
+        matches = re.findall(r"Episode\s+(\d+)\s*/\s*(\d+)", tail)
+        if matches:
+            last_ep, total_ep = matches[-1]
+            live["last_episode"] = int(last_ep)
+            live["total_episodes"] = int(total_ep)
+        ports = re.findall(r"\*\*\*Starting server on port (\d+)", tail)
+        if ports:
+            first_port = 8813
+            latest_port = int(ports[-1])
+            live["last_episode_approx"] = latest_port - first_port + 1
+    except Exception:
+        pass
+    return live, log_tail
 
 
 @app.route('/check_comparative_evaluation', methods=['GET'])
@@ -1407,6 +1496,15 @@ def check_comparative_evaluation():
     if data.get("status") in {"completed", "error"}:
         session['comparative_eval_running'] = False
         session.modified = True
+    # Live episode hint + log tail from worker.log (SUMO/eval output — not Flask console)
+    if data.get("status") == "running":
+        run_dir = data.get("run_dir") or os.path.dirname(status_path)
+        live, log_tail = _worker_log_insights(run_dir)
+        if live:
+            data["live_progress"] = live
+        if log_tail:
+            data["log_tail"] = log_tail
+        data["log_file_hint"] = os.path.join(run_dir, "worker.log")
     return jsonify(data)
 
 

@@ -486,9 +486,10 @@ def main():
         # Make evaluation statistically meaningful:
         # vary SUMO random seed across episodes and across repeated invocations (run-id).
         sumo_seed = int(args.seed) + int(args.run_id) * 10000 + int(ep)
+        traci_port = int(args.port) + int(ep) - 1
         simulator = TrafficSimulator(
             use_gui=False,
-            port=args.port,
+            port=traci_port,
             dataset=args.dataset,
             enable_sumo_emissions_output=bool(args.sumo_emissions_output),
             sumo_seed=sumo_seed,
@@ -542,6 +543,20 @@ def main():
             import torch as _torch
             ckpt = _torch.load(model_path, map_location="cpu")
             ckpt_cfg = ckpt.get("config", {})
+
+            # Use lanes_per_tl from checkpoint so observation size matches training.
+            ckpt_lanes = int(ckpt_cfg.get("lanes_per_tl", 0))
+            if ckpt_lanes > 0 and ckpt_lanes != int(args.lanes_per_tl):
+                print(
+                    f"Note: overriding --lanes-per-tl {args.lanes_per_tl} -> "
+                    f"{ckpt_lanes} (from checkpoint config) to match trained model."
+                )
+                args.lanes_per_tl = ckpt_lanes
+                # Rebuild lane padding with the corrected value
+                for tl_id in tls_ids:
+                    lanes = get_controlled_lanes_for_tl(tl_id)
+                    tl_lanes[tl_id] = pad_or_truncate(lanes, ckpt_lanes)
+
             ckpt_action_dim = ckpt_cfg.get("action_dim", 2)
             is_n_action = ckpt_action_dim > 2
             switch_mode = str(ckpt_cfg.get("switch_mode", "legacy_cycle"))
@@ -768,6 +783,7 @@ def main():
         # SUMO writes emission-output XML incrementally; ensure SUMO is closed before parsing,
         # otherwise the XML can be incomplete and iterparse may stop early.
         simulator.close_simulation()
+        time.sleep(0.35)
 
         metrics = {}
         if args.calc_metrics:

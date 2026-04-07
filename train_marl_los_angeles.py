@@ -393,6 +393,12 @@ def main():
     parser.add_argument("--lanes-per-tl", type=int, default=20, help="Fixed lanes per TLS in observation (pad/truncate)")
     parser.add_argument("--demand-scale", type=float, default=0.0, help="SUMO --scale for traffic demand (0=default, 1.0=100%%)")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--traci-port",
+        type=int,
+        default=8813,
+        help="Base TraCI TCP port. Each episode uses (base + episode_index - 1) so SUMO can restart cleanly.",
+    )
     parser.add_argument("--save-every", type=int, default=10)
     parser.add_argument("--out", type=str, default="", help="Model output path")
     parser.add_argument("--resume", type=str, default="", help="Path to checkpoint to resume training from")
@@ -640,8 +646,10 @@ def main():
             ramp_progress = float(ep - start_ep) / float(max(1, int(args.curriculum_ramp_episodes) - 1))
             ramp_progress = float(np.clip(ramp_progress, 0.0, 1.0))
             run_ratio = float(args.curriculum_ratio_start) + (target_ratio - float(args.curriculum_ratio_start)) * ramp_progress
+        traci_port = int(args.traci_port) + int(ep) - 1
         simulator = TrafficSimulator(
             use_gui=False,
+            port=traci_port,
             dataset=args.dataset,
             enable_sumo_emissions_output=False,
             sumo_seed=sumo_seed,
@@ -956,6 +964,8 @@ def main():
             lr_scheduler.step()
 
         simulator.close_simulation()
+        # Windows/Linux: prior SUMO may still hold the old port/socket briefly; stagger ports + small delay.
+        time.sleep(0.35)
 
         wall = time.time() - start_wall
         avg_loss = float(np.mean(losses)) if losses else float("nan")

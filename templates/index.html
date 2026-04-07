@@ -44,7 +44,7 @@
                     {% elif selected_strategy == 'SOTL' %}
                     Threshold-based self-organizing logic.
                     {% else %}
-                    Shared multi-agent DQN (requires checkpoint for live run).
+                    Shared multi-agent DQN: live run uses the <strong>MARL evaluation → Model Path (.pt)</strong> field (same as batch eval). If that file is missing or PyTorch load fails, the simulator falls back to fixed-time.
                     {% endif %}
                 </div>
                 
@@ -263,10 +263,16 @@
                     <label class="form-check-label" for="bSotl">SOTL</label>
                 </div>
             </div>
-            <div class="col-md-4 d-flex align-items-center">
+            <div class="col-md-4 d-flex align-items-center flex-wrap gap-2">
                 <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" id="compareEmissions" checked>
                     <label class="form-check-label" for="compareEmissions">Enable SUMO emissions output</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="compareForceRestart">
+                    <label class="form-check-label" for="compareForceRestart" title="If a past run left status stuck on running, check this to start a new batch">
+                        Force restart <span class="text-muted small">(interrupted run)</span>
+                    </label>
                 </div>
             </div>
             <div class="col-md-4">
@@ -276,6 +282,14 @@
             </div>
         </div>
         <div id="compareEvalStatus" class="mt-3 alert alert-light border">Status: idle</div>
+        <div id="compareEvalLogWrap" class="mt-2 d-none">
+            <p class="small text-muted mb-1">
+                <strong>Where is the evaluation output?</strong> SUMO and Python write to
+                <code>output/web_results/comparative_eval_…/worker.log</code> — not to the Flask terminal.
+                The box below tails that file while the run is active.
+            </p>
+            <pre id="compareEvalLogPre" class="p-2 rounded border bg-dark text-light overflow-auto small mb-0" style="max-height:280px; white-space:pre-wrap; font-size:0.72rem;"></pre>
+        </div>
         <div id="compareEvalSummary" class="mt-3"></div>
         <div id="compareEvalCharts" class="mt-4 d-none">
             <h6 class="fw-semibold border-bottom pb-2 mb-3">Results — current run</h6>
@@ -587,7 +601,7 @@ $('#strategySelect').on('change', function() {
         'ADAPTIVE': 'Actuated-style extensions from queue pressure.',
         'MAX_PRESSURE': 'Greedy phase choice by upstream queue pressure.',
         'SOTL': 'Threshold-based self-organizing logic.',
-        'MARL_DQN': 'Shared multi-agent DQN (requires checkpoint for live run).'
+        'MARL_DQN': 'Loads the checkpoint from <strong>MARL evaluation → Model Path (.pt)</strong>. Wrong or missing file → falls back to fixed-time.'
     };
     $('#strategyDescription').html(descriptions[strategy] || '');
 });
@@ -665,7 +679,14 @@ function startSimulation() {
         url: '/start_simulation',
         method: 'POST',
         contentType: 'application/json',
-        data: JSON.stringify({strategy: strategy, use_gui: useGui, duration: duration}),
+        data: JSON.stringify({
+            strategy: strategy,
+            use_gui: useGui,
+            duration: duration,
+            marl_model_path: strategy === 'MARL_DQN'
+                ? ($('#marlModelPath').val().trim() || $('#trainOutPath').val().trim())
+                : ''
+        }),
         timeout: 10000,
         success: function(response) {
             if (response.status === 'success') {
@@ -884,7 +905,8 @@ function startComparativeEvaluation() {
         regional_reward_weight: parseFloat($('#compareRegionalWeight').val()) || 0.0,
         region_grid_size: parseFloat($('#compareRegionGrid').val()) || 500.0,
         sumo_emissions_output: $('#compareEmissions').is(':checked'),
-        baselines: baselines
+        baselines: baselines,
+        force: $('#compareForceRestart').is(':checked'),
     };
 
     if (!payload.model_path) {
@@ -894,6 +916,8 @@ function startComparativeEvaluation() {
 
     $('#compareEvalBtn').prop('disabled', true).text('Starting…');
     $('#compareEvalStatus').removeClass('alert-danger alert-success').addClass('alert-light').text('Status: starting...');
+    $('#compareEvalLogWrap').addClass('d-none');
+    $('#compareEvalLogPre').empty();
     $('#compareEvalSummary').empty();
     clearComparativeChartDivs();
 
@@ -905,16 +929,31 @@ function startComparativeEvaluation() {
         timeout: 10000,
         success: function(resp) {
             if (resp.status === 'success') {
-                $('#compareEvalStatus').text('Status: running...');
+                $('#compareForceRestart').prop('checked', false);
+                const hint = (resp.log_path || resp.run_dir)
+                    ? ` Log file: <code class="small">${resp.log_path || ''}</code>`
+                    : '';
+                $('#compareEvalStatus').html('Status: running…' + hint);
                 if (compareEvalInterval) clearInterval(compareEvalInterval);
-                compareEvalInterval = setInterval(checkComparativeEvaluation, 3000);
+                compareEvalInterval = setInterval(checkComparativeEvaluation, 5000);
             } else {
-                $('#compareEvalStatus').addClass('alert-danger').text('Error: ' + resp.message);
+                $('#compareEvalStatus').addClass('alert-danger').text('Error: ' + (resp.message || 'Unknown'));
                 $('#compareEvalBtn').prop('disabled', false).text('Run comparative evaluation');
             }
         },
         error: function(xhr) {
-            const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to start comparative evaluation';
+            let msg = 'Failed to start comparative evaluation';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                msg = xhr.responseJSON.message;
+            } else if (xhr.status === 0) {
+                msg = 'Network error (server unreachable or request blocked).';
+            } else if (xhr.status >= 500) {
+                msg = 'Server error HTTP ' + xhr.status + '. Check the Flask terminal for a traceback.';
+            } else if (xhr.responseText && xhr.responseText.trim().charAt(0) === '<') {
+                msg = 'Server returned HTML instead of JSON (often a crash). Check the Flask terminal.';
+            } else if (xhr.responseText) {
+                msg = 'HTTP ' + xhr.status + ': ' + xhr.responseText.substring(0, 240);
+            }
             $('#compareEvalStatus').addClass('alert-danger').text('Error: ' + msg);
             $('#compareEvalBtn').prop('disabled', false).text('Run comparative evaluation');
         }
@@ -928,18 +967,56 @@ function checkComparativeEvaluation() {
         timeout: 5000,
         success: function(resp) {
             if (resp.status === 'running') {
-                const msg = `Status: running... ${resp.completed_jobs || 0}/${resp.total_jobs || '?'} (${resp.current || 'starting'})`;
-                $('#compareEvalStatus').text(msg);
+                const current = resp.current || 'starting';
+                const done = resp.completed_jobs || 0;
+                const total = resp.total_jobs || '?';
+                let epInfo = '';
+                if (resp.live_progress) {
+                    const lp = resp.live_progress;
+                    if (lp.last_episode && lp.total_episodes) {
+                        epInfo = ` — MARL episodes (this step): <strong>${lp.last_episode} / ${lp.total_episodes}</strong>`;
+                    } else if (lp.last_episode_approx) {
+                        epInfo = ` — ~episode <strong>${lp.last_episode_approx}</strong> (from SUMO port)`;
+                    }
+                }
+                let cmdHint = '';
+                if (resp.cmd) {
+                    const c = resp.cmd.length > 220 ? resp.cmd.substring(0, 220) + '…' : resp.cmd;
+                    cmdHint = `<br><small class="text-muted">Active command: <code style="font-size:0.7rem;">${$('<div>').text(c).html()}</code></small>`;
+                }
+                let logHint = '';
+                if (resp.log_file_hint) {
+                    logHint = `<br><small class="text-muted">Log file: <code>${$('<div>').text(resp.log_file_hint).html()}</code></small>`;
+                }
+                let msg = `<div>Status: running… batch step <strong>${done} / ${total}</strong> — job: <strong>${current}</strong>${epInfo}</div>${cmdHint}${logHint}`;
+                $('#compareEvalStatus').html(msg);
+                if (resp.log_tail) {
+                    $('#compareEvalLogWrap').removeClass('d-none');
+                    $('#compareEvalLogPre').text(resp.log_tail);
+                }
             } else if (resp.status === 'completed') {
                 if (compareEvalInterval) clearInterval(compareEvalInterval);
+                $('#compareEvalLogWrap').addClass('d-none');
                 $('#compareEvalStatus').removeClass('alert-light alert-danger').addClass('alert-success').text('Status: completed');
                 $('#compareEvalBtn').prop('disabled', false).text('Run comparative evaluation');
                 loadComparativeResults();
             } else if (resp.status === 'error') {
                 if (compareEvalInterval) clearInterval(compareEvalInterval);
-                $('#compareEvalStatus').removeClass('alert-light').addClass('alert-danger').text('Error: ' + (resp.message || 'unknown'));
+                $('#compareEvalLogWrap').addClass('d-none');
+                const rd = resp.run_dir ? ` <small class="d-block mt-1">Run dir: <code>${resp.run_dir}</code> — see <code>worker.log</code> there.</small>` : '';
+                $('#compareEvalStatus').removeClass('alert-light').addClass('alert-danger').html('Error: ' + (resp.message || 'unknown') + rd);
+                $('#compareEvalBtn').prop('disabled', false).text('Run comparative evaluation');
+            } else if (resp.status === 'idle') {
+                if (compareEvalInterval) clearInterval(compareEvalInterval);
+                $('#compareEvalLogWrap').addClass('d-none');
+                $('#compareEvalStatus').removeClass('alert-light').addClass('alert-warning').text(
+                    'Evaluation session lost (idle). Click “Run comparative evaluation” again, or use Reset session if stuck.'
+                );
                 $('#compareEvalBtn').prop('disabled', false).text('Run comparative evaluation');
             }
+        },
+        error: function() {
+            /* keep polling unless repeated failures */
         }
     });
 }
@@ -1017,7 +1094,7 @@ function resetSimulation() {
 
 // Restore web interface - full reset
 function restoreWebInterface() {
-    if (confirm('Restore the web interface? This will:\n• Reset simulation state\n• Clear all temporary files\n• Reload the page\n\nContinue?')) {
+    if (confirm('Restore the web interface? This will:\n• Reset simulation state\n• Clear MARL/comparative eval session flags (fixes stuck “already running”)\n• Clear temporary files\n• Reload the page\n\nContinue?')) {
         // First reset simulation state
         $.ajax({
             url: '/reset_simulation',

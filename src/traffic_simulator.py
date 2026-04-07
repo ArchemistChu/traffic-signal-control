@@ -625,13 +625,21 @@ class TrafficSimulator:
                 print(f"Simulation step error: {e}")
                 return False
     
-    def run_simulation(self, duration: Optional[int] = None, strategy: str = "FIXED_TIME") -> Dict:
+    def run_simulation(
+        self,
+        duration: Optional[int] = None,
+        strategy: str = "FIXED_TIME",
+        marl_model_path: Optional[str] = None,
+    ) -> Dict:
         """
         Run complete simulation
         
         Args:
             duration: simulation duration (seconds), None means run until end
-            strategy: control strategy ('FIXED_TIME', 'ADAPTIVE', 'DQN', 'MAX_PRESSURE')
+            strategy: control strategy ('FIXED_TIME', 'ADAPTIVE', 'DQN', 'MAX_PRESSURE', 'MARL_DQN', ...)
+            marl_model_path: optional path to a trained MARL checkpoint when strategy is MARL_DQN
+                (relative paths are resolved from project BASE_DIR). If omitted, uses
+                models/marl_los_angeles_shared_dqn.pt for backward compatibility.
             
         Returns:
             Dict: simulation statistics results
@@ -738,8 +746,15 @@ class TrafficSimulator:
                 presslight_enabled = False
 
         if marl_enabled:
-            # Load trained checkpoint
-            model_path = os.path.join(SimulationConfig.MODEL_DIR, "marl_los_angeles_shared_dqn.pt")
+            # Load trained checkpoint (UI / caller can override path; legacy default for Los Angeles)
+            default_marl = os.path.join(SimulationConfig.MODEL_DIR, "marl_los_angeles_shared_dqn.pt")
+            if marl_model_path and str(marl_model_path).strip():
+                raw = str(marl_model_path).strip()
+                model_path = raw if os.path.isabs(raw) else os.path.normpath(
+                    os.path.join(SimulationConfig.BASE_DIR, raw)
+                )
+            else:
+                model_path = default_marl
             if not os.path.exists(model_path):
                 print(f"Warning: MARL model not found at {model_path}. Falling back to FIXED_TIME.")
                 marl_enabled = False
